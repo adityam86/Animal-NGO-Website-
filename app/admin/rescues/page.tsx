@@ -32,13 +32,13 @@ export default async function AdminRescuesPage() {
           </div>
         ) : rescues.map(rescue => (
           <div key={rescue.id} style={{ background: "white", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)", overflow: "hidden" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.5rem", borderBottom: "1px solid var(--cream-200)", background: "var(--stone-50)" }}>
-              <div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--stone-400)", marginBottom: "0.25rem" }}>CASE ID: {rescue.id}</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--stone-800)" }}>{rescue.animalType} at {rescue.location}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 1.25rem", borderBottom: "1px solid var(--cream-200)", background: "var(--stone-50)", flexWrap: "wrap", gap: "0.75rem" }}>
+              <div style={{ minWidth: 200, flex: 1 }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--stone-400)", marginBottom: "0.2rem" }}>CASE ID: {rescue.id.slice(-8).toUpperCase()}</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--stone-800)", lineHeight: 1.25 }}>{rescue.animalType} at {rescue.location}</div>
               </div>
               <div style={{ 
-                padding: "0.5rem 1rem", borderRadius: "var(--radius-full)", fontSize: "0.85rem", fontWeight: 700,
+                padding: "0.35rem 0.75rem", borderRadius: "var(--radius-full)", fontSize: "0.78rem", fontWeight: 700,
                 background: rescue.emergencyLevel === "Critical" ? "var(--red-100)" : rescue.emergencyLevel === "High" ? "var(--saffron-100)" : "var(--green-100)",
                 color: rescue.emergencyLevel === "Critical" ? "var(--red-700)" : rescue.emergencyLevel === "High" ? "var(--saffron-700)" : "var(--green-700)"
               }}>
@@ -46,7 +46,7 @@ export default async function AdminRescuesPage() {
               </div>
             </div>
             
-            <div style={{ padding: "1.5rem", display: "flex", gap: "2rem" }}>
+            <div className="admin-two-col-content">
               <div style={{ flex: 1 }}>
                 <h3 style={{ fontSize: "0.95rem", marginBottom: "0.75rem", color: "var(--stone-500)" }}>Details</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.5rem 1.5rem", fontSize: "0.95rem" }}>
@@ -118,7 +118,7 @@ export default async function AdminRescuesPage() {
                 </div>
               </div>
               
-              <div style={{ flex: 1, borderLeft: "1px solid var(--cream-200)", paddingLeft: "2rem" }}>
+              <div className="admin-two-col-right">
                 <h3 style={{ fontSize: "0.95rem", marginBottom: "0.75rem", color: "var(--stone-500)" }}>Update Status</h3>
                 <div style={{ fontSize: "0.9rem", marginBottom: "1rem" }}>
                   Current Status: <strong style={{ color: "var(--saffron-600)" }}>{rescue.status}</strong>
@@ -130,8 +130,8 @@ export default async function AdminRescuesPage() {
                   if (newStatus) {
                     await updateRescueStatus(rescue.id, newStatus);
                   }
-                }} style={{ display: "flex", gap: "0.5rem" }}>
-                  <select name="status" className="form-input" style={{ flex: 1, padding: "0.5rem" }}>
+                }} style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <select name="status" className="form-input" style={{ flex: 1, minWidth: 160, padding: "0.5rem" }}>
                     <option value="">Select next status...</option>
                     {availableStatuses.map(s => (
                       <option key={s} value={s}>{s}</option>

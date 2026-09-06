@@ -15,6 +15,7 @@ import {
   Building,
   BarChart2,
   ExternalLink,
+  X,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -30,28 +31,20 @@ const NAV_ITEMS = [
   { href: "/admin/stories", icon: BookOpen, label: "Rescue Stories" },
 ];
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside
-      style={{
-        width: 260,
-        background: "#0f172a", // Deep Slate Obsidian
-        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-        color: "#f8fafc",
-      }}
-    >
+    <aside className={`admin-sidebar ${isOpen ? "admin-sidebar-open" : ""}`}>
       {/* Brand Header */}
       <div
         style={{
-          padding: "1.25rem 1.5rem",
+          padding: "1.25rem 1.25rem",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           display: "flex",
           alignItems: "center",
@@ -85,6 +78,29 @@ export default function AdminSidebar() {
             Command & Sanctuary Center
           </div>
         </div>
+
+        {/* Close Button on Mobile Phone Screens */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="admin-mobile-only"
+          aria-label="Close menu"
+          style={{
+            background: "rgba(255, 255, 255, 0.08)",
+            border: "none",
+            color: "#f8fafc",
+            width: 32,
+            height: 32,
+            borderRadius: "var(--radius-md)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.15s",
+          }}
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Navigation List */}
@@ -108,6 +124,7 @@ export default function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -176,6 +193,7 @@ export default function AdminSidebar() {
         <Link
           href="/"
           target="_blank"
+          onClick={onClose}
           style={{
             display: "flex",
             alignItems: "center",

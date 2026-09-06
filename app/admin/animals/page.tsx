@@ -21,7 +21,8 @@ export default async function AdminAnimalsPage() {
       </div>
 
       <div style={{ background: "white", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="admin-table-scroll">
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
           <thead>
             <tr style={{ background: "var(--stone-100)", borderBottom: "1px solid var(--cream-200)", textAlign: "left" }}>
               <th style={{ padding: "1rem", fontSize: "0.85rem", color: "var(--stone-600)", fontWeight: 700, textTransform: "uppercase" }}>Animal</th>
@@ -73,6 +74,7 @@ export default async function AdminAnimalsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
