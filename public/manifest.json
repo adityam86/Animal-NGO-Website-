@@ -1,0 +1,47 @@
+{
+  "name": "Ayudar Animal Welfare Foundation",
+  "short_name": "Ayudar",
+  "description": "24/7 Animal Rescue, Gaushala, Shelter & Adoption in Raniganj",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffbf5",
+  "theme_color": "#ea580c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "🚨 Report Animal Emergency",
+      "short_name": "Emergency",
+      "description": "Report an injured or sick animal immediately",
+      "url": "/rescue",
+      "icons": [{ "src": "/images/logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "🐕 Adopt a Pet",
+      "short_name": "Adopt",
+      "description": "Browse animals ready for adoption",
+      "url": "/animals",
+      "icons": [{ "src": "/images/logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "❤️ Donate",
+      "short_name": "Donate",
+      "description": "Support animal treatments with 80G tax exemption",
+      "url": "/donate",
+      "icons": [{ "src": "/images/logo.jpg", "sizes": "192x192" }]
+    }
+  ]
+}

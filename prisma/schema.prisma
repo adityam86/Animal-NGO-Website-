@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Animal {
+  id         String   @id @default(cuid())
+  name       String
+  type       String
+  breed      String
+  gender     String
+  age        String
+  color      String
+  location   String
+  status     String
+  image      String
+  vaccinated Boolean  @default(false)
+  dewormed   Boolean  @default(false)
+  sterilized Boolean  @default(false)
+  rescueDate DateTime
+  shelter    String
+  story      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  adoptionApps AdoptionApplication[]
+  sponsorships Sponsorship[]
+  medicalRecords MedicalRecord[]
+  vaccinations   Vaccination[]
+  shelterLocationId String?
+  shelterLocation   ShelterLocation? @relation(fields: [shelterLocationId], references: [id])
+}
+
+model RescueCase {
+  id             String             @id @default(cuid())
+  animalType     String
+  emergencyLevel String
+  location       String
+  reporterName   String
+  reporterPhone  String
+  assignedTeam   String?
+  status         String
+  reportedAt     DateTime           @default(now())
+  description    String
+  history        RescueCaseStatus[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model RescueCaseStatus {
+  id           String     @id @default(cuid())
+  rescueCaseId String
+  rescueCase   RescueCase @relation(fields: [rescueCaseId], references: [id], onDelete: Cascade)
+  status       String
+  time         String?
+  done         Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+}
+
+model Story {
+  slug       String       @id
+  title      String
+  subtitle   String
+  animal     String
+  animalType String
+  date       DateTime
+  readTime   String
+  coverImage String
+  outcome    String
+  excerpt    String
+  phases     StoryPhase[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model StoryPhase {
+  id          String   @id @default(cuid())
+  storySlug   String
+  story       Story    @relation(fields: [storySlug], references: [slug], onDelete: Cascade)
+  phase       String
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model Volunteer {
+  id            String                  @id @default(cuid())
+  name          String
+  age           Int
+  phone         String
+  email         String
+  location      String?
+  experience    String?
+  status        String                  @default("Pending") // Pending, Active, Inactive
+  roles         VolunteerRole[]
+  availabilities VolunteerAvailability[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+}
+
+model VolunteerRole {
+  id          String    @id @default(cuid())
+  volunteerId String
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  role        String
+}
+
+model VolunteerAvailability {
+  id           String    @id @default(cuid())
+  volunteerId  String
+  volunteer    Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  availability String
+}
+
+model Donation {
+  id            String   @id @default(cuid())
+  amount        Float
+  purpose       String
+  frequency     String
+  donorName     String
+  donorPhone    String
+  donorEmail    String
+  donorPan      String?
+  paymentStatus String   @default("Pending") // Pending, Completed, Failed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AdoptionApplication {
+  id               String   @id @default(cuid())
+  applicantName    String
+  age              Int
+  phone            String
+  email            String
+  address          String
+  occupation       String
+  hasPets          Boolean
+  homeType         String
+  familyMembers    Int
+  reason           String
+  status           String   @default("Pending") // Pending, Under Review, Interview, Approved, Rejected, Adopted
+  animalId         String?
+  animal           Animal?  @relation(fields: [animalId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Sponsorship {
+  id            String   @id @default(cuid())
+  sponsorName   String
+  sponsorPhone  String
+  sponsorEmail  String
+  animalId      String?
+  animal        Animal?  @relation(fields: [animalId], references: [id])
+  tier          String   // e.g., "Food", "Medical", "Full Care"
+  amount        Float
+  frequency     String   // "One-time", "Monthly"
+  paymentStatus String   @default("Pending") // Pending, Completed, Failed
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model MedicalRecord {
+  id          String   @id @default(cuid())
+  animalId    String
+  animal      Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  diagnosis   String
+  treatment   String
+  cost        Float    @default(0)
+  vetName     String
+  notes       String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vaccination {
+  id               String    @id @default(cuid())
+  animalId         String
+  animal           Animal    @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  vaccineName      String
+  dateAdministered DateTime  @default(now())
+  dateDue          DateTime?
+  vetName          String
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model ShelterLocation {
+  id        String   @id @default(cuid())
+  name      String   // e.g., "Main Shelter", "Cat Wing", "Gaushala"
+  address   String
+  capacity  Int
+  type      String   // "Dogs", "Cats", "Cows", "Mixed"
+  animals   Animal[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
