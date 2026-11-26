@@ -1,30 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-
-function resolveDatabaseUrl(): string {
-  const configured = process.env.DATABASE_URL;
-  if (process.env.VERCEL && (!configured || configured.startsWith("file:"))) {
-    const tmpDb = "/tmp/dev.db";
-    if (!fs.existsSync(tmpDb)) {
-      const bundledDb = path.join(process.cwd(), "prisma", "dev.db");
-      if (fs.existsSync(bundledDb)) {
-        try {
-          fs.copyFileSync(bundledDb, tmpDb);
-        } catch (err) {
-          console.warn("Could not copy bundled SQLite db to /tmp:", err);
-        }
-      }
-    }
-    if (fs.existsSync(tmpDb)) {
-      return `file:${tmpDb}`;
-    }
-  }
-  return configured || "file:./dev.db";
-}
-
-const resolvedUrl = resolveDatabaseUrl();
-process.env.DATABASE_URL = resolvedUrl;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -32,11 +6,18 @@ const globalForPrisma = globalThis as unknown as {
 
 function getPrismaClient(): PrismaClient {
   if (!globalForPrisma.prisma) {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error(
+        "DATABASE_URL is not configured. Provide a valid PostgreSQL connection string in your environment."
+      );
+    }
+
     globalForPrisma.prisma = new PrismaClient({
       datasources: {
-        db: { url: resolvedUrl },
+        db: { url: databaseUrl },
       },
-      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+      log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
     });
   }
   return globalForPrisma.prisma;

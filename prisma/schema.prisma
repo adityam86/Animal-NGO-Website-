@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -97,7 +97,7 @@ model Animal {
   medicalRecords    MedicalRecord[]
   vaccinations      Vaccination[]
   shelterLocationId String?
-  shelterLocation   ShelterLocation?      @relation(fields: [shelterLocationId], references: [id])
+  shelterLocation   ShelterLocation?      @relation(fields: [shelterLocationId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([type])
