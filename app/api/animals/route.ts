@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     if (limit) {
       const parsed = parseInt(limit, 10);
       if (!Number.isNaN(parsed) && parsed > 0) {
-        queryOptions.take = parsed;
+        queryOptions.take = Math.min(parsed, 100);
       }
     }
 

@@ -1,31 +1,60 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
+import { volunteerCreateSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    const parsedAge = parseInt(String(data.age), 10);
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
 
+    const ip = getClientIp(request);
+    const rate = checkRateLimit(`volunteer-create:${ip}`, 6, 15 * 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many submissions received. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+      );
+    }
+
+    const bodyResult = await readBoundedJson(request, 64 * 1024);
+    if (!bodyResult.ok) {
+      return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+    }
+
+    const parsed = volunteerCreateSchema.safeParse(bodyResult.data);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Please complete all required fields." },
+        { status: 400 }
+      );
+    }
+
+    const data = parsed.data;
     const newVolunteer = await prisma.volunteer.create({
       data: {
-        name: String(data.name || "").trim(),
-        age: Number.isFinite(parsedAge) && parsedAge > 0 ? parsedAge : 18,
-        phone: String(data.phone || "").trim(),
-        email: String(data.email || "").trim(),
-        location: data.location ? String(data.location).trim() : null,
-        experience: data.experience ? String(data.experience).trim() : null,
+        name: data.name,
+        age: data.age,
+        phone: data.phone,
+        email: data.email,
+        location: data.location || null,
+        experience: data.experience || null,
+        status: "Pending Review",
         roles: {
-          create: Array.isArray(data.roles)
-            ? data.roles.map((role: string) => ({ role: String(role) }))
-            : [],
+          create: data.roles.map((role) => ({ role })),
         },
         availabilities: {
-          create: Array.isArray(data.availability)
-            ? data.availability.map((avail: string) => ({ availability: String(avail) }))
-            : [],
+          create: data.availability.map((availability) => ({ availability })),
         },
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
       },
     });
 
