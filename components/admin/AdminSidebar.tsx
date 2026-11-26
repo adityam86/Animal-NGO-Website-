@@ -31,12 +31,15 @@ const NAV_ITEMS = [
   { href: "/admin/stories", icon: BookOpen, label: "Rescue Stories" },
 ];
 
+import type { AdminUserSummary } from "./AdminShell";
+
 interface AdminSidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  adminUser?: AdminUserSummary;
 }
 
-export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ isOpen = false, onClose, adminUser }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -218,6 +221,26 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
           <ExternalLink size={15} style={{ color: "#64748b" }} />
           <span>View Public Site</span>
         </Link>
+
+        {adminUser && (
+          <div
+            style={{
+              padding: "0.5rem 0.75rem",
+              borderRadius: "var(--radius-md)",
+              background: "rgba(255, 255, 255, 0.04)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              fontSize: "0.75rem",
+              color: "#cbd5e1",
+            }}
+          >
+            <div style={{ fontWeight: 700, color: "#f8fafc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {adminUser.name}
+            </div>
+            <div style={{ fontSize: "0.68rem", color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {adminUser.role} · {adminUser.email}
+            </div>
+          </div>
+        )}
 
         <form action="/api/logout" method="POST">
           <button

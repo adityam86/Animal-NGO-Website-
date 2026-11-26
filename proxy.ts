@@ -1,28 +1,39 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session-token";
 
-export function proxy(request: NextRequest) {
-  // Check if trying to access /admin
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    const sessionCookie = request.cookies.get('ayudar_admin_session');
-    
-    // If no valid session cookie, redirect to login
-    if (!sessionCookie || sessionCookie.value !== 'authenticated') {
-      return NextResponse.redirect(new URL('/login', request.url));
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const session = await verifySessionToken(token);
+
+  // Protect admin API routes
+  if (pathname.startsWith("/api/reports") || pathname === "/api/upload" || pathname.startsWith("/api/admin")) {
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
+  // Protect /admin UI routes
+  if (pathname.startsWith("/admin")) {
+    if (!session) {
+      const response = NextResponse.redirect(new URL("/login", request.url));
+      if (token) {
+        response.cookies.delete(SESSION_COOKIE_NAME);
+      }
+      return response;
     }
   }
-  
-  // Check if trying to access /login while already logged in
-  if (request.nextUrl.pathname === '/login') {
-    const sessionCookie = request.cookies.get('ayudar_admin_session');
-    if (sessionCookie && sessionCookie.value === 'authenticated') {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
+
+  // Redirect authenticated admin away from /login
+  if (pathname === "/login" && session) {
+    return NextResponse.redirect(new URL("/admin", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/login'],
+  matcher: ["/admin/:path*", "/login", "/api/reports/:path*", "/api/upload", "/api/admin/:path*"],
 };

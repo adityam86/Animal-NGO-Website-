@@ -5,7 +5,20 @@ import { usePathname } from "next/navigation";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export interface AdminUserSummary {
+  id?: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export default function AdminShell({
+  children,
+  adminUser,
+}: {
+  children: React.ReactNode;
+  adminUser?: AdminUserSummary;
+}) {
   const pathname = usePathname();
   const [openAtPath, setOpenAtPath] = useState<string | null>(null);
   const sidebarOpen = openAtPath === pathname;
@@ -34,7 +47,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       )}
 
       {/* Sidebar: Docked on Desktop, Slide-over Drawer on Mobile */}
-      <AdminSidebar isOpen={sidebarOpen} onClose={() => setOpenAtPath(null)} />
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setOpenAtPath(null)}
+        adminUser={adminUser}
+      />
 
       {/* Main Workspace Canvas */}
       <main
@@ -48,6 +65,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         }}
       >
         <AdminHeader
+          adminUser={adminUser}
           onToggleSidebar={() =>
             setOpenAtPath((prev) => (prev === pathname ? null : pathname))
           }

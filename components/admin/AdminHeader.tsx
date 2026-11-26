@@ -4,11 +4,14 @@ import Link from "next/link";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import { ShieldAlert, ExternalLink, Activity, Menu } from "lucide-react";
 
+import type { AdminUserSummary } from "./AdminShell";
+
 interface AdminHeaderProps {
   onToggleSidebar?: () => void;
+  adminUser?: AdminUserSummary;
 }
 
-export default function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
+export default function AdminHeader({ onToggleSidebar, adminUser }: AdminHeaderProps) {
   return (
     <header
       style={{
@@ -134,6 +137,38 @@ export default function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
           <span className="admin-desktop-only">Live Site</span>
           <ExternalLink size={13} />
         </Link>
+
+        {/* Staff Pill (Desktop) */}
+        {adminUser && (
+          <div
+            className="admin-desktop-only"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              fontSize: "0.75rem",
+              color: "var(--stone-600)",
+              padding: "0.3rem 0.6rem",
+              borderRadius: "var(--radius-full)",
+              background: "var(--cream-100)",
+              border: "1px solid var(--cream-200)",
+            }}
+          >
+            <span style={{ fontWeight: 700, color: "var(--color-text)" }}>{adminUser.name}</span>
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                padding: "0.08rem 0.4rem",
+                borderRadius: "var(--radius-full)",
+                background: "rgba(21, 128, 61, 0.12)",
+                color: "#15803d",
+              }}
+            >
+              {adminUser.role}
+            </span>
+          </div>
+        )}
 
         {/* Theme Toggle Button */}
         <ThemeToggle />
