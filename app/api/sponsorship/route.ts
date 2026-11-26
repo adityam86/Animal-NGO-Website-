@@ -1,43 +1,89 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { SPONSORSHIP_TIERS_INR } from "@/lib/payment";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
+import { sponsorshipCreateSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const {
-      sponsorName,
-      sponsorPhone,
-      sponsorEmail,
-      animalId,
-      tier,
-      frequency,
-    } = body;
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ success: false, error: "Invalid request origin" }, { status: 403 });
+    }
 
-    // Parse amount from tier (e.g. "Food - 500" -> 500)
-    let amount = 500;
-    if (tier && String(tier).includes("-")) {
-      const parsed = parseFloat(String(tier).split("-")[1].trim());
-      if (Number.isFinite(parsed) && parsed > 0) {
-        amount = parsed;
+    const ip = getClientIp(request);
+    const rate = checkRateLimit(`sponsorship-init:${ip}`, 15, 15 * 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many sponsorship attempts. Please wait a moment." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+      );
+    }
+
+    const bodyResult = await readBoundedJson(request, 32 * 1024);
+    if (!bodyResult.ok) {
+      return NextResponse.json(
+        { success: false, error: bodyResult.error },
+        { status: bodyResult.status }
+      );
+    }
+
+    const parsed = sponsorshipCreateSchema.safeParse(bodyResult.data);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: parsed.error.issues[0]?.message || "Invalid sponsorship details.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const d = parsed.data;
+    if (d.animalId) {
+      const animalExists = await prisma.animal.findUnique({
+        where: { id: d.animalId },
+        select: { id: true },
+      });
+      if (!animalExists) {
+        return NextResponse.json(
+          { success: false, error: "Selected animal was not found." },
+          { status: 404 }
+        );
       }
+    }
+
+    const serverAmount = SPONSORSHIP_TIERS_INR[d.tier];
+    if (!serverAmount) {
+      return NextResponse.json(
+        { success: false, error: "Invalid sponsorship tier selected." },
+        { status: 400 }
+      );
     }
 
     const sponsorship = await prisma.sponsorship.create({
       data: {
-        sponsorName: String(sponsorName || "").trim(),
-        sponsorPhone: String(sponsorPhone || "").trim(),
-        sponsorEmail: String(sponsorEmail || "").trim(),
-        animalId: animalId || null,
-        tier: String(tier || "Food - 500"),
-        frequency: String(frequency || "Monthly"),
-        amount,
+        sponsorName: d.sponsorName,
+        sponsorPhone: d.sponsorPhone,
+        sponsorEmail: d.sponsorEmail,
+        animalId: d.animalId || null,
+        tier: d.tier,
+        frequency: d.frequency,
+        amount: serverAmount,
         paymentStatus: "Pending",
+      },
+      select: {
+        id: true,
+        tier: true,
+        amount: true,
+        frequency: true,
+        paymentStatus: true,
       },
     });
 
-    return NextResponse.json({ success: true, sponsorship });
+    return NextResponse.json({ success: true, sponsorship }, { status: 201 });
   } catch (error) {
     console.error("Sponsorship error:", error);
     return NextResponse.json(

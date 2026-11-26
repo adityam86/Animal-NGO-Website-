@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import FadeIn from "@/components/motion/FadeIn";
 
@@ -34,11 +35,19 @@ type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
 
 function SponsorForm() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const preselectedAnimalId = searchParams.get("animal") || "";
   const [loading, setLoading] = useState(false);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [manualAnimalId, setManualAnimalId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<{
+    sponsorshipId: string;
+    paymentId: string;
+    tier: string;
+    amount: number;
+    frequency: string;
+    sponsorName: string;
+  } | null>(null);
   const selectedAnimal = manualAnimalId !== null ? manualAnimalId : preselectedAnimalId;
 
   useEffect(() => {
@@ -67,6 +76,7 @@ function SponsorForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMsg(null);
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -80,7 +90,7 @@ function SponsorForm() {
     };
 
     try {
-      // 1. Create sponsorship record
+      // 1. Create pending sponsorship record (amount computed server-side)
       const res = await fetch("/api/sponsorship", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,59 +99,63 @@ function SponsorForm() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to initiate sponsorship");
 
-      // 2. Create Order
-      const tierMap: Record<string, number> = {
-        "Food - 500": 500,
-        "Medical - 1000": 1000,
-        "Care - 1500": 1500,
-        "Full Care - 3000": 3000,
-      };
-      const amount = tierMap[data.tier] || 500;
-
+      // 2. Create server-bound order using sponsorship ID
       const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, purpose: `Sponsorship: ${data.tier}` }),
+        body: JSON.stringify({ recordType: "sponsorship", recordId: result.sponsorship.id }),
       });
       const order = await orderRes.json();
       if (!orderRes.ok) throw new Error(order.error || "Failed to create order");
 
-      const completeVerification = async (paymentParams: RazorpayResponse) => {
+      const completeVerification = async (paymentParams: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => {
         const verifyRes = await fetch("/api/verify-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            razorpay_order_id: paymentParams.razorpay_order_id || order.id,
-            razorpay_payment_id: paymentParams.razorpay_payment_id || `pay_mock_${Date.now()}`,
-            razorpay_signature: paymentParams.razorpay_signature || "sig_mock",
+            ...paymentParams,
             sponsorshipId: result.sponsorship.id,
           }),
         });
         const verifyResult = await verifyRes.json();
-        if (verifyResult.success) {
-          alert("Payment Successful! Thank you for your sponsorship.");
-          router.push("/cow-care");
-        } else {
-          alert("Payment verification failed.");
+        if (!verifyRes.ok || !verifyResult.verified) {
+          throw new Error(verifyResult.error || "Payment verification failed.");
         }
+        setReceipt({
+          sponsorshipId: result.sponsorship.id,
+          paymentId: verifyResult.paymentId || paymentParams.razorpay_payment_id,
+          tier: result.sponsorship.tier,
+          amount: result.sponsorship.amount,
+          frequency: result.sponsorship.frequency,
+          sponsorName: data.sponsorName,
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       };
 
-      // 3. Presentation / Demo Mode when Razorpay live keys are absent
+      // 3. Explicit Non-Production Demo Mode Only (rejected in production)
       if (order.isMock) {
-        await completeVerification({});
+        await completeVerification({
+          razorpay_order_id: order.id,
+          razorpay_payment_id: `pay_mock_${Date.now()}`,
+          razorpay_signature: "sig_mock_demo",
+        });
         return;
       }
 
       // 4. Load Live Razorpay Checkout
       const resScript = await loadRazorpayScript();
       if (!resScript) {
-        alert("Razorpay SDK failed to load. Are you online?");
+        setErrorMsg("Razorpay Checkout SDK could not be loaded. Please check your connection.");
         return;
       }
 
       const RazorpayClass = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
       if (!RazorpayClass) {
-        alert("Payment gateway unavailable.");
+        setErrorMsg("Payment gateway is temporarily unavailable.");
         return;
       }
 
@@ -150,10 +164,22 @@ function SponsorForm() {
         amount: order.amount,
         currency: order.currency,
         name: "Ayudar Animal Welfare",
-        description: "Sponsorship",
+        description: `Sponsorship: ${data.tier}`,
         order_id: order.id,
         handler: async (response: RazorpayResponse) => {
-          await completeVerification(response);
+          try {
+            await completeVerification({
+              razorpay_order_id: response.razorpay_order_id || order.id,
+              razorpay_payment_id: response.razorpay_payment_id || "",
+              razorpay_signature: response.razorpay_signature || "",
+            });
+          } catch (verifyErr) {
+            setErrorMsg(
+              verifyErr instanceof Error
+                ? verifyErr.message
+                : "Could not verify sponsorship payment signature."
+            );
+          }
         },
         prefill: {
           name: data.sponsorName,
@@ -161,22 +187,68 @@ function SponsorForm() {
           contact: data.sponsorPhone,
         },
         theme: {
-          color: "#f97316",
+          color: "#15803d",
         },
       };
 
       const rzp = new RazorpayClass(options);
       rzp.on("payment.failed", () => {
-        alert("Payment failed. Please try again.");
+        setErrorMsg("Payment failed or was cancelled. Sponsorship was not activated.");
       });
       rzp.open();
     } catch (err) {
-      console.error(err);
-      alert("Something went wrong");
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (receipt) {
+    return (
+      <FadeIn direction="up" distance={20}>
+        <div
+          style={{
+            background: "white",
+            padding: "2.25rem 2rem",
+            borderRadius: "var(--radius-xl)",
+            border: "1px solid var(--cream-200)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: "3.25rem", marginBottom: "0.75rem" }}>🌿</div>
+          <h2 style={{ color: "var(--green-700)", marginBottom: "0.5rem" }}>Sponsorship Confirmed!</h2>
+          <p style={{ color: "var(--stone-600)", marginBottom: "1.5rem" }}>
+            Thank you, <strong>{receipt.sponsorName}</strong>. Your verified sponsorship supports daily shelter nutrition &amp; medical care.
+          </p>
+          <div
+            style={{
+              background: "var(--cream-50)",
+              borderRadius: "var(--radius-lg)",
+              padding: "1.25rem",
+              border: "1px solid var(--cream-200)",
+              textAlign: "left",
+              marginBottom: "1.5rem",
+              fontSize: "0.9rem",
+            }}
+          >
+            <div><strong>Sponsorship ID:</strong> {receipt.sponsorshipId}</div>
+            <div><strong>Payment Ref:</strong> {receipt.paymentId}</div>
+            <div><strong>Plan:</strong> {receipt.tier} ({receipt.frequency})</div>
+            <div><strong>Verified Amount:</strong> ₹{receipt.amount.toLocaleString("en-IN")}</div>
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <button type="button" onClick={() => window.print()} className="btn btn-primary">
+              Print Receipt
+            </button>
+            <Link href="/cow-care" className="btn btn-outline">
+              Visit Gaushala Care
+            </Link>
+          </div>
+        </div>
+      </FadeIn>
+    );
+  }
 
   return (
     <FadeIn direction="up" distance={20}>
@@ -246,6 +318,23 @@ function SponsorForm() {
             <input name="sponsorEmail" required type="email" className="form-input" placeholder="your@email.com" />
           </div>
         </div>
+
+        {errorMsg && (
+          <div
+            role="alert"
+            style={{
+              padding: "0.85rem 1rem",
+              borderRadius: "var(--radius-md)",
+              background: "hsl(0, 80%, 96%)",
+              border: "1px solid hsl(0, 70%, 82%)",
+              color: "hsl(0, 72%, 38%)",
+              fontSize: "0.88rem",
+              fontWeight: 600,
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
 
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <button
