@@ -16,6 +16,9 @@ import {
   BarChart2,
   ExternalLink,
   X,
+  HeartHandshake,
+  Inbox,
+  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -25,10 +28,13 @@ const NAV_ITEMS = [
   { href: "/admin/animals", icon: Heart, label: "Animals" },
   { href: "/admin/medical", icon: Stethoscope, label: "Medical Portal" },
   { href: "/admin/donations", icon: IndianRupee, label: "Donations" },
+  { href: "/admin/sponsorships", icon: HeartHandshake, label: "Sponsorships" },
   { href: "/admin/volunteers", icon: Users, label: "Volunteers" },
+  { href: "/admin/inquiries", icon: Inbox, label: "Inquiries" },
   { href: "/admin/shelters", icon: Building, label: "Shelters" },
   { href: "/admin/reports", icon: BarChart2, label: "Reports & Analytics" },
   { href: "/admin/stories", icon: BookOpen, label: "Rescue Stories" },
+  { href: "/admin/settings", icon: ShieldCheck, label: "Team & Audit" },
 ];
 
 import type { AdminUserSummary } from "./AdminShell";

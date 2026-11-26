@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { recordAuditLog, requireAdminSession } from "@/lib/auth-server";
+import { hashPassword } from "@/lib/password";
 import { sanitizePlainText } from "@/lib/security";
 import { animalFormSchema } from "@/lib/validation";
 
@@ -16,11 +17,27 @@ const STANDARD_RESCUE_TIMELINE = [
 ] as const;
 
 const ALLOWED_VOLUNTEER_STATUSES = new Set([
+  "Pending",
   "Pending Review",
   "Approved",
   "Active",
   "Inactive",
+  "Rejected",
   "Declined",
+]);
+
+const ALLOWED_INQUIRY_STATUSES = new Set([
+  "New",
+  "In Progress",
+  "Resolved",
+  "Archived",
+]);
+
+const ALLOWED_SPONSORSHIP_STATUSES = new Set([
+  "Pending",
+  "Completed",
+  "Failed",
+  "Cancelled",
 ]);
 
 export async function updateRescueStatus(rescueId: string, newStatus: string) {
@@ -133,6 +150,7 @@ export async function deleteAnimal(id: string) {
     resource: `animal:${cleanId}`,
   });
 
+  revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/admin/animals");
   revalidatePath("/animals");
@@ -216,9 +234,74 @@ export async function createAnimal(formData: FormData) {
     details: `Created profile for ${created.name} (${created.type})`,
   });
 
+  revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/admin/animals");
   revalidatePath("/animals");
+  revalidatePath("/adoption");
+}
+
+export async function updateAnimal(id: string, formData: FormData) {
+  const session = await requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"]);
+  const cleanId = sanitizePlainText(id, 80);
+  if (!cleanId) throw new Error("Invalid animal ID");
+
+  const parsed = animalFormSchema.safeParse({
+    name: formData.get("name"),
+    type: formData.get("type"),
+    breed: formData.get("breed"),
+    gender: formData.get("gender"),
+    age: formData.get("age"),
+    color: formData.get("color"),
+    location: formData.get("location"),
+    status: formData.get("status"),
+    image: String(formData.get("image") || "").trim(),
+    vaccinated: formData.get("vaccinated") === "on",
+    dewormed: formData.get("dewormed") === "on",
+    sterilized: formData.get("sterilized") === "on",
+    rescueDate: formData.get("rescueDate") ? String(formData.get("rescueDate")) : undefined,
+    shelter: formData.get("shelter") || "Ayudar Main Shelter",
+    story: formData.get("story") || "Rescued by the Ayudar field unit.",
+  });
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message || "Invalid animal profile details");
+  }
+
+  const d = parsed.data;
+  const updated = await prisma.animal.update({
+    where: { id: cleanId },
+    data: {
+      name: d.name,
+      type: d.type,
+      breed: d.breed,
+      gender: d.gender,
+      age: d.age,
+      color: d.color,
+      location: d.location,
+      status: d.status,
+      ...(d.image ? { image: d.image } : {}),
+      vaccinated: d.vaccinated,
+      dewormed: d.dewormed,
+      sterilized: d.sterilized,
+      rescueDate: d.rescueDate ? new Date(d.rescueDate) : undefined,
+      shelter: d.shelter,
+      story: d.story,
+    },
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: "UPDATE_ANIMAL",
+    resource: `animal:${updated.id}`,
+    details: `Updated profile for ${updated.name} (${updated.status})`,
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/admin/animals");
+  revalidatePath("/animals");
+  revalidatePath(`/animals/${cleanId}`);
   revalidatePath("/adoption");
 }
 
@@ -297,6 +380,7 @@ export async function createStory(formData: FormData) {
     details: `Published story: ${created.title}`,
   });
 
+  revalidatePath("/");
   revalidatePath("/admin/stories");
   revalidatePath("/stories");
 }
@@ -316,6 +400,127 @@ export async function deleteStory(slug: string) {
     resource: `story:${cleanSlug}`,
   });
 
+  revalidatePath("/");
   revalidatePath("/admin/stories");
   revalidatePath("/stories");
+}
+
+export async function updateContactInquiryStatus(id: string, formData: FormData) {
+  const session = await requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"]);
+  const cleanId = sanitizePlainText(id, 80);
+  const status = sanitizePlainText(formData.get("status"), 30);
+  const adminNotes = sanitizePlainText(formData.get("adminNotes"), 1000);
+
+  if (!cleanId || !ALLOWED_INQUIRY_STATUSES.has(status)) {
+    throw new Error("Invalid inquiry status update");
+  }
+
+  await prisma.contactInquiry.update({
+    where: { id: cleanId },
+    data: {
+      status,
+      adminNotes: adminNotes || null,
+    },
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: "UPDATE_INQUIRY_STATUS",
+    resource: `inquiry:${cleanId}`,
+    details: `Status set to ${status}`,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/inquiries");
+}
+
+export async function updateSponsorshipStatus(id: string, status: string) {
+  const session = await requireAdminSession(["SUPER_ADMIN", "ADMIN"]);
+  const cleanId = sanitizePlainText(id, 80);
+  const cleanStatus = sanitizePlainText(status, 30);
+
+  if (!cleanId || !ALLOWED_SPONSORSHIP_STATUSES.has(cleanStatus)) {
+    throw new Error("Invalid sponsorship status update");
+  }
+
+  await prisma.sponsorship.update({
+    where: { id: cleanId },
+    data: { paymentStatus: cleanStatus },
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: "UPDATE_SPONSORSHIP_STATUS",
+    resource: `sponsorship:${cleanId}`,
+    details: `Status set to ${cleanStatus}`,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/sponsorships");
+}
+
+export async function createAdminUser(formData: FormData) {
+  const session = await requireAdminSession(["SUPER_ADMIN"]);
+  const name = sanitizePlainText(formData.get("name"), 100);
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const password = String(formData.get("password") || "");
+  const role = sanitizePlainText(formData.get("role") || "COORDINATOR", 30);
+
+  if (!name || !email || !email.includes("@") || password.length < 8) {
+    throw new Error("Provide valid name, email, and a password of at least 8 characters.");
+  }
+
+  if (!["SUPER_ADMIN", "ADMIN", "COORDINATOR", "VET"].includes(role)) {
+    throw new Error("Invalid role assignment");
+  }
+
+  const passwordHash = await hashPassword(password);
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      passwordHash,
+      role,
+      isActive: true,
+    },
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: "CREATE_ADMIN_USER",
+    resource: `user:${user.id}`,
+    details: `Created ${user.role} account for ${user.email}`,
+  });
+
+  revalidatePath("/admin/settings");
+}
+
+export async function toggleAdminUserActive(userId: string, active: boolean) {
+  const session = await requireAdminSession(["SUPER_ADMIN"]);
+  const cleanId = sanitizePlainText(userId, 80);
+  if (!cleanId) throw new Error("Invalid user ID");
+  if (cleanId === session.userId && !active) {
+    throw new Error("You cannot deactivate your own active session account.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: cleanId },
+      data: { isActive: active },
+    });
+    if (!active) {
+      await tx.adminSession.updateMany({
+        where: { userId: cleanId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: active ? "ACTIVATE_ADMIN_USER" : "DEACTIVATE_ADMIN_USER",
+    resource: `user:${cleanId}`,
+  });
+
+  revalidatePath("/admin/settings");
 }

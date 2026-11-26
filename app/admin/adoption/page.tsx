@@ -4,20 +4,48 @@ import Link from "next/link";
 import { approveAdoption, scheduleAdoptionVisit, rejectAdoption, updateAdoptionStatus } from "./actions";
 import { Check, Calendar, X, Home } from "lucide-react";
 
+import type { Prisma } from "@prisma/client";
+
 export const metadata = {
   title: "Adoption Applications | Admin",
 };
 
-export default async function AdminAdoptionPage() {
-  const applications = await prisma.adoptionApplication.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { animal: true },
-  });
+export default async function AdminAdoptionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string }>;
+}) {
+  const sp = await searchParams;
+  const q = sp.q?.trim() || "";
+  const statusFilter = sp.status?.trim() || "All";
 
-  const total = applications.length;
-  const pending = applications.filter((a) => a.status === "Pending" || a.status === "Under Review").length;
-  const scheduled = applications.filter((a) => a.status === "Interview Scheduled" || a.status === "Interview").length;
-  const approved = applications.filter((a) => a.status === "Approved" || a.status === "Adopted").length;
+  const where: Prisma.AdoptionApplicationWhereInput = {};
+  if (statusFilter !== "All") {
+    where.status = statusFilter;
+  }
+  if (q) {
+    where.OR = [
+      { applicantName: { contains: q, mode: "insensitive" } },
+      { email: { contains: q, mode: "insensitive" } },
+      { address: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  const [applications, allStats] = await Promise.all([
+    prisma.adoptionApplication.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { animal: true },
+    }),
+    prisma.adoptionApplication.findMany({
+      select: { status: true },
+    }),
+  ]);
+
+  const total = allStats.length;
+  const pending = allStats.filter((a) => a.status === "Pending" || a.status === "Submitted" || a.status === "Under Review").length;
+  const scheduled = allStats.filter((a) => a.status === "Interview Scheduled" || a.status === "Interview").length;
+  const approved = allStats.filter((a) => a.status === "Approved" || a.status === "Adopted").length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -50,6 +78,42 @@ export default async function AdminAdoptionPage() {
           <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--green-600)", marginTop: "0.25rem" }}>{approved}</div>
         </div>
       </div>
+
+      {/* Filter Bar */}
+      <form
+        method="GET"
+        style={{
+          display: "flex",
+          gap: "0.75rem",
+          flexWrap: "wrap",
+          background: "var(--color-surface)",
+          padding: "1rem",
+          borderRadius: "var(--radius-lg)",
+          border: "1px solid var(--cream-200)",
+        }}
+      >
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search applicant name, email, or city..."
+          className="form-input"
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        <select name="status" defaultValue={statusFilter} className="form-select" style={{ width: 190 }}>
+          <option value="All">All Statuses</option>
+          <option value="Submitted">Submitted</option>
+          <option value="Pending">Pending</option>
+          <option value="Under Review">Under Review</option>
+          <option value="Interview Scheduled">Interview Scheduled</option>
+          <option value="Approved">Approved</option>
+          <option value="Adopted">Adopted</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+        <button type="submit" className="btn btn-primary btn-sm">Filter</button>
+        {(q || statusFilter !== "All") && (
+          <Link href="/admin/adoption" className="btn btn-outline btn-sm">Reset</Link>
+        )}
+      </form>
 
       {/* Main Table */}
       <div style={{ background: "white", borderRadius: "var(--radius-xl)", border: "1px solid var(--cream-200)", boxShadow: "0 4px 16px rgba(0,0,0,0.02)", overflow: "hidden" }}>

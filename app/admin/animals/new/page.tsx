@@ -11,17 +11,19 @@ export default function NewAnimalPage() {
   const router = useRouter();
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMsg(null);
     setSubmitting(true);
     try {
       const formData = new FormData(e.currentTarget);
       await createAnimal(formData);
       router.push("/admin/animals");
+      router.refresh();
     } catch (err) {
-      console.error("Failed to save animal:", err);
-      alert("Failed to save animal. Please check the inputs.");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to save animal. Please check the inputs.");
     } finally {
       setSubmitting(false);
     }
@@ -169,6 +171,23 @@ export default function NewAnimalPage() {
             placeholder="Tell how this animal was rescued, their personality, and what kind of loving home they need..."
           />
         </div>
+
+        {errorMsg && (
+          <div
+            role="alert"
+            style={{
+              padding: "0.85rem 1rem",
+              borderRadius: "var(--radius-md)",
+              background: "hsl(0, 80%, 96%)",
+              border: "1px solid hsl(0, 70%, 82%)",
+              color: "hsl(0, 72%, 38%)",
+              fontSize: "0.88rem",
+              fontWeight: 600,
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
           <button type="submit" disabled={submitting} className="btn btn-primary">

@@ -11,17 +11,19 @@ export default function NewStoryPage() {
   const router = useRouter();
   const [coverImage, setCoverImage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMsg(null);
     setSubmitting(true);
     try {
       const formData = new FormData(e.currentTarget);
       await createStory(formData);
       router.push("/admin/stories");
+      router.refresh();
     } catch (err) {
-      console.error("Failed to publish story:", err);
-      alert("Failed to publish story. Please check required fields.");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to publish story. Please check required fields.");
     } finally {
       setSubmitting(false);
     }
@@ -143,6 +145,23 @@ export default function NewStoryPage() {
             <textarea name="phase_after" className="form-textarea" rows={2} placeholder="Current life today..." />
           </div>
         </div>
+
+        {errorMsg && (
+          <div
+            role="alert"
+            style={{
+              padding: "0.85rem 1rem",
+              borderRadius: "var(--radius-md)",
+              background: "hsl(0, 80%, 96%)",
+              border: "1px solid hsl(0, 70%, 82%)",
+              color: "hsl(0, 72%, 38%)",
+              fontSize: "0.88rem",
+              fontWeight: 600,
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
           <button type="submit" disabled={submitting} className="btn btn-primary">
