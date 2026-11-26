@@ -43,7 +43,7 @@ function CountUp({ target, suffix }: { target: number; suffix: string }) {
         fontSize: "clamp(2.5rem, 4vw, 3.5rem)",
         fontFamily: "var(--font-display)",
         fontWeight: 700,
-        color: "var(--saffron-500)",
+        color: "var(--green-600)",
         lineHeight: 1,
       }}
     >

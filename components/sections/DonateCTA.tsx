@@ -11,7 +11,7 @@ export default function DonateCTA() {
     <section
       className="section"
       style={{
-        background: "linear-gradient(135deg, var(--saffron-600) 0%, var(--saffron-500) 60%, hsl(28,85%,58%) 100%)",
+        background: "linear-gradient(135deg, #14532d 0%, #15803d 58%, #1e6b43 100%)",
         position: "relative",
         overflow: "hidden",
       }}

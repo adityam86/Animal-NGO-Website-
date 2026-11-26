@@ -56,7 +56,7 @@ export default function AdminHeader({ onToggleSidebar, adminUser }: AdminHeaderP
         {/* Mobile Brand Title */}
         <div className="admin-mobile-only" style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
           <span style={{ fontSize: "1.15rem" }}>🐾</span>
-          <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#f97316", fontFamily: "var(--font-display)" }}>
+          <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#15803d", fontFamily: "var(--font-display)" }}>
             Ayudar <span style={{ color: "var(--color-text)", fontWeight: 600 }}>Ops</span>
           </span>
         </div>
@@ -75,7 +75,7 @@ export default function AdminHeader({ onToggleSidebar, adminUser }: AdminHeaderP
               letterSpacing: "0.06em",
             }}
           >
-            <Activity size={15} style={{ color: "var(--saffron-500)" }} />
+            <Activity size={15} style={{ color: "#15803d" }} />
             Operations Command
           </div>
         </div>

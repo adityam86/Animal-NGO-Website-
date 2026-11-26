@@ -68,7 +68,7 @@ export default function AdminSidebar({ isOpen = false, onClose, adminUser }: Adm
                 fontFamily: "var(--font-display)",
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "#f97316",
+                color: "#4ade80",
                 letterSpacing: "-0.01em",
               }}
             >
@@ -140,12 +140,12 @@ export default function AdminSidebar({ isOpen = false, onClose, adminUser }: Adm
                 justifyContent: "space-between",
                 padding: "0.65rem 0.9rem",
                 borderRadius: "var(--radius-md)",
-                color: isActive ? "#fb923c" : "#94a3b8",
+                color: isActive ? "#4ade80" : "#94a3b8",
                 background: isActive
-                  ? "rgba(249, 115, 22, 0.12)"
+                  ? "rgba(34, 197, 94, 0.14)"
                   : "transparent",
                 borderLeft: isActive
-                  ? "3px solid #f97316"
+                  ? "3px solid #22c55e"
                   : "3px solid transparent",
                 textDecoration: "none",
                 fontWeight: isActive ? 700 : 500,
@@ -166,7 +166,7 @@ export default function AdminSidebar({ isOpen = false, onClose, adminUser }: Adm
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <Icon size={17} style={{ color: isActive ? "#f97316" : "#64748b", flexShrink: 0 }} />
+                <Icon size={17} style={{ color: isActive ? "#22c55e" : "#64748b", flexShrink: 0 }} />
                 <span>{item.label}</span>
               </div>
               {item.badge && (
