@@ -30,11 +30,42 @@ const InteractiveMap = dynamic(() => import("@/components/shared/InteractiveMap"
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [inquiryId, setInquiryId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setErrorMsg(null);
+    setSubmitting(true);
+
+    try {
+      const name = (document.getElementById("contact-name") as HTMLInputElement).value.trim();
+      const phone = (document.getElementById("contact-phone") as HTMLInputElement).value.trim();
+      const email = (document.getElementById("contact-email") as HTMLInputElement).value.trim();
+      const subject = (document.getElementById("contact-subject") as HTMLSelectElement).value.trim();
+      const message = (document.getElementById("contact-message") as HTMLTextAreaElement).value.trim();
+
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, email, subject, message }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Could not send your message. Please try again.");
+        return;
+      }
+
+      setInquiryId(data.inquiry?.id || "");
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      setErrorMsg("Network error while sending your message. Please try again shortly.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -161,6 +192,11 @@ export default function ContactPage() {
                   >
                     <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>✉️</div>
                     <h3 style={{ color: "var(--stone-800)", marginBottom: "0.5rem" }}>Message Sent!</h3>
+                    {inquiryId && (
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--green-700)", marginBottom: "0.65rem" }}>
+                        Reference ID: {inquiryId}
+                      </div>
+                    )}
                     <p style={{ color: "var(--stone-600)", lineHeight: 1.75, maxWidth: 400, marginInline: "auto" }}>
                       Thank you for reaching out. We&apos;ll get back to you within 24 hours. For emergencies, please call our rescue hotline.
                     </p>
@@ -214,13 +250,30 @@ export default function ContactPage() {
                         <label className="form-label" htmlFor="contact-message">Message *</label>
                         <textarea id="contact-message" required className="form-textarea" style={{ minHeight: 140 }} placeholder="Tell us how we can help..." />
                       </div>
+                      {errorMsg && (
+                        <div
+                          role="alert"
+                          style={{
+                            padding: "0.8rem 1rem",
+                            borderRadius: "var(--radius-md)",
+                            background: "hsl(0, 80%, 96%)",
+                            border: "1px solid hsl(0, 70%, 82%)",
+                            color: "hsl(0, 72%, 38%)",
+                            fontSize: "0.86rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {errorMsg}
+                        </div>
+                      )}
                       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                         <button
                           type="submit"
+                          disabled={submitting}
                           className="btn btn-primary btn-lg"
                           style={{ width: "100%", justifyContent: "center", gap: "0.5rem", fontSize: "1.05rem" }}
                         >
-                          <Send size={18} /> Send Message
+                          <Send size={18} /> {submitting ? "Sending..." : "Send Message"}
                         </button>
                       </motion.div>
                     </form>

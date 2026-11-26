@@ -1,9 +1,50 @@
 import Link from "next/link";
+import prisma from "@/lib/prisma";
 import StoryCard from "@/components/shared/StoryCard";
 import { STORIES } from "@/lib/data";
 import FadeIn from "@/components/motion/FadeIn";
 
-export default function StoriesSection() {
+export default async function StoriesSection() {
+  let stories: Array<{
+    slug: string;
+    title: string;
+    subtitle: string;
+    date: string;
+    readTime: string;
+    coverImage: string;
+    outcome: string;
+    excerpt: string;
+    animal: string;
+  }> = [];
+
+  try {
+    const dbStories = await prisma.story.findMany({
+      orderBy: { date: "desc" },
+      take: 3,
+      select: {
+        slug: true,
+        title: true,
+        subtitle: true,
+        date: true,
+        readTime: true,
+        coverImage: true,
+        outcome: true,
+        excerpt: true,
+        animal: true,
+      },
+    });
+    stories = dbStories.map((s) => ({
+      ...s,
+      date: s.date.toISOString(),
+    }));
+  } catch {
+    stories = [];
+  }
+
+  if (stories.length === 0) {
+    stories = STORIES;
+  }
+
   return (
     <section className="section" style={{ background: "var(--cream-50)" }}>
       <div className="container">
@@ -39,7 +80,7 @@ export default function StoriesSection() {
             justifyContent: "center",
           }}
         >
-          {STORIES.map((story, idx) => (
+          {stories.map((story, idx) => (
             <FadeIn key={story.slug} delay={idx * 0.1} direction="up" distance={20}>
               <StoryCard {...story} />
             </FadeIn>

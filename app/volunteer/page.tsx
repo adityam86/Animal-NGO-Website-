@@ -22,6 +22,7 @@ const availability = ["Weekdays", "Weekends", "Evenings only", "Full-time (tempo
 export default function VolunteerPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedAvail, setSelectedAvail] = useState<string[]>([]);
 
@@ -60,15 +61,15 @@ export default function VolunteerPage() {
         }),
       });
 
+      const resData = await res.json().catch(() => ({}));
       if (res.ok) {
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        alert("Failed to submit application.");
+        setErrorMsg(resData.error || "Failed to submit volunteer application. Please check all required fields.");
       }
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred.");
+    } catch {
+      setErrorMsg("Network error while submitting application. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -255,6 +256,23 @@ export default function VolunteerPage() {
                 <label className="form-label" htmlFor="vol-experience">Skills / Experience (optional)</label>
                 <textarea id="vol-experience" className="form-textarea" placeholder="Tell us about any relevant skills — driving, photography, handling dogs/cats/cows, first aid, translation..." />
               </div>
+
+              {errorMsg && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: "0.85rem 1rem",
+                    borderRadius: "var(--radius-md)",
+                    background: "hsl(0, 80%, 96%)",
+                    border: "1px solid hsl(0, 70%, 82%)",
+                    color: "hsl(0, 72%, 38%)",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {errorMsg}
+                </div>
+              )}
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <button disabled={submitting} type="submit" className="btn btn-green btn-lg" style={{ width: "100%", justifyContent: "center", fontSize: "1.05rem" }}>

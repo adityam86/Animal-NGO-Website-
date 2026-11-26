@@ -31,6 +31,7 @@ function AdoptionContent() {
   const selectedAnimalId = manualAnimalId !== null ? manualAnimalId : preselectedAnimalId;
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadAnimals() {
@@ -53,6 +54,7 @@ function AdoptionContent() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMsg(null);
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -64,6 +66,7 @@ function AdoptionContent() {
       address: formData.get("address"),
       occupation: formData.get("occupation"),
       hasPets: formData.get("hasPets") !== "No pets",
+      petDetails: String(formData.get("hasPets") || ""),
       homeType: formData.get("homeType"),
       familyMembers: formData.get("familyMembers"),
       reason: formData.get("reason"),
@@ -76,15 +79,15 @@ function AdoptionContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      const resData = await res.json().catch(() => ({}));
       if (res.ok) {
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        alert("Failed to submit adoption application. Please try again.");
+        setErrorMsg(resData.error || "Failed to submit adoption application. Please review your details.");
       }
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred.");
+    } catch {
+      setErrorMsg("Network error while submitting application. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -274,6 +277,23 @@ function AdoptionContent() {
                   placeholder="Tell us about your lifestyle and why you'd provide a great loving home for this animal..."
                 />
               </div>
+
+              {errorMsg && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: "0.85rem 1rem",
+                    borderRadius: "var(--radius-md)",
+                    background: "hsl(0, 80%, 96%)",
+                    border: "1px solid hsl(0, 70%, 82%)",
+                    color: "hsl(0, 72%, 38%)",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {errorMsg}
+                </div>
+              )}
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <button
