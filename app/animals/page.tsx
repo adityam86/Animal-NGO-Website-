@@ -6,11 +6,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import AnimalCard from "@/components/shared/AnimalCard";
 import FadeIn from "@/components/motion/FadeIn";
 
+interface AnimalItem {
+  id: string;
+  name: string;
+  type: string;
+  breed: string;
+  gender: string;
+  age: string;
+  location: string;
+  status: string;
+  image: string;
+  vaccinated: boolean;
+  sterilized: boolean;
+}
+
 const types = ["All", "Dog", "Cat", "Cow", "Other"];
 const statuses = ["All", "Available for Adoption", "Sponsored", "Under Treatment"];
 
 export default function AnimalsPage() {
-  const [animals, setAnimals] = useState<any[]>([]);
+  const [animals, setAnimals] = useState<AnimalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -21,7 +35,7 @@ export default function AnimalsPage() {
         const res = await fetch("/api/animals");
         if (res.ok) {
           const data = await res.json();
-          setAnimals(data);
+          setAnimals(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error("Failed to fetch animals:", err);
@@ -57,8 +71,9 @@ export default function AnimalsPage() {
 
       {/* Filters */}
       <section
+        className="sticky-filter-bar"
         style={{
-          background: "rgba(255,255,255,0.95)",
+          background: "var(--navbar-bg-scrolled)",
           backdropFilter: "blur(10px)",
           borderBottom: "1px solid var(--cream-200)",
           padding: "1.25rem 0",
@@ -86,7 +101,7 @@ export default function AnimalsPage() {
                     borderRadius: "var(--radius-full)",
                     border: "1.5px solid",
                     borderColor: typeFilter === t ? "var(--saffron-500)" : "var(--cream-300)",
-                    background: typeFilter === t ? "var(--saffron-50)" : "white",
+                    background: typeFilter === t ? "var(--saffron-50)" : "var(--color-surface)",
                     color: typeFilter === t ? "var(--saffron-700)" : "var(--stone-600)",
                     fontWeight: 600,
                     fontSize: "0.82rem",
@@ -115,7 +130,7 @@ export default function AnimalsPage() {
                     borderRadius: "var(--radius-full)",
                     border: "1.5px solid",
                     borderColor: statusFilter === s ? "var(--green-500)" : "var(--cream-300)",
-                    background: statusFilter === s ? "var(--green-50)" : "white",
+                    background: statusFilter === s ? "var(--green-50)" : "var(--color-surface)",
                     color: statusFilter === s ? "var(--green-700)" : "var(--stone-600)",
                     fontWeight: 600,
                     fontSize: "0.82rem",

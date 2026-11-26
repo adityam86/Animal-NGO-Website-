@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useCallback, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
@@ -12,56 +12,83 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
+function applyThemeToDom(t: Theme) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (t === "dark") {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
+}
 
-  useEffect(() => {
-    setMounted(true);
-    // 1. Read stored preference or system default
-    const stored = localStorage.getItem("ayudar_theme") as Theme | null;
+function getClientThemeSnapshot(): Theme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const stored = localStorage.getItem("ayudar_theme");
     if (stored === "dark" || stored === "light") {
-      setThemeState(stored);
-      applyTheme(stored);
-    } else {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = prefersDark ? "dark" : "light";
-      setThemeState(initialTheme);
-      applyTheme(initialTheme);
+      return stored;
     }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
 
-    // 2. Listen to OS changes if no manual preference stored
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem("ayudar_theme")) {
-        const nextTheme = e.matches ? "dark" : "light";
-        setThemeState(nextTheme);
-        applyTheme(nextTheme);
-      }
-    };
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
+function getServerThemeSnapshot(): Theme {
+  return "light";
+}
+
+function subscribeTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const handleMediaChange = () => {
+    if (!localStorage.getItem("ayudar_theme")) {
+      applyThemeToDom(getClientThemeSnapshot());
+      callback();
+    }
+  };
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === "ayudar_theme") {
+      applyThemeToDom(getClientThemeSnapshot());
+      callback();
+    }
+  };
+
+  mediaQuery.addEventListener("change", handleMediaChange);
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener("ayudar-theme-change", callback);
+
+  return () => {
+    mediaQuery.removeEventListener("change", handleMediaChange);
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("ayudar-theme-change", callback);
+  };
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    getClientThemeSnapshot,
+    getServerThemeSnapshot
+  );
+
+  const setTheme = useCallback((newTheme: Theme) => {
+    try {
+      localStorage.setItem("ayudar_theme", newTheme);
+    } catch {
+      // Ignore storage quota errors
+    }
+    applyThemeToDom(newTheme);
+    window.dispatchEvent(new Event("ayudar-theme-change"));
   }, []);
 
-  const applyTheme = (t: Theme) => {
-    const root = document.documentElement;
-    if (t === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  };
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem("ayudar_theme", newTheme);
-    applyTheme(newTheme);
-  };
-
-  const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
+  const toggleTheme = useCallback(() => {
+    const current = getClientThemeSnapshot();
+    const next: Theme = current === "light" ? "dark" : "light";
     setTheme(next);
-  };
+  }, [setTheme]);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

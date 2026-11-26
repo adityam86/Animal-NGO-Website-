@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
-import Link from "next/link";
-import { Download, FileText, TrendingUp, ShieldAlert, Heart, Activity } from "lucide-react";
+import { Download, FileText, TrendingUp, ShieldAlert, Heart } from "lucide-react";
 
 export default async function AdminReportsPage() {
   const [
@@ -124,7 +123,7 @@ export default async function AdminReportsPage() {
       </div>
 
       {/* Categorized Stats Charts */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+      <div className="admin-split-1-1">
         
         {/* Donations by Purpose */}
         <div style={{ background: "white", padding: "2rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)" }}>

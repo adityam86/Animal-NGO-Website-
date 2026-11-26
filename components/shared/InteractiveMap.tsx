@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 export type Facility = {
@@ -71,16 +72,32 @@ export default function InteractiveMap({
   onLocationSelect,
 }: InteractiveMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<Leaflet.Map | null>(null);
+  const markerRef = useRef<Leaflet.Marker | null>(null);
 
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(
     selectedLat && selectedLng ? { lat: selectedLat, lng: selectedLng } : null
   );
 
+  // Store latest callback & initial config in refs so map initializes once cleanly
+  const onLocationSelectRef = useRef(onLocationSelect);
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
+
+  const initConfigRef = useRef({
+    mode,
+    initialLat,
+    initialLng,
+    zoom,
+    facilities,
+    initialCoords: selectedLat && selectedLng ? { lat: selectedLat, lng: selectedLng } : null,
+  });
+
   useEffect(() => {
     let isMounted = true;
+    const cfg = initConfigRef.current;
 
     async function initMap() {
       if (!mapContainerRef.current || mapInstanceRef.current) return;
@@ -90,20 +107,20 @@ export default function InteractiveMap({
       if (!isMounted || !mapContainerRef.current) return;
 
       const map = L.map(mapContainerRef.current, {
-        center: currentCoords ? [currentCoords.lat, currentCoords.lng] : [initialLat, initialLng],
-        zoom: zoom,
+        center: cfg.initialCoords
+          ? [cfg.initialCoords.lat, cfg.initialCoords.lng]
+          : [cfg.initialLat, cfg.initialLng],
+        zoom: cfg.zoom,
         zoomControl: true,
       });
 
       mapInstanceRef.current = map;
 
-      // OpenStreetMap clean tile layer
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
 
-      // SVG Pin for Emergency Picker
       const createEmergencyIcon = () =>
         L.divIcon({
           className: "custom-map-pin",
@@ -128,7 +145,6 @@ export default function InteractiveMap({
           popupAnchor: [0, -36],
         });
 
-      // SVG Pin for Facilities
       const createFacilityIcon = (emoji: string) =>
         L.divIcon({
           className: "facility-map-pin",
@@ -153,8 +169,8 @@ export default function InteractiveMap({
           popupAnchor: [0, -22],
         });
 
-      if (mode === "facilities") {
-        facilities.forEach((fac) => {
+      if (cfg.mode === "facilities") {
+        cfg.facilities.forEach((fac) => {
           const m = L.marker([fac.lat, fac.lng], {
             icon: createFacilityIcon(fac.icon || "🏠"),
           }).addTo(map);
@@ -177,13 +193,11 @@ export default function InteractiveMap({
           `);
         });
 
-        // Fit bounds to facilities
-        if (facilities.length > 1) {
-          const group = L.featureGroup(facilities.map((f) => L.marker([f.lat, f.lng])));
+        if (cfg.facilities.length > 1) {
+          const group = L.featureGroup(cfg.facilities.map((f) => L.marker([f.lat, f.lng])));
           map.fitBounds(group.getBounds().pad(0.2));
         }
       } else {
-        // Picker mode
         const placeOrUpdateMarker = async (lat: number, lng: number) => {
           if (markerRef.current) {
             markerRef.current.setLatLng([lat, lng]);
@@ -193,11 +207,12 @@ export default function InteractiveMap({
               draggable: true,
             }).addTo(map);
 
-            markerRef.current.on("dragend", async (e: any) => {
-              const pos = e.target.getLatLng();
+            markerRef.current.on("dragend", async (e: Leaflet.LeafletEvent) => {
+              const target = e.target as Leaflet.Marker;
+              const pos = target.getLatLng();
               setCurrentCoords({ lat: pos.lat, lng: pos.lng });
               const addr = await reverseGeocode(pos.lat, pos.lng);
-              if (onLocationSelect) onLocationSelect(pos.lat, pos.lng, addr);
+              onLocationSelectRef.current?.(pos.lat, pos.lng, addr);
             });
           }
 
@@ -205,14 +220,14 @@ export default function InteractiveMap({
           map.panTo([lat, lng]);
 
           const addr = await reverseGeocode(lat, lng);
-          if (onLocationSelect) onLocationSelect(lat, lng, addr);
+          onLocationSelectRef.current?.(lat, lng, addr);
         };
 
-        if (currentCoords) {
-          placeOrUpdateMarker(currentCoords.lat, currentCoords.lng);
+        if (cfg.initialCoords) {
+          placeOrUpdateMarker(cfg.initialCoords.lat, cfg.initialCoords.lng);
         }
 
-        map.on("click", (e: any) => {
+        map.on("click", (e: Leaflet.LeafletMouseEvent) => {
           placeOrUpdateMarker(e.latlng.lat, e.latlng.lng);
         });
       }
@@ -229,7 +244,6 @@ export default function InteractiveMap({
     };
   }, []);
 
-  // Handle GPS button click
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser.");
@@ -259,9 +273,7 @@ export default function InteractiveMap({
         }
 
         const addr = await reverseGeocode(lat, lng);
-        if (onLocationSelect) {
-          onLocationSelect(lat, lng, addr);
-        }
+        onLocationSelectRef.current?.(lat, lng, addr);
       },
       (err) => {
         setLoadingLocation(false);

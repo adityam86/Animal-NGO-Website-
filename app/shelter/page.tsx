@@ -30,7 +30,7 @@ export default function ShelterPage() {
             <div className="section-tag" style={{ background: "hsla(142,55%,35%,0.25)", color: "var(--green-200)" }}>Our Shelter</div>
             <h1 style={{ color: "white", marginBottom: "0.75rem" }}>A Safe Place Called Home</h1>
             <p style={{ color: "hsla(0,0%,100%,0.8)", fontSize: "1.05rem", lineHeight: 1.8 }}>
-              Our shelter is more than a building — it's the place where animals begin their journey from pain to hope. Every corner is designed for animal wellbeing.
+              Our shelter is more than a building — it&apos;s the place where animals begin their journey from pain to hope. Every corner is designed for animal wellbeing.
             </p>
           </div>
         </div>

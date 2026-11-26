@@ -126,7 +126,7 @@ const GENERAL_KNOWLEDGE = [
   },
   {
     keywords: ["gaushala", "cow sanctuary", "cows", "cattle"],
-    response: "🐄 AYUDAR GAUSHALA:\n\nOur sanctuary provides lifetime care, nutritious green fodder, and medical treatments for over 45 rescued cows, calves, and retired working cattle. Learn more at `/gaushala`!"
+    response: "🐄 AYUDAR GAUSHALA:\n\nOur sanctuary provides lifetime care, nutritious green fodder, and medical treatments for over 45 rescued cows, calves, and retired working cattle. Learn more at `/cow-care`!"
   },
   {
     keywords: ["location", "address", "raniganj", "contact", "timing", "shelter"],

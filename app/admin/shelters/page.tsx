@@ -27,7 +27,7 @@ export default async function AdminSheltersPage() {
         <p style={{ color: "var(--stone-500)" }}>Manage shelter capacities, facilities, and animal housing assignments.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem", alignItems: "flex-start", marginBottom: "3rem" }}>
+      <div className="admin-split-2-1" style={{ marginBottom: "2.5rem" }}>
         {/* Shelter List */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {shelters.length === 0 ? (
@@ -42,7 +42,7 @@ export default async function AdminSheltersPage() {
 
             return (
               <div key={shelter.id} style={{ background: "white", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)", padding: "2rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
                   <div>
                     <h3 style={{ fontSize: "1.25rem", color: "var(--stone-800)", marginBottom: "0.25rem" }}>{shelter.name}</h3>
                     <p style={{ fontSize: "0.85rem", color: "var(--stone-500)", margin: 0 }}>📍 {shelter.address}</p>
@@ -109,7 +109,7 @@ export default async function AdminSheltersPage() {
                 <label className="form-label">Address *</label>
                 <input name="address" required className="form-input" placeholder="e.g. GT Road, Raniganj" />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="responsive-grid-2">
                 <div className="form-group">
                   <label className="form-label">Capacity *</label>
                   <input type="number" name="capacity" required className="form-input" placeholder="e.g. 50" min="1" />
@@ -138,7 +138,7 @@ export default async function AdminSheltersPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 {unassignedAnimals.map((animal) => (
-                  <div key={animal.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", borderRadius: "var(--radius-md)", border: "1px solid var(--cream-200)", background: "var(--cream-50)" }}>
+                  <div key={animal.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", padding: "0.75rem", borderRadius: "var(--radius-md)", border: "1px solid var(--cream-200)", background: "var(--cream-50)" }}>
                     <div style={{ fontSize: "0.85rem" }}>
                       <strong>{animal.name}</strong> ({animal.type})
                     </div>

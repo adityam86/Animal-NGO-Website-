@@ -5,6 +5,8 @@ import BeforeAfterSlider from "@/components/shared/BeforeAfterSlider";
 import prisma from "@/lib/prisma";
 import FadeIn from "@/components/motion/FadeIn";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Rescue Stories | Ayudar",
   description: "Read inspiring rescue stories from Ayudar Animal Welfare Foundation — before, rescue, treatment, recovery, after.",

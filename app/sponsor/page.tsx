@@ -1,18 +1,45 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import FadeIn from "@/components/motion/FadeIn";
 
 type Animal = { id: string; name: string; type: string; image: string };
 
+interface RazorpayResponse {
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpayResponse) => Promise<void> | void;
+  prefill: { name: string; email: string; contact: string };
+  theme: { color: string };
+}
+
+interface RazorpayInstance {
+  on: (event: string, cb: () => void) => void;
+  open: () => void;
+}
+
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+
 function SponsorForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const preselectedAnimalId = searchParams.get("animal") || "";
   const [loading, setLoading] = useState(false);
   const [animals, setAnimals] = useState<Animal[]>([]);
-  const [selectedAnimal, setSelectedAnimal] = useState(preselectedAnimalId);
+  const [manualAnimalId, setManualAnimalId] = useState<string | null>(null);
+  const selectedAnimal = manualAnimalId !== null ? manualAnimalId : preselectedAnimalId;
 
   useEffect(() => {
     fetch("/api/animals")
@@ -24,14 +51,12 @@ function SponsorForm() {
       .catch((err) => console.error("Failed to load animals for sponsor:", err));
   }, []);
 
-  useEffect(() => {
-    if (preselectedAnimalId) {
-      setSelectedAnimal(preselectedAnimalId);
-    }
-  }, [preselectedAnimalId]);
-
   const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof window !== "undefined" && (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay) {
+        resolve(true);
+        return;
+      }
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
@@ -46,12 +71,12 @@ function SponsorForm() {
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      sponsorName: formData.get("sponsorName"),
-      sponsorPhone: formData.get("sponsorPhone"),
-      sponsorEmail: formData.get("sponsorEmail"),
+      sponsorName: String(formData.get("sponsorName") || "").trim(),
+      sponsorPhone: String(formData.get("sponsorPhone") || "").trim(),
+      sponsorEmail: String(formData.get("sponsorEmail") || "").trim(),
       animalId: formData.get("animalId") || null,
-      tier: formData.get("tier"),
-      frequency: formData.get("frequency"),
+      tier: String(formData.get("tier") || "Food - 500"),
+      frequency: String(formData.get("frequency") || "Monthly"),
     };
 
     try {
@@ -64,22 +89,14 @@ function SponsorForm() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to initiate sponsorship");
 
-      // 2. Load Razorpay
-      const resScript = await loadRazorpayScript();
-      if (!resScript) {
-        alert("Razorpay SDK failed to load. Are you online?");
-        setLoading(false);
-        return;
-      }
-
-      // 3. Create Order
+      // 2. Create Order
       const tierMap: Record<string, number> = {
         "Food - 500": 500,
         "Medical - 1000": 1000,
         "Care - 1500": 1500,
         "Full Care - 3000": 3000,
       };
-      const amount = tierMap[data.tier as string] || 500;
+      const amount = tierMap[data.tier] || 500;
 
       const orderRes = await fetch("/api/create-order", {
         method: "POST",
@@ -87,34 +104,56 @@ function SponsorForm() {
         body: JSON.stringify({ amount, purpose: `Sponsorship: ${data.tier}` }),
       });
       const order = await orderRes.json();
+      if (!orderRes.ok) throw new Error(order.error || "Failed to create order");
 
-      // 4. Open Razorpay Checkout
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_dummy",
+      const completeVerification = async (paymentParams: RazorpayResponse) => {
+        const verifyRes = await fetch("/api/verify-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_order_id: paymentParams.razorpay_order_id || order.id,
+            razorpay_payment_id: paymentParams.razorpay_payment_id || `pay_mock_${Date.now()}`,
+            razorpay_signature: paymentParams.razorpay_signature || "sig_mock",
+            sponsorshipId: result.sponsorship.id,
+          }),
+        });
+        const verifyResult = await verifyRes.json();
+        if (verifyResult.success) {
+          alert("Payment Successful! Thank you for your sponsorship.");
+          router.push("/cow-care");
+        } else {
+          alert("Payment verification failed.");
+        }
+      };
+
+      // 3. Presentation / Demo Mode when Razorpay live keys are absent
+      if (order.isMock) {
+        await completeVerification({});
+        return;
+      }
+
+      // 4. Load Live Razorpay Checkout
+      const resScript = await loadRazorpayScript();
+      if (!resScript) {
+        alert("Razorpay SDK failed to load. Are you online?");
+        return;
+      }
+
+      const RazorpayClass = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
+      if (!RazorpayClass) {
+        alert("Payment gateway unavailable.");
+        return;
+      }
+
+      const options: RazorpayOptions = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
         amount: order.amount,
         currency: order.currency,
         name: "Ayudar Animal Welfare",
         description: "Sponsorship",
         order_id: order.id,
-        handler: async function (response: any) {
-          // 5. Verify Payment
-          const verifyRes = await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id || order.id,
-              razorpay_payment_id: response.razorpay_payment_id || "pay_mock",
-              razorpay_signature: response.razorpay_signature || "sig_mock",
-              sponsorshipId: result.sponsorship.id,
-            }),
-          });
-          const verifyResult = await verifyRes.json();
-          if (verifyResult.success) {
-            alert("Payment Successful! Thank you for your sponsorship.");
-            window.location.href = "/cow-care";
-          } else {
-            alert("Payment verification failed.");
-          }
+        handler: async (response: RazorpayResponse) => {
+          await completeVerification(response);
         },
         prefill: {
           name: data.sponsorName,
@@ -126,8 +165,8 @@ function SponsorForm() {
         },
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on("payment.failed", function () {
+      const rzp = new RazorpayClass(options);
+      rzp.on("payment.failed", () => {
         alert("Payment failed. Please try again.");
       });
       rzp.open();
@@ -145,7 +184,7 @@ function SponsorForm() {
         onSubmit={handleSubmit}
         style={{
           background: "white",
-          padding: "2.5rem",
+          padding: "2rem",
           borderRadius: "var(--radius-xl)",
           border: "1px solid var(--cream-200)",
           display: "flex",
@@ -159,7 +198,7 @@ function SponsorForm() {
           <select
             name="animalId"
             value={selectedAnimal}
-            onChange={(e) => setSelectedAnimal(e.target.value)}
+            onChange={(e) => setManualAnimalId(e.target.value)}
             className="form-select"
           >
             <option value="">General Fund (No specific animal)</option>
@@ -171,7 +210,7 @@ function SponsorForm() {
           </select>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label" style={{ fontWeight: 600 }}>Sponsorship Tier</label>
             <select name="tier" required className="form-select">
@@ -197,7 +236,7 @@ function SponsorForm() {
           <input name="sponsorName" required className="form-input" placeholder="Full name" />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label" style={{ fontWeight: 600 }}>Phone *</label>
             <input name="sponsorPhone" required type="tel" className="form-input" placeholder="+91 XXXXX XXXXX" />
@@ -215,7 +254,7 @@ function SponsorForm() {
             className="btn btn-primary btn-lg"
             style={{ width: "100%", justifyContent: "center", marginTop: "0.5rem", fontSize: "1.05rem" }}
           >
-            {loading ? "Processing..." : "Continue to Payment (Razorpay)"}
+            {loading ? "Processing..." : "Continue to Payment"}
           </button>
         </motion.div>
       </form>

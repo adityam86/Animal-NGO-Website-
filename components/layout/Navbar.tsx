@@ -125,7 +125,7 @@ export default function Navbar() {
               borderTop: "1px solid var(--cream-200)",
               overflow: "hidden",
             }}
-            className="hide-desktop"
+            className="hide-desktop mobile-nav-drawer"
           >
             <div style={{ padding: "1.25rem 1rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {NAV_LINKS.map((link) => (

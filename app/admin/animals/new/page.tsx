@@ -55,7 +55,7 @@ export default function NewAnimalPage() {
         onSubmit={handleSubmit}
         style={{
           background: "white",
-          padding: "2rem",
+          padding: "1.5rem",
           borderRadius: "var(--radius-lg)",
           border: "1px solid var(--cream-200)",
           display: "flex",
@@ -64,7 +64,7 @@ export default function NewAnimalPage() {
         }}
       >
         {/* Photo Upload with Live Preview */}
-        <div style={{ background: "var(--cream-50)", padding: "1.5rem", borderRadius: "var(--radius-md)", border: "1px solid var(--cream-200)" }}>
+        <div style={{ background: "var(--cream-50)", padding: "1.25rem", borderRadius: "var(--radius-md)", border: "1px solid var(--cream-200)" }}>
           <ImageUploader
             label="Animal Photo *"
             value={imageUrl}
@@ -73,7 +73,7 @@ export default function NewAnimalPage() {
           <input type="hidden" name="image" value={imageUrl} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label">Name *</label>
             <input name="name" required className="form-input" placeholder="e.g. Bruno, Bella..." />
@@ -92,7 +92,7 @@ export default function NewAnimalPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label">Breed *</label>
             <input name="breed" required className="form-input" placeholder="e.g. Indian Pariah, Domestic Short Hair..." />
@@ -107,7 +107,7 @@ export default function NewAnimalPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label">Age *</label>
             <input name="age" required className="form-input" placeholder="e.g. ~2 years, 4 months" />
@@ -118,7 +118,7 @@ export default function NewAnimalPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label">Status *</label>
             <select name="status" required className="form-select">
@@ -136,7 +136,7 @@ export default function NewAnimalPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div className="responsive-grid-2">
           <div className="form-group">
             <label className="form-label">Shelter Facility *</label>
             <input name="shelter" required className="form-input" defaultValue="Ayudar Main Shelter" placeholder="Ayudar Main Shelter" />
@@ -147,7 +147,7 @@ export default function NewAnimalPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "2rem", marginBlock: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap", marginBlock: "0.5rem" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.9rem", fontWeight: 600 }}>
             <input type="checkbox" name="vaccinated" defaultChecked /> Vaccinated
           </label>

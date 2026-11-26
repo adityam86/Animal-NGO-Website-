@@ -26,8 +26,8 @@ export default function EmergencyFAB() {
           className="hide-desktop"
           style={{
             position: "fixed",
-            bottom: "1.5rem",
-            right: "1.5rem",
+            bottom: "1.25rem",
+            left: "1rem",
             zIndex: 999,
           }}
         >
@@ -36,8 +36,8 @@ export default function EmergencyFAB() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "0.6rem",
-              padding: "0.85rem 1.3rem",
+              gap: "0.5rem",
+              padding: "0.75rem 1.05rem",
               background: "hsl(0, 80%, 50%)",
               color: "white",
               borderRadius: "var(--radius-full)",

@@ -93,7 +93,7 @@ export default function AIChatbot() {
   };
 
   return (
-    <div style={{ position: "fixed", bottom: "2rem", right: "2rem", zIndex: 9999, fontFamily: "inherit" }}>
+    <div style={{ position: "fixed", bottom: "1.25rem", right: "1rem", zIndex: 9999, fontFamily: "inherit" }}>
       {/* Floating Toggle Button */}
       {!isOpen && (
         <button

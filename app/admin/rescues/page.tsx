@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import Image from "next/image";
 import { updateRescueStatus } from "../actions";
 
 export default async function AdminRescuesPage() {
@@ -8,12 +9,12 @@ export default async function AdminRescuesPage() {
   });
 
   const availableStatuses = [
-    "Report Received",
-    "Assigned to Team",
-    "Team Dispatched",
+    "Reported",
+    "Assigned",
+    "On The Way",
     "Rescued",
-    "In Treatment",
-    "Completed"
+    "Treatment",
+    "Closed"
   ];
 
   return (
@@ -94,9 +95,12 @@ export default async function AdminRescuesPage() {
                           {photoUrl && (
                             <div style={{ marginTop: "4px" }}>
                               <a href={photoUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block" }}>
-                                <img
+                                <Image
                                   src={photoUrl}
                                   alt="Incident photo"
+                                  width={180}
+                                  height={80}
+                                  unoptimized
                                   style={{
                                     height: "80px",
                                     width: "auto",

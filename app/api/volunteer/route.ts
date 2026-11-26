@@ -1,24 +1,31 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+    const parsedAge = parseInt(String(data.age), 10);
 
     const newVolunteer = await prisma.volunteer.create({
       data: {
-        name: data.name,
-        age: parseInt(data.age),
-        phone: data.phone,
-        email: data.email,
-        location: data.location || null,
-        experience: data.experience || null,
+        name: String(data.name || "").trim(),
+        age: Number.isFinite(parsedAge) && parsedAge > 0 ? parsedAge : 18,
+        phone: String(data.phone || "").trim(),
+        email: String(data.email || "").trim(),
+        location: data.location ? String(data.location).trim() : null,
+        experience: data.experience ? String(data.experience).trim() : null,
         roles: {
-          create: data.roles?.map((role: string) => ({ role })) || [],
+          create: Array.isArray(data.roles)
+            ? data.roles.map((role: string) => ({ role: String(role) }))
+            : [],
         },
         availabilities: {
-          create: data.availability?.map((avail: string) => ({ availability: avail })) || [],
-        }
+          create: Array.isArray(data.availability)
+            ? data.availability.map((avail: string) => ({ availability: String(avail) }))
+            : [],
+        },
       },
     });
 

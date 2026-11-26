@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import FadeIn from "@/components/motion/FadeIn";
 import BeforeAfterSlider from "@/components/shared/BeforeAfterSlider";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const animal = await prisma.animal.findUnique({ where: { id } });
@@ -63,7 +65,14 @@ export default async function AnimalProfilePage({ params }: { params: Promise<{ 
                   border: "1px solid var(--cream-200)",
                 }}
               >
-                <Image src={animal.image} alt={animal.name} fill style={{ objectFit: "cover" }} priority />
+                <Image
+                  src={animal.image}
+                  alt={animal.name}
+                  fill
+                  unoptimized={animal.image.startsWith("data:")}
+                  style={{ objectFit: "cover" }}
+                  priority
+                />
                 <div
                   style={{
                     position: "absolute",
@@ -98,7 +107,7 @@ export default async function AnimalProfilePage({ params }: { params: Promise<{ 
                 </p>
 
                 {/* Details grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+                <div className="responsive-grid-2" style={{ marginBottom: "1.5rem" }}>
                   <div style={{ background: "white", borderRadius: "var(--radius-lg)", padding: "1.1rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
                     <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--stone-400)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.35rem" }}>Rescue Date</div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontWeight: 600, color: "var(--stone-800)", fontSize: "0.92rem" }}>

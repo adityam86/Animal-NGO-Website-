@@ -8,6 +8,8 @@ import FadeIn from "@/components/motion/FadeIn";
 import HoverCard from "@/components/motion/HoverCard";
 import BeforeAfterSlider from "@/components/shared/BeforeAfterSlider";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const story = await prisma.story.findUnique({ where: { slug } });
@@ -115,7 +117,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
               afterImage={
                 story.slug === "lakshmi-the-highway-cow"
                   ? "/images/cow_lakshmi.jpg"
-                  : story.slug === "bruno-from-streets-to-sofa"
+                  : story.slug === "bruno-road-to-recovery"
                   ? "/images/dog_bruno.jpg"
                   : story.coverImage
               }
@@ -147,11 +149,12 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
                     <div
                       style={{
                         display: "flex",
-                        gap: "2rem",
+                        flexWrap: "wrap",
+                        gap: "1.5rem",
                         alignItems: "flex-start",
                         background: "white",
                         borderRadius: "var(--radius-xl)",
-                        padding: "2rem",
+                        padding: "1.75rem",
                         border: "1px solid var(--cream-200)",
                         boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
                       }}

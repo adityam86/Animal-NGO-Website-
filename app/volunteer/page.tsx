@@ -21,6 +21,7 @@ const availability = ["Weekdays", "Weekends", "Evenings only", "Full-time (tempo
 
 export default function VolunteerPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedAvail, setSelectedAvail] = useState<string[]>([]);
 
@@ -35,6 +36,7 @@ export default function VolunteerPage() {
       alert("Please select at least one role.");
       return;
     }
+    setSubmitting(true);
     try {
       const name = (document.getElementById("vol-name") as HTMLInputElement).value;
       const age = (document.getElementById("vol-age") as HTMLInputElement).value;
@@ -67,6 +69,8 @@ export default function VolunteerPage() {
     } catch (err) {
       console.error(err);
       alert("An error occurred.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -158,9 +162,9 @@ export default function VolunteerPage() {
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
               {/* Personal info */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Personal Information</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="vol-name">Full Name *</label>
                     <input id="vol-name" required className="form-input" placeholder="Your full name" />
@@ -170,7 +174,7 @@ export default function VolunteerPage() {
                     <input id="vol-age" required type="number" min="14" className="form-input" placeholder="e.g. 22" />
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="vol-phone">Phone Number *</label>
                     <input id="vol-phone" required type="tel" className="form-input" placeholder="+91 XXXXX XXXXX" />
@@ -253,8 +257,8 @@ export default function VolunteerPage() {
               </div>
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <button type="submit" className="btn btn-green btn-lg" style={{ width: "100%", justifyContent: "center", fontSize: "1.05rem" }}>
-                  🙌 Submit Volunteer Application
+                <button disabled={submitting} type="submit" className="btn btn-green btn-lg" style={{ width: "100%", justifyContent: "center", fontSize: "1.05rem" }}>
+                  {submitting ? "Submitting..." : "🙌 Submit Volunteer Application"}
                 </button>
               </motion.div>
             </form>

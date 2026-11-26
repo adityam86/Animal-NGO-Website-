@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -10,17 +11,20 @@ export async function GET(request: Request) {
     const status = searchParams.get("status");
     const limit = searchParams.get("limit");
 
-    const where: any = {};
+    const where: Prisma.AnimalWhereInput = {};
     if (type) where.type = type;
     if (status) where.status = status;
 
-    const queryOptions: any = {
+    const queryOptions: Prisma.AnimalFindManyArgs = {
       where,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     };
 
     if (limit) {
-      queryOptions.take = parseInt(limit);
+      const parsed = parseInt(limit, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        queryOptions.take = parsed;
+      }
     }
 
     const animals = await prisma.animal.findMany(queryOptions);

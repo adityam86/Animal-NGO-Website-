@@ -1,5 +1,4 @@
 "use client";
-import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -100,7 +99,7 @@ export default function CowCarePage() {
               <p style={{ lineHeight: 1.8, marginBottom: "2rem" }}>
                 Today, Lakshmi is healthy, well-fed, and has a kind sponsor who visits her every month. She has become the heart of our Gaushala.
               </p>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <Link href="/animals/ANM-000097" className="btn btn-green">Read Her Story</Link>
                 <Link href="/sponsor" className="btn btn-outline" style={{ borderColor: "var(--green-400)", color: "var(--green-600)" }}>Sponsor Like Lakshmi</Link>
               </div>
@@ -116,9 +115,9 @@ export default function CowCarePage() {
             <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 1rem", background: "hsla(0,0%,100%,0.15)", borderRadius: "var(--radius-full)", color: "hsla(0,0%,100%,0.85)", fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1rem" }}>
               💛 Sponsorship
             </div>
-            <h2 style={{ color: "white" }}>Sponsor a Cow's Care</h2>
+            <h2 style={{ color: "white" }}>Sponsor a Cow&apos;s Care</h2>
             <p style={{ color: "hsla(0,0%,100%,0.75)", maxWidth: 480, marginInline: "auto", marginTop: "0.75rem" }}>
-              Your monthly sponsorship directly funds the daily care of a specific cow. You'll receive monthly updates and photos.
+              Your monthly sponsorship directly funds the daily care of a specific cow. You&apos;ll receive monthly updates and photos.
             </p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>

@@ -184,7 +184,7 @@ export default function ContactPage() {
                   >
                     <h2 style={{ marginBottom: "1.75rem", fontSize: "1.5rem", color: "var(--stone-800)" }}>Send Us a Message</h2>
                     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                      <div className="responsive-grid-2">
                         <div className="form-group">
                           <label className="form-label" htmlFor="contact-name">Name *</label>
                           <input id="contact-name" required className="form-input" placeholder="Your name" />

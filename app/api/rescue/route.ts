@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -8,15 +9,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get("limit");
 
-    const queryOptions: any = {
+    const queryOptions: Prisma.RescueCaseFindManyArgs = {
       include: {
         history: true,
       },
-      orderBy: { reportedAt: 'desc' },
+      orderBy: { reportedAt: "desc" },
     };
 
     if (limit) {
-      queryOptions.take = parseInt(limit);
+      const parsed = parseInt(limit, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        queryOptions.take = parsed;
+      }
     }
 
     const cases = await prisma.rescueCase.findMany(queryOptions);
@@ -31,25 +35,24 @@ export async function GET(request: Request) {
 function classifyRescue(description: string, animalType: string) {
   const desc = description.toLowerCase();
   let emergencyLevel = "Normal";
-  
+
   const criticalKeywords = [
     "bleeding", "blood", "accident", "hit by", "car", "run over", "truck",
-    "fracture", "unconscious", "dying", "broken leg", "injured badly", "poisoned"
+    "fracture", "unconscious", "dying", "broken leg", "injured badly", "poisoned",
   ];
   const highKeywords = [
-    "sick", "vomiting", "limping", "wounded", "pain", "open wound", 
-    "crying", "mange", "trapped", "cannot walk"
+    "sick", "vomiting", "limping", "wounded", "pain", "open wound",
+    "crying", "mange", "trapped", "cannot walk",
   ];
 
-  if (criticalKeywords.some(kw => desc.includes(kw))) {
+  if (criticalKeywords.some((kw) => desc.includes(kw))) {
     emergencyLevel = "Critical";
-  } else if (highKeywords.some(kw => desc.includes(kw))) {
+  } else if (highKeywords.some((kw) => desc.includes(kw))) {
     emergencyLevel = "High";
   }
 
-  // Auto-assign team based on animal type
   let assignedTeam = "General Rescue Team 01";
-  const type = animalType.toLowerCase();
+  const type = (animalType || "").toLowerCase();
   if (type === "cow" || type === "buffalo" || type === "bull") {
     assignedTeam = "Gaushala Rescue Team 02";
   } else if (type === "cat" || type === "kitten") {
@@ -64,18 +67,28 @@ function classifyRescue(description: string, animalType: string) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const desc = data.description || "";
-    
-    // AI Auto-prioritize and assign team based on description
-    const aiResult = classifyRescue(desc, data.animalType);
+    const animalType = String(data.animalType || "").trim();
+    const location = String(data.location || "").trim();
+    const reporterName = String(data.reporterName || "").trim();
+    const reporterPhone = String(data.reporterPhone || "").trim();
+    const desc = String(data.description || "").trim();
+
+    if (!animalType || !location || !reporterName || !reporterPhone || !desc) {
+      return NextResponse.json(
+        { error: "Please provide animal type, location, reporter contact, and description." },
+        { status: 400 }
+      );
+    }
+
+    const aiResult = classifyRescue(desc, animalType);
 
     const newCase = await prisma.rescueCase.create({
       data: {
-        animalType: data.animalType,
+        animalType,
         emergencyLevel: data.emergencyLevel || aiResult.emergencyLevel,
-        location: data.location,
-        reporterName: data.reporterName,
-        reporterPhone: data.reporterPhone,
+        location,
+        reporterName,
+        reporterPhone,
         description: desc,
         assignedTeam: aiResult.assignedTeam,
         status: "Reported",
@@ -83,7 +96,7 @@ export async function POST(request: Request) {
           create: [
             {
               status: "Reported",
-              time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
               done: true,
             },
             { status: "Assigned", done: false },
@@ -91,12 +104,12 @@ export async function POST(request: Request) {
             { status: "Rescued", done: false },
             { status: "Treatment", done: false },
             { status: "Closed", done: false },
-          ]
-        }
+          ],
+        },
       },
       include: {
         history: true,
-      }
+      },
     });
 
     return NextResponse.json(newCase, { status: 201 });

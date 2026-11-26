@@ -26,9 +26,9 @@ export default async function AdminMedicalPage() {
         <p style={{ color: "var(--stone-500)" }}>Manage treatments, vaccinations, and veterinary reports.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "3rem" }}>
+      <div className="admin-split-1-1" style={{ marginBottom: "2.5rem" }}>
         {/* Record Treatment Form */}
-        <div style={{ background: "white", padding: "2rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)" }}>
+        <div style={{ background: "white", padding: "1.5rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)" }}>
           <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>🩹 Record New Treatment</h2>
           <form action={addMedicalRecord} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div className="form-group">
@@ -51,7 +51,7 @@ export default async function AdminMedicalPage() {
               <input name="treatment" required className="form-input" placeholder="e.g. Antibiotics, splint application, wound cleaning" />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="responsive-grid-2">
               <div className="form-group">
                 <label className="form-label">Cost (₹)</label>
                 <input type="number" step="0.01" name="cost" className="form-input" placeholder="0.00" />
@@ -81,7 +81,7 @@ export default async function AdminMedicalPage() {
         </div>
 
         {/* Record Vaccination Form */}
-        <div style={{ background: "white", padding: "2rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)" }}>
+        <div style={{ background: "white", padding: "1.5rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)" }}>
           <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>💉 Record Vaccination</h2>
           <form action={addVaccination} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div className="form-group">
@@ -99,7 +99,7 @@ export default async function AdminMedicalPage() {
               <input name="vaccineName" required className="form-input" placeholder="e.g. Anti-Rabies, 9-in-1, DHPPi" />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="responsive-grid-2">
               <div className="form-group">
                 <label className="form-label">Date Administered</label>
                 <input type="date" name="dateAdministered" className="form-input" defaultValue={new Date().toISOString().substring(0, 10)} />
@@ -132,10 +132,11 @@ export default async function AdminMedicalPage() {
         
         {/* Treatments List */}
         <div style={{ background: "white", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)", overflow: "hidden" }}>
-          <div style={{ padding: "1.5rem", borderBottom: "1px solid var(--cream-200)" }}>
+          <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--cream-200)" }}>
             <h2 style={{ fontSize: "1.1rem" }}>Recent Treatments & Medical History</h2>
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+          <div className="admin-table-scroll">
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem", minWidth: 620 }}>
             <thead>
               <tr style={{ background: "var(--stone-100)", borderBottom: "1px solid var(--cream-200)", textAlign: "left" }}>
                 <th style={{ padding: "1rem" }}>Date</th>
@@ -165,14 +166,16 @@ export default async function AdminMedicalPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Vaccinations List */}
         <div style={{ background: "white", borderRadius: "var(--radius-lg)", border: "1px solid var(--cream-200)", overflow: "hidden" }}>
-          <div style={{ padding: "1.5rem", borderBottom: "1px solid var(--cream-200)" }}>
+          <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--cream-200)" }}>
             <h2 style={{ fontSize: "1.1rem" }}>Recent Vaccinations</h2>
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+          <div className="admin-table-scroll">
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem", minWidth: 620 }}>
             <thead>
               <tr style={{ background: "var(--stone-100)", borderBottom: "1px solid var(--cream-200)", textAlign: "left" }}>
                 <th style={{ padding: "1rem" }}>Administered</th>
@@ -204,6 +207,7 @@ export default async function AdminMedicalPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
       </div>

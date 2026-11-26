@@ -1,23 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { DONATION_AMOUNTS, DONATION_PURPOSES } from "@/lib/data";
 import FadeIn from "@/components/motion/FadeIn";
 
-export default function DonatePage() {
-  const [amount, setAmount] = useState<number | null>(500);
-  const [custom, setCustom] = useState("");
-  const [purpose, setPurpose] = useState(DONATION_PURPOSES[0]);
+interface RazorpayResponse {
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpayResponse) => Promise<void> | void;
+  prefill: { name: string; email: string; contact: string };
+  theme: { color: string };
+}
+
+interface RazorpayInstance {
+  on: (event: string, cb: () => void) => void;
+  open: () => void;
+}
+
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+
+function DonateContent() {
+  const searchParams = useSearchParams();
+  const paramAmountRaw = searchParams.get("amount");
+  const paramAmount = paramAmountRaw ? parseInt(paramAmountRaw, 10) : NaN;
+  const hasValidParamAmount = Number.isFinite(paramAmount) && paramAmount > 0;
+  const isPresetParamAmount = hasValidParamAmount && DONATION_AMOUNTS.includes(paramAmount);
+
+  const paramPurposeRaw = searchParams.get("purpose") || "";
+  const matchedPurpose = DONATION_PURPOSES.find(
+    (p) => p.toLowerCase() === paramPurposeRaw.toLowerCase()
+  );
+
+  const [amount, setAmount] = useState<number | null>(
+    hasValidParamAmount ? (isPresetParamAmount ? paramAmount : null) : 500
+  );
+  const [custom, setCustom] = useState(
+    hasValidParamAmount && !isPresetParamAmount ? String(paramAmount) : ""
+  );
+  const [purpose, setPurpose] = useState(matchedPurpose || DONATION_PURPOSES[0]);
   const [frequency, setFrequency] = useState<"one-time" | "monthly">("one-time");
   const [submitted, setSubmitted] = useState(false);
   const [donationId, setDonationId] = useState("");
   const [loading, setLoading] = useState(false);
 
   const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof window !== "undefined" && (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay) {
+        resolve(true);
+        return;
+      }
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
@@ -26,18 +70,19 @@ export default function DonatePage() {
     });
   };
 
-  const finalAmount = amount ?? (parseInt(custom) || 0);
+  const finalAmount = amount ?? (parseInt(custom, 10) || 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!finalAmount) return;
     setLoading(true);
 
     try {
-      const name = (document.getElementById("donor-name") as HTMLInputElement).value;
-      const phone = (document.getElementById("donor-phone") as HTMLInputElement).value;
-      const email = (document.getElementById("donor-email") as HTMLInputElement).value;
-      const pan = (document.getElementById("donor-pan") as HTMLInputElement).value;
+      const formData = new FormData(e.currentTarget);
+      const name = String(formData.get("name") || "").trim();
+      const phone = String(formData.get("phone") || "").trim();
+      const email = String(formData.get("email") || "").trim();
+      const pan = String(formData.get("pan") || "").trim();
 
       // 1. Create Donation Record
       const res = await fetch("/api/donate", {
@@ -48,31 +93,64 @@ export default function DonatePage() {
       const data = await res.json();
       if (!res.ok) throw new Error("Failed to create donation");
 
-      // 2. Load Razorpay
-      const resScript = await loadRazorpayScript();
-      if (!resScript) {
-        alert("Razorpay SDK failed to load. Are you online?");
-        setLoading(false);
-        return;
-      }
-
-      // 3. Create Order
+      // 2. Create Order
       const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: finalAmount, purpose }),
       });
       const order = await orderRes.json();
+      if (!orderRes.ok) throw new Error(order.error || "Failed to create order");
 
-      // 4. Open Razorpay Checkout
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_dummy",
+      // 3. Presentation / Demo Mode when Razorpay live keys are not configured
+      if (order.isMock) {
+        await fetch("/api/verify-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_order_id: order.id,
+            razorpay_payment_id: `pay_mock_${Date.now()}`,
+            razorpay_signature: "sig_mock",
+            donationId: data.id,
+          }),
+        });
+        setDonationId(data.id || "DON-" + Date.now().toString().slice(-6));
+        setSubmitted(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      // 4. Live Razorpay Checkout
+      const resScript = await loadRazorpayScript();
+      if (!resScript) {
+        alert("Razorpay SDK failed to load. Are you online?");
+        return;
+      }
+
+      const RazorpayClass = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
+      if (!RazorpayClass) {
+        alert("Payment gateway unavailable.");
+        return;
+      }
+
+      const options: RazorpayOptions = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
         amount: order.amount,
         currency: order.currency,
         name: "Ayudar Animal Welfare",
         description: `Donation: ${purpose}`,
         order_id: order.id,
-        handler: async function () {
+        handler: async (response: RazorpayResponse) => {
+          await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id || order.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              donationId: data.id,
+            }),
+          });
           setDonationId(data.id || "DON-" + Date.now().toString().slice(-6));
           setSubmitted(true);
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -81,14 +159,14 @@ export default function DonatePage() {
         theme: { color: "#f97316" },
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on("payment.failed", function () {
+      const rzp = new RazorpayClass(options);
+      rzp.on("payment.failed", () => {
         alert("Payment failed. Please try again.");
       });
       rzp.open();
     } catch (err) {
       console.error(err);
-      alert("An error occurred.");
+      alert("An error occurred while initiating your donation.");
     } finally {
       setLoading(false);
     }
@@ -116,12 +194,12 @@ export default function DonatePage() {
                 textAlign: "left",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--cream-200)", paddingBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem", borderBottom: "1px solid var(--cream-200)", paddingBottom: "1rem" }}>
                 <div>
                   <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--stone-400)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                     Donation ID
                   </div>
-                  <div style={{ fontSize: "1.4rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--saffron-500)", letterSpacing: "0.04em" }}>
+                  <div style={{ fontSize: "1.25rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--saffron-500)", letterSpacing: "0.04em" }}>
                     {donationId}
                   </div>
                 </div>
@@ -193,9 +271,9 @@ export default function DonatePage() {
           <FadeIn direction="up" distance={25}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
               {/* Frequency */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", marginBottom: "1.25rem", color: "var(--stone-800)" }}>Donation Frequency</h3>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                   {(["one-time", "monthly"] as const).map((f) => (
                     <motion.button
                       key={f}
@@ -205,11 +283,12 @@ export default function DonatePage() {
                       onClick={() => setFrequency(f)}
                       style={{
                         flex: 1,
+                        minWidth: 160,
                         padding: "0.9rem",
                         borderRadius: "var(--radius-md)",
                         border: "2px solid",
                         borderColor: frequency === f ? "var(--saffron-500)" : "var(--cream-300)",
-                        background: frequency === f ? "var(--saffron-50)" : "white",
+                        background: frequency === f ? "var(--saffron-50)" : "var(--color-surface)",
                         color: frequency === f ? "var(--saffron-700)" : "var(--stone-600)",
                         fontWeight: 700,
                         fontSize: "0.95rem",
@@ -224,9 +303,9 @@ export default function DonatePage() {
               </div>
 
               {/* Amount */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", marginBottom: "1.25rem", color: "var(--stone-800)" }}>Choose Amount</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.75rem", marginBottom: "1.25rem" }}>
                   {DONATION_AMOUNTS.map((a) => (
                     <motion.button
                       key={a}
@@ -242,7 +321,7 @@ export default function DonatePage() {
                         borderRadius: "var(--radius-md)",
                         border: "2px solid",
                         borderColor: amount === a ? "var(--saffron-500)" : "var(--cream-300)",
-                        background: amount === a ? "var(--saffron-50)" : "white",
+                        background: amount === a ? "var(--saffron-50)" : "var(--color-surface)",
                         color: amount === a ? "var(--saffron-700)" : "var(--stone-700)",
                         fontWeight: 700,
                         fontSize: "1.05rem",
@@ -274,7 +353,7 @@ export default function DonatePage() {
               </div>
 
               {/* Purpose */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", marginBottom: "1.25rem", color: "var(--stone-800)" }}>Purpose</h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
                   {DONATION_PURPOSES.map((p) => (
@@ -289,7 +368,7 @@ export default function DonatePage() {
                         borderRadius: "var(--radius-full)",
                         border: "1.5px solid",
                         borderColor: purpose === p ? "var(--saffron-500)" : "var(--cream-300)",
-                        background: purpose === p ? "var(--saffron-50)" : "white",
+                        background: purpose === p ? "var(--saffron-50)" : "var(--color-surface)",
                         color: purpose === p ? "var(--saffron-700)" : "var(--stone-600)",
                         fontWeight: 600,
                         fontSize: "0.85rem",
@@ -304,31 +383,31 @@ export default function DonatePage() {
               </div>
 
               {/* Donor info */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Your Information</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="donor-name">Name *</label>
-                    <input id="donor-name" required className="form-input" placeholder="Full name" />
+                    <input id="donor-name" name="name" required className="form-input" placeholder="Full name" />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="donor-phone">Phone *</label>
-                    <input id="donor-phone" required type="tel" className="form-input" placeholder="+91 XXXXX XXXXX" />
+                    <input id="donor-phone" name="phone" required type="tel" className="form-input" placeholder="+91 XXXXX XXXXX" />
                   </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="donor-email">Email *</label>
-                  <input id="donor-email" required type="email" className="form-input" placeholder="your@email.com" />
+                  <input id="donor-email" name="email" required type="email" className="form-input" placeholder="your@email.com" />
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="donor-pan">PAN (for 80G tax receipt)</label>
-                  <input id="donor-pan" className="form-input" placeholder="ABCDE1234F" />
+                  <input id="donor-pan" name="pan" className="form-input" placeholder="ABCDE1234F" />
                 </div>
               </div>
 
               {/* Summary + submit */}
               <div style={{ background: "var(--saffron-50)", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1.5px solid var(--saffron-200)", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
                   <div>
                     <div style={{ fontSize: "0.8rem", color: "var(--stone-500)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Donation Summary</div>
                     <div style={{ fontSize: "0.9rem", color: "var(--stone-700)", marginTop: "0.2rem", fontWeight: 500 }}>
@@ -347,7 +426,7 @@ export default function DonatePage() {
                     style={{ width: "100%", justifyContent: "center", fontSize: "1.05rem" }}
                     disabled={!finalAmount || loading}
                   >
-                    {loading ? "Processing..." : "💳 Proceed to Payment (Razorpay)"}
+                    {loading ? "Processing..." : "💳 Proceed to Payment"}
                   </button>
                 </motion.div>
 
@@ -360,5 +439,13 @@ export default function DonatePage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function DonatePage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: "center", padding: "6rem", color: "var(--stone-400)" }}>Loading donation page...</div>}>
+      <DonateContent />
+    </Suspense>
   );
 }

@@ -2,13 +2,12 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Upload, X, Check, Image as ImageIcon, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Upload, X, Link as LinkIcon, Loader2 } from "lucide-react";
 
 type ImageUploaderProps = {
   value?: string;
   onChange: (url: string) => void;
   label?: string;
-  placeholder?: string;
   helperText?: string;
 };
 
@@ -16,7 +15,6 @@ export default function ImageUploader({
   value = "",
   onChange,
   label = "Photo",
-  placeholder = "Upload an image...",
   helperText,
 }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string>(value);
@@ -64,9 +62,9 @@ export default function ImageUploader({
       } else {
         throw new Error(data.error || "Upload failed");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Failed to upload image.");
+      setError(err instanceof Error ? err.message : "Failed to upload image.");
     } finally {
       setUploading(false);
     }

@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
     const { amount, purpose } = await request.json();
-    
-    // For local testing without keys, we mock the Razorpay order creation
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
+    }
+
+    // For local testing / presentation mode without live Razorpay keys, create a mock order
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET || !process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
       console.warn("Razorpay keys missing, using mock order for testing");
       return NextResponse.json({
         id: `order_mock_${Date.now()}`,
-        amount: amount * 100, // Razorpay expects amount in paise (1 INR = 100 paise)
+        amount: Math.round(numericAmount * 100),
         currency: "INR",
-        receipt: `receipt_${Date.now()}`
+        receipt: `receipt_${Date.now()}`,
+        isMock: true,
       });
     }
 
@@ -23,14 +29,14 @@ export async function POST(request: Request) {
     });
 
     const options = {
-      amount: amount * 100, 
+      amount: Math.round(numericAmount * 100),
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
-      notes: { purpose }
+      notes: { purpose: String(purpose || "Ayudar Welfare") },
     };
 
     const order = await razorpay.orders.create(options);
-    return NextResponse.json(order);
+    return NextResponse.json({ ...order, isMock: false });
   } catch (error) {
     console.error("Order creation failed:", error);
     return NextResponse.json(

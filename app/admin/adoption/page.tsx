@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { approveAdoption, scheduleAdoptionVisit, rejectAdoption, updateAdoptionStatus } from "./actions";
-import { Check, Calendar, X, Heart, Home, AlertCircle } from "lucide-react";
+import { Check, Calendar, X, Home } from "lucide-react";
 
 export const metadata = {
   title: "Adoption Applications | Admin",
@@ -214,7 +214,7 @@ export default async function AdminAdoptionPage() {
                               padding: "0.2rem 0.4rem",
                               borderRadius: "var(--radius-sm)",
                               border: "1px solid var(--cream-200)",
-                              background: "white",
+                              background: "var(--color-surface)",
                               fontSize: "0.75rem",
                               color: "var(--stone-600)",
                               cursor: "pointer",
@@ -285,9 +285,9 @@ export default async function AdminAdoptionPage() {
                                   alignItems: "center",
                                   gap: "0.35rem",
                                   padding: "0.4rem 0.75rem",
-                                  background: isScheduled ? "hsl(210, 85%, 94%)" : "white",
-                                  color: "hsl(210, 80%, 35%)",
-                                  border: "1px solid hsl(210, 70%, 80%)",
+                                  background: isScheduled ? "rgba(59, 130, 246, 0.12)" : "var(--color-surface)",
+                                  color: "hsl(210, 80%, 55%)",
+                                  border: "1px solid rgba(59, 130, 246, 0.35)",
                                   borderRadius: "var(--radius-md)",
                                   fontSize: "0.78rem",
                                   fontWeight: 600,

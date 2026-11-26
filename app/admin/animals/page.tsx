@@ -44,7 +44,7 @@ export default async function AdminAnimalsPage() {
                 <td style={{ padding: "1rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                     <div style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", position: "relative", background: "var(--cream-100)" }}>
-                      {animal.image && <Image src={animal.image} alt={animal.name} fill style={{ objectFit: "cover" }} />}
+                      {animal.image && <Image src={animal.image} alt={animal.name} fill unoptimized={animal.image.startsWith("data:")} style={{ objectFit: "cover" }} />}
                     </div>
                     <div style={{ fontWeight: 600 }}>{animal.name}</div>
                   </div>

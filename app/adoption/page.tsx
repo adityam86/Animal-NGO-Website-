@@ -8,12 +8,27 @@ import AnimalCard from "@/components/shared/AnimalCard";
 import { ANIMALS } from "@/lib/data";
 import FadeIn from "@/components/motion/FadeIn";
 
+interface AnimalItem {
+  id: string;
+  name: string;
+  type: string;
+  breed: string;
+  gender: string;
+  age: string;
+  location: string;
+  status: string;
+  image: string;
+  vaccinated: boolean;
+  sterilized: boolean;
+}
+
 function AdoptionContent() {
   const searchParams = useSearchParams();
   const preselectedAnimalId = searchParams.get("animal") || "";
 
-  const [animals, setAnimals] = useState<any[]>(ANIMALS);
-  const [selectedAnimalId, setSelectedAnimalId] = useState(preselectedAnimalId);
+  const [animals, setAnimals] = useState<AnimalItem[]>(ANIMALS);
+  const [manualAnimalId, setManualAnimalId] = useState<string | null>(null);
+  const selectedAnimalId = manualAnimalId !== null ? manualAnimalId : preselectedAnimalId;
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -33,12 +48,6 @@ function AdoptionContent() {
     }
     loadAnimals();
   }, []);
-
-  useEffect(() => {
-    if (preselectedAnimalId) {
-      setSelectedAnimalId(preselectedAnimalId);
-    }
-  }, [preselectedAnimalId]);
 
   const adoptable = animals.filter((a) => a.status === "Available for Adoption");
 
@@ -144,7 +153,7 @@ function AdoptionContent() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1.5rem", justifyContent: "center", marginBottom: "3rem" }}>
             {adoptable.map((animal, idx) => (
               <FadeIn key={animal.id} delay={idx * 0.08} direction="up" distance={20}>
-                <div onClick={() => setSelectedAnimalId(animal.id)} style={{ cursor: "pointer" }}>
+                <div onClick={() => setManualAnimalId(animal.id)} style={{ cursor: "pointer" }}>
                   <AnimalCard {...animal} />
                 </div>
               </FadeIn>
@@ -176,7 +185,7 @@ function AdoptionContent() {
                     name="animalId"
                     id="adopt-animal"
                     value={selectedAnimalId}
-                    onChange={(e) => setSelectedAnimalId(e.target.value)}
+                    onChange={(e) => setManualAnimalId(e.target.value)}
                     className="form-select"
                     style={{ background: "white" }}
                   >
@@ -191,9 +200,9 @@ function AdoptionContent() {
               </div>
 
               {/* Personal info */}
-              <div style={{ background: "var(--cream-50)", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
+              <div style={{ background: "var(--cream-50)", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Personal Information</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="adopt-name">Full Name *</label>
                     <input name="applicantName" id="adopt-name" required className="form-input" placeholder="Your full name" />
@@ -203,7 +212,7 @@ function AdoptionContent() {
                     <input name="age" id="adopt-age" required type="number" min="18" className="form-input" placeholder="e.g. 28" />
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="adopt-phone">Phone Number *</label>
                     <input name="phone" id="adopt-phone" required type="tel" className="form-input" placeholder="+91 XXXXX XXXXX" />
@@ -224,9 +233,9 @@ function AdoptionContent() {
               </div>
 
               {/* Living situation */}
-              <div style={{ background: "var(--cream-50)", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
+              <div style={{ background: "var(--cream-50)", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Living Environment</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="home-type">Home Type *</label>
                     <select name="homeType" id="home-type" required className="form-select">

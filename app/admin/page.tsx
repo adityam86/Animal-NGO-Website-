@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
-import { ArrowRight, Activity, Users, IndianRupee, Heart, ShieldAlert, CheckCircle, Clock } from "lucide-react";
+import { ArrowRight, Users, IndianRupee, Heart, ShieldAlert, CheckCircle } from "lucide-react";
 
 export default async function AdminDashboardPage() {
   const [
@@ -14,7 +14,7 @@ export default async function AdminDashboardPage() {
     recentAdoptions
   ] = await Promise.all([
     prisma.animal.count(),
-    prisma.rescueCase.count({ where: { status: { not: "Completed" } } }),
+    prisma.rescueCase.count({ where: { status: { notIn: ["Completed", "Closed"] } } }),
     prisma.volunteer.count(),
     prisma.donation.aggregate({ _sum: { amount: true } }),
     prisma.rescueCase.findMany({

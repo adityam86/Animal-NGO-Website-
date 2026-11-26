@@ -42,6 +42,8 @@ const emergencyLevels: { level: EmergencyLevel; emoji: string; color: string; bg
 
 export default function RescuePage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [rescueId, setRescueId] = useState("");
   const [emergency, setEmergency] = useState<EmergencyLevel>("Normal");
   const [animalType, setAnimalType] = useState("");
@@ -52,6 +54,14 @@ export default function RescuePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (!animalType) {
+      setFormError("Please select the Animal Type (e.g. Dog, Cat, Cow).");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const reporterName = (document.getElementById("reporter-name") as HTMLInputElement).value;
       const reporterPhone = (document.getElementById("reporter-phone") as HTMLInputElement).value;
@@ -84,11 +94,14 @@ export default function RescuePage() {
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        alert("Failed to submit rescue request.");
+        const errData = await res.json().catch(() => ({}));
+        setFormError(errData.error || "Failed to submit rescue request.");
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred.");
+      setFormError("Network error while submitting request. Please call +91 98000 00000.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -116,7 +129,7 @@ export default function RescuePage() {
               <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--stone-400)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
                 Your Rescue ID
               </div>
-              <div style={{ fontSize: "2.2rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--saffron-500)", letterSpacing: "0.05em" }}>
+              <div style={{ fontSize: "2rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--saffron-500)", letterSpacing: "0.05em", wordBreak: "break-all" }}>
                 {rescueId}
               </div>
               <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "var(--stone-500)", margin: 0 }}>
@@ -199,9 +212,9 @@ export default function RescuePage() {
           <FadeIn direction="up" distance={25}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
               {/* Reporter details */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Your Contact Details</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="responsive-grid-2">
                   <div className="form-group">
                     <label className="form-label" htmlFor="reporter-name">Your Name *</label>
                     <input id="reporter-name" required className="form-input" placeholder="Full name" />
@@ -218,7 +231,7 @@ export default function RescuePage() {
               </div>
 
               {/* Animal details */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Animal Information</h3>
 
                 <div className="form-group">
@@ -230,13 +243,16 @@ export default function RescuePage() {
                         type="button"
                         whileHover={{ scale: 1.04 }}
                         whileTap={{ scale: 0.96 }}
-                        onClick={() => setAnimalType(t)}
+                        onClick={() => {
+                          setAnimalType(t);
+                          setFormError(null);
+                        }}
                         style={{
                           padding: "0.45rem 1rem",
                           borderRadius: "var(--radius-full)",
                           border: "1.5px solid",
                           borderColor: animalType === t ? "var(--saffron-500)" : "var(--cream-300)",
-                          background: animalType === t ? "var(--saffron-50)" : "white",
+                          background: animalType === t ? "var(--saffron-50)" : "var(--color-surface)",
                           color: animalType === t ? "var(--saffron-700)" : "var(--stone-600)",
                           fontWeight: 600,
                           fontSize: "0.85rem",
@@ -265,7 +281,7 @@ export default function RescuePage() {
                           borderRadius: "var(--radius-full)",
                           border: "1.5px solid",
                           borderColor: condition === c ? "var(--saffron-500)" : "var(--cream-300)",
-                          background: condition === c ? "var(--saffron-50)" : "white",
+                          background: condition === c ? "var(--saffron-50)" : "var(--color-surface)",
                           color: condition === c ? "var(--saffron-700)" : "var(--stone-600)",
                           fontWeight: 600,
                           fontSize: "0.85rem",
@@ -286,7 +302,7 @@ export default function RescuePage() {
               </div>
 
               {/* Location */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <div>
                   <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)", marginBottom: "0.25rem" }}>Location & GPS Pin</h3>
                   <p style={{ fontSize: "0.85rem", color: "var(--stone-500)", margin: 0 }}>
@@ -317,7 +333,7 @@ export default function RescuePage() {
               </div>
 
               {/* Emergency Level */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)", marginBottom: "1.25rem" }}>Emergency Urgency Level *</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {emergencyLevels.map(({ level, emoji, color, bg, desc }) => (
@@ -332,7 +348,7 @@ export default function RescuePage() {
                         borderRadius: "var(--radius-lg)",
                         cursor: "pointer",
                         border: `2px solid ${emergency === level ? color : "var(--cream-200)"}`,
-                        background: emergency === level ? bg : "white",
+                        background: emergency === level ? bg : "var(--color-surface)",
                         transition: "all 0.15s ease",
                       }}
                     >
@@ -355,7 +371,7 @@ export default function RescuePage() {
               </div>
 
               {/* Upload photo */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "2rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
                 <ImageUploader
                   label="Upload Animal Incident Photo (optional)"
                   value={photoUrl}
@@ -364,13 +380,30 @@ export default function RescuePage() {
                 />
               </div>
 
+              {formError && (
+                <div
+                  style={{
+                    padding: "0.85rem 1rem",
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--red-100)",
+                    border: "1px solid var(--red-200)",
+                    color: "var(--red-700)",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ {formError}
+                </div>
+              )}
+
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="btn btn-emergency btn-lg"
                   style={{ width: "100%", justifyContent: "center", fontSize: "1.1rem", padding: "1rem" }}
                 >
-                  🚨 Submit Rescue Request
+                  {submitting ? "Dispatching..." : "🚨 Submit Rescue Request"}
                 </button>
               </motion.div>
             </form>

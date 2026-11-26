@@ -68,6 +68,7 @@ export default function AnimalCard({
             src={image}
             alt={name}
             fill
+            unoptimized={image.startsWith("data:")}
             style={{ objectFit: "cover" }}
           />
         </motion.div>

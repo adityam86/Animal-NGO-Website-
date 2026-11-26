@@ -1,16 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import FadeIn from "@/components/motion/FadeIn";
 import PulseBeacon from "@/components/motion/PulseBeacon";
 
-export default function TrackRescuePage() {
-  const [inputId, setInputId] = useState("");
+interface RescueHistoryItem {
+  id?: string;
+  status: string;
+  time?: string | null;
+  done: boolean;
+}
+
+interface RescueCaseData {
+  id: string;
+  animalType: string;
+  emergencyLevel: string;
+  location: string;
+  assignedTeam?: string | null;
+  status: string;
+  description?: string;
+  history: RescueHistoryItem[];
+}
+
+function TrackRescueContent() {
+  const searchParams = useSearchParams();
+  const initialParamId = searchParams.get("id") || "";
+
+  const [inputId, setInputId] = useState(initialParamId);
   const [searched, setSearched] = useState(false);
-  const [found, setFound] = useState<any>(null);
+  const [loading, setLoading] = useState(Boolean(initialParamId));
+  const [found, setFound] = useState<RescueCaseData | null>(null);
 
   const emergencyColors: Record<string, string> = {
     Critical: "hsl(0,75%,45%)",
@@ -18,12 +42,14 @@ export default function TrackRescuePage() {
     Normal: "hsl(45,90%,40%)",
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchCaseById = useCallback(async (id: string) => {
+    const trimmed = id.trim();
+    if (!trimmed) return;
+    setLoading(true);
     try {
-      const res = await fetch(`/api/rescue/${inputId.trim()}`);
+      const res = await fetch(`/api/rescue/${encodeURIComponent(trimmed)}`);
       if (res.ok) {
-        const data = await res.json();
+        const data: RescueCaseData = await res.json();
         setFound(data);
       } else {
         setFound(null);
@@ -31,8 +57,32 @@ export default function TrackRescuePage() {
     } catch (err) {
       console.error(err);
       setFound(null);
+    } finally {
+      setSearched(true);
+      setLoading(false);
     }
-    setSearched(true);
+  }, []);
+
+  useEffect(() => {
+    if (!initialParamId) return;
+    let cancelled = false;
+    fetch(`/api/rescue/${encodeURIComponent(initialParamId.trim())}`)
+      .then(async (res) => (res.ok ? ((await res.json()) as RescueCaseData) : null))
+      .catch(() => null)
+      .then((data) => {
+        if (cancelled) return;
+        setFound(data);
+        setSearched(true);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialParamId]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetchCaseById(inputId);
   };
 
   return (
@@ -47,7 +97,7 @@ export default function TrackRescuePage() {
             </div>
 
             {/* Search bar */}
-            <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
+            <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
               <input
                 value={inputId}
                 onChange={(e) => {
@@ -56,16 +106,17 @@ export default function TrackRescuePage() {
                 }}
                 className="form-input"
                 placeholder="e.g. RES-2026-00125"
-                style={{ flex: 1, fontSize: "1rem" }}
+                style={{ flex: 1, minWidth: 200, fontSize: "1rem" }}
               />
               <motion.button
                 type="submit"
+                disabled={loading}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 className="btn btn-primary"
                 style={{ gap: "0.4rem" }}
               >
-                <Search size={16} /> Track
+                <Search size={16} /> {loading ? "Checking..." : "Track"}
               </motion.button>
             </form>
 
@@ -89,7 +140,10 @@ export default function TrackRescuePage() {
                 Demo: Click to try{" "}
                 <strong
                   style={{ cursor: "pointer", color: "var(--saffron-700)", textDecoration: "underline" }}
-                  onClick={() => setInputId("RES-2026-00125")}
+                  onClick={() => {
+                    setInputId("RES-2026-00125");
+                    fetchCaseById("RES-2026-00125");
+                  }}
                 >
                   RES-2026-00125
                 </strong>
@@ -98,7 +152,7 @@ export default function TrackRescuePage() {
           </FadeIn>
 
           {/* Result: Not found */}
-          {searched && !found && (
+          {searched && !found && !loading && (
             <FadeIn direction="up">
               <div
                 style={{
@@ -134,13 +188,13 @@ export default function TrackRescuePage() {
               }}
             >
               {/* Case header */}
-              <div style={{ background: "var(--stone-800)", padding: "1.75rem 2rem", color: "white" }}>
+              <div style={{ background: "var(--stone-800)", padding: "1.75rem 1.5rem", color: "white" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
                   <div>
                     <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "hsla(0,0%,100%,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>
                       Rescue Case
                     </div>
-                    <div style={{ fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.05em", fontFamily: "var(--font-display)" }}>
+                    <div style={{ fontSize: "1.45rem", fontWeight: 700, letterSpacing: "0.05em", fontFamily: "var(--font-display)", wordBreak: "break-all" }}>
                       {found.id}
                     </div>
                   </div>
@@ -166,8 +220,8 @@ export default function TrackRescuePage() {
               </div>
 
               {/* Case details */}
-              <div style={{ padding: "1.75rem 2rem", borderBottom: "1px solid var(--cream-200)" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+              <div style={{ padding: "1.5rem", borderBottom: "1px solid var(--cream-200)" }}>
+                <div className="responsive-grid-2">
                   {[
                     { label: "Animal Type", value: found.animalType },
                     {
@@ -217,7 +271,7 @@ export default function TrackRescuePage() {
 
                 {found.description && (() => {
                   const photoMatch = found.description.match(/\[Incident Photo:\s*([^\]]+)\]/);
-                  const cleanDesc = found.description.replace(/\[Incident Photo:\s*[^\]]+\]/, "").trim();
+                  const cleanDesc = found.description.replace(/\[Incident Photo:\s*([^\]]+)\]/, "").trim();
                   const photoUrl = photoMatch ? photoMatch[1].trim() : null;
 
                   return (
@@ -236,10 +290,13 @@ export default function TrackRescuePage() {
                             Incident Photo
                           </div>
                           <a href={photoUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block" }}>
-                            <img
+                            <Image
                               src={photoUrl}
                               alt="Incident photo"
-                              style={{ maxHeight: 240, maxWidth: "100%", borderRadius: "var(--radius-md)", objectFit: "cover", border: "1px solid var(--cream-300)" }}
+                              width={320}
+                              height={220}
+                              unoptimized
+                              style={{ maxHeight: 240, width: "auto", maxWidth: "100%", height: "auto", borderRadius: "var(--radius-md)", objectFit: "cover", border: "1px solid var(--cream-300)" }}
                             />
                           </a>
                         </div>
@@ -250,15 +307,15 @@ export default function TrackRescuePage() {
               </div>
 
               {/* Status timeline */}
-              <div style={{ padding: "1.75rem 2rem" }}>
+              <div style={{ padding: "1.5rem" }}>
                 <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--stone-400)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "1.25rem" }}>
                   Live Status Timeline
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-                  {found.history.map((step: any, i: number) => {
+                  {found.history.map((step: RescueHistoryItem, i: number) => {
                     const isCurrent = step.status === found.status;
                     return (
-                      <div key={step.status} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                      <div key={step.id || step.status} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                         <div
                           style={{
                             width: 32,
@@ -278,7 +335,7 @@ export default function TrackRescuePage() {
                         >
                           {step.done ? "✓" : i + 1}
                         </div>
-                        <div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.4rem" }}>
                           <span style={{ fontWeight: step.done ? 700 : 400, color: step.done ? "var(--stone-800)" : "var(--stone-400)", fontSize: "0.92rem", display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
                             {step.status}
                             {isCurrent && (
@@ -320,5 +377,13 @@ export default function TrackRescuePage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function TrackRescuePage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: "center", padding: "6rem", color: "var(--stone-400)" }}>Loading tracker...</div>}>
+      <TrackRescueContent />
+    </Suspense>
   );
 }

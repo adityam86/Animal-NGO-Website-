@@ -23,7 +23,6 @@ export default function StoryCard({
   slug,
   title,
   subtitle,
-  date,
   readTime,
   coverImage,
   outcome,

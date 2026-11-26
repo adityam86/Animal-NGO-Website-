@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       { success: false, error: 'Invalid credentials' },
       { status: 401 }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Login failed' },
       { status: 500 }

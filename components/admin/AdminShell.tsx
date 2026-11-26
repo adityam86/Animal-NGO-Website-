@@ -6,13 +6,9 @@ import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-
-  // Auto-close mobile drawer when route changes
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+  const [openAtPath, setOpenAtPath] = useState<string | null>(null);
+  const sidebarOpen = openAtPath === pathname;
 
   // Prevent background scroll when mobile drawer is open
   useEffect(() => {
@@ -32,13 +28,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {sidebarOpen && (
         <div
           className="admin-mobile-backdrop"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setOpenAtPath(null)}
           aria-label="Close navigation"
         />
       )}
 
       {/* Sidebar: Docked on Desktop, Slide-over Drawer on Mobile */}
-      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <AdminSidebar isOpen={sidebarOpen} onClose={() => setOpenAtPath(null)} />
 
       {/* Main Workspace Canvas */}
       <main
@@ -51,7 +47,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           minWidth: 0,
         }}
       >
-        <AdminHeader onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
+        <AdminHeader
+          onToggleSidebar={() =>
+            setOpenAtPath((prev) => (prev === pathname ? null : pathname))
+          }
+        />
 
         <div className="admin-scroll-canvas">
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>

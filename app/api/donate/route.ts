@@ -1,25 +1,28 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+    const numericAmount = parseFloat(String(data.amount));
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return NextResponse.json({ error: "Invalid donation amount" }, { status: 400 });
+    }
 
     const newDonation = await prisma.donation.create({
       data: {
-        amount: parseFloat(data.amount),
-        purpose: data.purpose,
-        frequency: data.frequency,
-        donorName: data.name,
-        donorPhone: data.phone,
-        donorEmail: data.email,
-        donorPan: data.pan || null,
+        amount: numericAmount,
+        purpose: String(data.purpose || "General Fund"),
+        frequency: String(data.frequency || "one-time"),
+        donorName: String(data.name || "").trim(),
+        donorPhone: String(data.phone || "").trim(),
+        donorEmail: String(data.email || "").trim(),
+        donorPan: data.pan ? String(data.pan).trim() : null,
         paymentStatus: "Pending",
       },
     });
-
-    // In a real application, you would integrate a payment gateway (e.g., Razorpay/Stripe) here
-    // and return the order ID or payment session details.
 
     return NextResponse.json({ success: true, id: newDonation.id }, { status: 201 });
   } catch (error) {

@@ -5,11 +5,10 @@ import ThemeToggle from "@/components/shared/ThemeToggle";
 import { ShieldAlert, ExternalLink, Activity, Menu } from "lucide-react";
 
 interface AdminHeaderProps {
-  activeRescuesCount?: number;
   onToggleSidebar?: () => void;
 }
 
-export default function AdminHeader({ activeRescuesCount = 0, onToggleSidebar }: AdminHeaderProps) {
+export default function AdminHeader({ onToggleSidebar }: AdminHeaderProps) {
   return (
     <header
       style={{
