@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { AuthError, requireAdminSession } from "@/lib/auth-server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { rescueCreateSchema } from "@/lib/validation";
 
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`rescue-create:${ip}`, 8, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`rescue-create:${ip}`, 8, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many rescue reports submitted. For emergencies, call +91 98000 00000." },

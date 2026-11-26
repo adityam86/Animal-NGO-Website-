@@ -23,10 +23,14 @@ export interface AuthenticatedAdmin {
   jti: string;
 }
 
-export async function getAdminSession(): Promise<AuthenticatedAdmin | null> {
+/**
+ * Validates BOTH cryptographic JWT token AND live database session state
+ * (not revoked, not expired, and user account active).
+ */
+export async function verifyActiveSessionToken(
+  token: string | undefined | null
+): Promise<AuthenticatedAdmin | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!token) return null;
 
     const payload = await verifySessionToken(token);
@@ -64,6 +68,16 @@ export async function getAdminSession(): Promise<AuthenticatedAdmin | null> {
       role: dbSession.user.role as AdminRole,
       jti: dbSession.jti,
     };
+  } catch {
+    return null;
+  }
+}
+
+export async function getAdminSession(): Promise<AuthenticatedAdmin | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    return await verifyActiveSessionToken(token);
   } catch {
     return null;
   }

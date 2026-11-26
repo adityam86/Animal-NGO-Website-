@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { AuthError, recordAuditLog, requireAdminSession } from "@/lib/auth-server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, validateImageSignature } from "@/lib/security";
 import { storeValidatedImage } from "@/lib/storage";
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const session = await requireAdminSession();
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`admin-upload:${session.userId}:${ip}`, 30, 15 * 60 * 1000);
+    const rate = await checkDistributedRateLimit(`admin-upload:${session.userId}:${ip}`, 30, 15 * 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Upload rate limit exceeded. Please wait before uploading more images." },

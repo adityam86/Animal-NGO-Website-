@@ -79,6 +79,7 @@ export async function POST(request: Request) {
             data: {
               paymentStatus: "Completed",
               razorpayPaymentId: paymentId,
+              verifiedAt: new Date(),
             },
           });
           return { updated: true, kind: "donation", id: donation.id };
@@ -102,6 +103,7 @@ export async function POST(request: Request) {
             data: {
               paymentStatus: "Completed",
               razorpayPaymentId: paymentId,
+              verifiedAt: new Date(),
             },
           });
           return { updated: true, kind: "sponsorship", id: sponsorship.id };

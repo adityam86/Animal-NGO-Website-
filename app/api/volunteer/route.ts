@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { volunteerCreateSchema } from "@/lib/validation";
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`volunteer-create:${ip}`, 6, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`volunteer-create:${ip}`, 6, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many submissions received. Please try again later." },

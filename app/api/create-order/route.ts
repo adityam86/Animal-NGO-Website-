@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import Razorpay from "razorpay";
 import prisma from "@/lib/prisma";
 import { SPONSORSHIP_TIERS_INR, isMockPaymentsEnabled } from "@/lib/payment";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { createOrderSchema } from "@/lib/validation";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`create-order:${ip}`, 20, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`create-order:${ip}`, 20, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many payment attempts. Please try again shortly." },

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { donationCreateSchema } from "@/lib/validation";
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`donate-init:${ip}`, 15, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`donate-init:${ip}`, 15, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many donation attempts. Please wait a few minutes and try again." },

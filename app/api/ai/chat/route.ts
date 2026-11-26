@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { chatMessageSchema } from "@/lib/validation";
 
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`ai-chat:${ip}`, 30, 60_000);
+    const rate = await checkDistributedRateLimit(`ai-chat:${ip}`, 30, 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         {

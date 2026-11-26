@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
+import { put } from "@vercel/blob";
 import type { ValidatedImage } from "./security";
 
 export interface StoredUploadResult {
@@ -13,39 +14,30 @@ export async function storeValidatedImage(
   originalFilename: string,
   prefix = "media"
 ): Promise<StoredUploadResult> {
-  const safeBase = originalFilename
-    .replace(/\.[^.]+$/, "")
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .slice(0, 40) || "image";
+  const safeBase =
+    originalFilename
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .slice(0, 40) || "image";
   const uniqueName = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}.${validated.extension}`;
 
-  // 1. Prefer persistent Vercel Blob storage when configured
+  // 1. Prefer official @vercel/blob SDK when configured (token stays strictly server-side)
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
   if (blobToken) {
-    const uploadUrl = `https://blob.vercel-storage.com/ayudar/${uniqueName}`;
-    const bodyBuffer = new ArrayBuffer(buffer.byteLength);
-    new Uint8Array(bodyBuffer).set(buffer);
-    const res = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        authorization: `Bearer ${blobToken}`,
-        "x-content-type": validated.mimeType,
-        "x-add-random-suffix": "1",
-      },
-      body: bodyBuffer,
+    const result = await put(`ayudar/${uniqueName}`, buffer, {
+      access: "public",
+      contentType: validated.mimeType,
+      addRandomSuffix: true,
+      token: blobToken,
     });
 
-    if (!res.ok) {
-      throw new Error(`Object storage upload failed with status ${res.status}`);
+    if (!result?.url) {
+      throw new Error("Vercel Blob storage did not return a public URL");
     }
-    const payload = (await res.json()) as { url?: string };
-    if (!payload.url) {
-      throw new Error("Object storage did not return a public URL");
-    }
-    return { url: payload.url, storage: "vercel-blob" };
+    return { url: result.url, storage: "vercel-blob" };
   }
 
-  // 2. Local filesystem storage when writable (development)
+  // 2. Local filesystem storage when writable outside Vercel serverless runtime
   if (!process.env.VERCEL) {
     try {
       const uploadDir = path.join(process.cwd(), "public", "uploads");
@@ -58,7 +50,7 @@ export async function storeValidatedImage(
     }
   }
 
-  // 3. Fallback data URL on serverless without BLOB_READ_WRITE_TOKEN (capped at 2 MB)
+  // 3. Bounded inline raster data URL fallback when BLOB_READ_WRITE_TOKEN is unconfigured
   if (buffer.byteLength > 2 * 1024 * 1024) {
     throw new Error(
       "Persistent object storage (BLOB_READ_WRITE_TOKEN) is not configured and image exceeds 2 MB fallback limit."

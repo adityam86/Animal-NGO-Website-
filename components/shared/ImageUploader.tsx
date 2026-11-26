@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import { isSafeImageUrl, shouldBypassImageOptimization } from "@/lib/image-url";
 import { Upload, X, Link as LinkIcon, Loader2 } from "lucide-react";
 
 type ImageUploaderProps = {
@@ -88,10 +89,15 @@ export default function ImageUploader({
   };
 
   const handleUrlSubmit = () => {
-    if (manualUrl) {
-      setPreview(manualUrl);
-      onChange(manualUrl);
+    const trimmed = manualUrl.trim();
+    if (!trimmed) return;
+    if (!isSafeImageUrl(trimmed)) {
+      setError("URL must start with /images/, /uploads/, or https://*.public.blob.vercel-storage.com");
+      return;
     }
+    setError(null);
+    setPreview(trimmed);
+    onChange(trimmed);
   };
 
   return (
@@ -157,7 +163,7 @@ export default function ImageUploader({
             alt="Upload preview"
             fill
             style={{ objectFit: "cover" }}
-            unoptimized={preview.startsWith("blob:") || preview.startsWith("data:")}
+            unoptimized={shouldBypassImageOptimization(preview)}
           />
 
           {uploading && (

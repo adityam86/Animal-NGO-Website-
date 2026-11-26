@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, validateImageSignature } from "@/lib/security";
 import { storeValidatedImage } from "@/lib/storage";
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`rescue-upload:${ip}`, 8, 15 * 60 * 1000);
+    const rate = await checkDistributedRateLimit(`rescue-upload:${ip}`, 8, 15 * 60 * 1000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many photo uploads from this address. Please try again shortly." },

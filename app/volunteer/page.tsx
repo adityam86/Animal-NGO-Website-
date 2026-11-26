@@ -34,9 +34,10 @@ export default function VolunteerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedRoles.length === 0) {
-      alert("Please select at least one role.");
+      setErrorMsg("Please select at least one volunteer role.");
       return;
     }
+    setErrorMsg(null);
     setSubmitting(true);
     try {
       const name = (document.getElementById("vol-name") as HTMLInputElement).value;

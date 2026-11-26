@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { contactCreateSchema } from "@/lib/validation";
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`contact-inquiry:${ip}`, 6, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`contact-inquiry:${ip}`, 6, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many messages submitted. Please wait before sending another enquiry." },

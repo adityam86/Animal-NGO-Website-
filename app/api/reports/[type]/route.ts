@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { AuthError, recordAuditLog, requireAdminSession } from "@/lib/auth-server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, sanitizeCsvCell } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(
     const session = await requireAdminSession(["SUPER_ADMIN", "ADMIN"]);
     const ip = getClientIp(request);
 
-    const rate = checkRateLimit(`reports-export:${session.userId}:${ip}`, 30, 60_000);
+    const rate = await checkDistributedRateLimit(`reports-export:${session.userId}:${ip}`, 30, 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many export requests. Please wait a moment." },

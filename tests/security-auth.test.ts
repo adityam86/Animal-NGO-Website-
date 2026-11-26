@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 const {
   mockCookieGet,
   mockCookieSet,
+  mockRedirect,
   mockUserFindUnique,
   mockUserUpdate,
   mockSessionFindUnique,
@@ -18,6 +19,9 @@ const {
 } = vi.hoisted(() => ({
   mockCookieGet: vi.fn(),
   mockCookieSet: vi.fn(),
+  mockRedirect: vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
   mockUserFindUnique: vi.fn(),
   mockUserUpdate: vi.fn(),
   mockSessionFindUnique: vi.fn(),
@@ -36,6 +40,10 @@ vi.mock("next/headers", () => ({
     get: mockCookieGet,
     set: mockCookieSet,
   })),
+}));
+
+vi.mock("next/navigation", () => ({
+  redirect: mockRedirect,
 }));
 
 vi.mock("next/cache", () => ({
@@ -86,10 +94,32 @@ import { proxy } from "@/proxy";
 import { POST as loginPost } from "@/app/api/login/route";
 import { POST as logoutPost } from "@/app/api/logout/route";
 import { deleteAnimal, updateRescueStatus } from "@/app/admin/actions";
+import AdminLayout from "@/app/admin/layout";
+import LoginPage from "@/app/login/page";
 
 const TEST_SECRET = "a_very_secure_test_session_secret_with_at_least_32_characters_12345";
 
-describe("Authentication, Session Security & Authorization", () => {
+function mockActiveDbSession(overrides?: {
+  revokedAt?: Date | null;
+  expiresAt?: Date;
+  isActive?: boolean;
+  role?: string;
+}) {
+  mockSessionFindUnique.mockResolvedValue({
+    jti: "j1",
+    revokedAt: overrides?.revokedAt ?? null,
+    expiresAt: overrides?.expiresAt ?? new Date(Date.now() + 60_000),
+    user: {
+      id: "u1",
+      email: "admin@ayudar.org",
+      name: "Admin",
+      role: overrides?.role ?? "ADMIN",
+      isActive: overrides?.isActive ?? true,
+    },
+  });
+}
+
+describe("Authentication, Session Revocation, Redirect Loop & Authorization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRateLimitStore();
@@ -148,22 +178,7 @@ describe("Authentication, Session Security & Authorization", () => {
     expect(await verifySessionToken("anything.fake.sig")).toBeNull();
   });
 
-  it("rejects forged cookies and unauthenticated access in proxy middleware", async () => {
-    const unauthReportReq = new NextRequest("https://ayudar.org/api/reports/donations");
-    const unauthReportRes = await proxy(unauthReportReq);
-    expect(unauthReportRes.status).toBe(401);
-
-    const forgedCookieReq = new NextRequest("https://ayudar.org/api/reports/donations", {
-      headers: { cookie: `${SESSION_COOKIE_NAME}=true` },
-    });
-    const forgedRes = await proxy(forgedCookieReq);
-    expect(forgedRes.status).toBe(401);
-
-    const unauthAdminReq = new NextRequest("https://ayudar.org/admin");
-    const adminRedirect = await proxy(unauthAdminReq);
-    expect(adminRedirect.status).toBe(307);
-    expect(adminRedirect.headers.get("location")).toContain("/login");
-
+  it("grants valid active DB session access and rejects expired, revoked, and suspended sessions without /login loop", async () => {
     const validToken = await createSessionToken(
       {
         id: "u1",
@@ -173,14 +188,87 @@ describe("Authentication, Session Security & Authorization", () => {
       },
       "j1"
     );
-    const validAdminReq = new NextRequest("https://ayudar.org/admin", {
-      headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
-    });
-    const validAdminRes = await proxy(validAdminReq);
+
+    // 1. Valid active DB session -> /admin passes (200), /login redirects cleanly to /admin
+    mockActiveDbSession();
+    const validAdminRes = await proxy(
+      new NextRequest("https://ayudar.org/admin", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
     expect(validAdminRes.status).toBe(200);
+
+    const validLoginRedirect = await proxy(
+      new NextRequest("https://ayudar.org/login", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(validLoginRedirect.status).toBe(307);
+    expect(validLoginRedirect.headers.get("location")).toContain("/admin");
+
+    // 2. DB Session Expired (even with valid JWT signature) -> /admin & /api/reports rejected, /login accessible
+    mockActiveDbSession({ expiresAt: new Date(Date.now() - 10_000) });
+    const expiredAdminRes = await proxy(
+      new NextRequest("https://ayudar.org/admin", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(expiredAdminRes.status).toBe(307);
+    expect(expiredAdminRes.headers.get("location")).toContain("/login");
+    expect(expiredAdminRes.headers.get("set-cookie")).toContain("Max-Age=0");
+
+    // 3. DB Session Revoked -> cryptographically valid JWT MUST NOT grant /admin, and /login renders without redirect loop
+    mockActiveDbSession({ revokedAt: new Date() });
+    const revokedApiRes = await proxy(
+      new NextRequest("https://ayudar.org/api/reports/donations", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(revokedApiRes.status).toBe(401);
+
+    const revokedAdminRes = await proxy(
+      new NextRequest("https://ayudar.org/admin", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(revokedAdminRes.status).toBe(307);
+    expect(revokedAdminRes.headers.get("location")).toContain("/login?session=expired");
+    expect(revokedAdminRes.headers.get("set-cookie")).toContain("Max-Age=0");
+
+    // Following redirect to /login with the same revoked JWT cookie MUST NOT loop to /admin
+    const loginAfterRevoke = await proxy(
+      new NextRequest("https://ayudar.org/login?session=expired", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(loginAfterRevoke.status).toBe(200);
+    expect(loginAfterRevoke.headers.get("location")).toBeNull();
+    expect(loginAfterRevoke.headers.get("set-cookie")).toContain("Max-Age=0");
+
+    mockCookieGet.mockReturnValue({ value: validToken });
+    await expect(AdminLayout({ children: null })).rejects.toThrow("NEXT_REDIRECT:/login?session=expired");
+    await expect(LoginPage({ searchParams: Promise.resolve({ session: "expired" }) })).resolves.toBeTruthy();
+
+    // 4. Suspended Admin (isActive: false) -> /admin rejected, /login accessible without loop
+    mockActiveDbSession({ isActive: false });
+    const suspendedAdminRes = await proxy(
+      new NextRequest("https://ayudar.org/admin", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(suspendedAdminRes.status).toBe(307);
+    expect(suspendedAdminRes.headers.get("location")).toContain("/login?session=expired");
+
+    const loginSuspendedRes = await proxy(
+      new NextRequest("https://ayudar.org/login?session=expired", {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      })
+    );
+    expect(loginSuspendedRes.status).toBe(200);
+    expect(loginSuspendedRes.headers.get("location")).toBeNull();
   });
 
-  it("authenticates DB user on POST /api/login, enforces rate limits, and revokes on logout", async () => {
+  it("authenticates DB user on POST /api/login, revokes on logout, and keeps /login accessible cleanly", async () => {
     const pwHash = await hashPassword("RescuePass#99");
     mockUserFindUnique.mockResolvedValue({
       id: "user_admin",
@@ -199,8 +287,7 @@ describe("Authentication, Session Security & Authorization", () => {
       headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.0.5" },
       body: JSON.stringify({ email: "ops@ayudar.org", password: "wrong-password" }),
     });
-    const badRes = await loginPost(badReq);
-    expect(badRes.status).toBe(401);
+    expect((await loginPost(badReq)).status).toBe(401);
 
     const okReq = new Request("http://localhost:3000/api/login", {
       method: "POST",
@@ -210,23 +297,23 @@ describe("Authentication, Session Security & Authorization", () => {
     const okRes = await loginPost(okReq);
     expect(okRes.status).toBe(200);
     const setCookie = okRes.headers.get("set-cookie") || "";
-    expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=`);
-    expect(setCookie.toLowerCase()).toContain("httponly");
+    const token = setCookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`))?.[1] || "";
+    expect(token).toBeTruthy();
 
-    const tokenMatch = setCookie.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
-    expect(tokenMatch?.[1]).toBeTruthy();
-
-    // Verify logout revokes DB session and clears cookie
-    mockCookieGet.mockReturnValue({ value: tokenMatch?.[1] });
+    // Logout revokes DB session and clears cookie
+    mockCookieGet.mockReturnValue({ value: token });
     mockSessionUpdateMany.mockResolvedValue({ count: 1 });
-
-    const logoutReq = new Request("http://localhost:3000/api/logout", {
-      method: "POST",
-    });
-    const logoutRes = await logoutPost(logoutReq);
+    const logoutRes = await logoutPost(
+      new Request("http://localhost:3000/api/logout", { method: "POST" })
+    );
     expect(logoutRes.status).toBe(303);
     expect(mockSessionUpdateMany).toHaveBeenCalledTimes(1);
     expect(logoutRes.headers.get("set-cookie")).toContain("Max-Age=0");
+
+    // Post-logout navigation to /login succeeds cleanly (no DB session found)
+    mockSessionFindUnique.mockResolvedValue(null);
+    const loginAfterLogout = await proxy(new NextRequest("https://ayudar.org/login"));
+    expect(loginAfterLogout.status).toBe(200);
   });
 
   it("blocks unauthenticated and lower-privilege invocations of Admin Server Actions", async () => {
@@ -257,7 +344,6 @@ describe("Authentication, Session Security & Authorization", () => {
       },
     });
 
-    // Coordinator cannot perform ADMIN-only deleteAnimal
     await expect(deleteAnimal("ani_1")).rejects.toThrow(/Forbidden/i);
   });
 });

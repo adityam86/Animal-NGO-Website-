@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sanitizePlainText } from "./security";
+import { isSafeImageUrl, sanitizePlainText } from "./security";
 
 const trimmedString = (min: number, max: number) =>
   z.string().transform((v) => sanitizePlainText(v, max)).pipe(z.string().min(min).max(max));
@@ -41,8 +41,8 @@ export const rescueCreateSchema = z.object({
   photoUrl: z
     .union([
       z.string().refine(
-        (u) => u === "" || u.startsWith("/uploads/") || u.startsWith("https://") || u.startsWith("data:image/"),
-        "Invalid image URL"
+        (u) => isSafeImageUrl(u),
+        "Image URL must be an uploaded shelter/Vercel Blob image or valid raster photo"
       ),
       z.null(),
       z.undefined(),
@@ -104,13 +104,18 @@ export const createOrderSchema = z.object({
   recordId: z.string().trim().min(1).max(80),
 });
 
-export const verifyPaymentSchema = z.object({
-  razorpay_order_id: z.string().trim().min(3).max(120),
-  razorpay_payment_id: z.string().trim().min(3).max(120),
-  razorpay_signature: z.string().trim().min(3).max(256),
-  donationId: z.string().trim().min(1).max(80).optional(),
-  sponsorshipId: z.string().trim().min(1).max(80).optional(),
-});
+export const verifyPaymentSchema = z
+  .object({
+    razorpay_order_id: z.string().trim().min(3).max(120),
+    razorpay_payment_id: z.string().trim().min(3).max(120),
+    razorpay_signature: z.string().trim().min(3).max(256),
+    donationId: z.string().trim().min(1).max(80).optional(),
+    sponsorshipId: z.string().trim().min(1).max(80).optional(),
+  })
+  .refine(
+    (d) => Boolean(d.donationId) !== Boolean(d.sponsorshipId),
+    "Provide exactly one of donationId or sponsorshipId"
+  );
 
 export const contactCreateSchema = z.object({
   name: trimmedString(2, 100),
@@ -148,13 +153,8 @@ export const animalFormSchema = z.object({
     .string()
     .trim()
     .refine(
-      (u) =>
-        u === "" ||
-        u.startsWith("/images/") ||
-        u.startsWith("/uploads/") ||
-        u.startsWith("https://") ||
-        u.startsWith("data:image/"),
-      "Invalid animal image URL"
+      (u) => isSafeImageUrl(u),
+      "Animal image URL must be a local sanctuary asset, uploaded Vercel Blob URL, or raster data URL"
     )
     .optional(),
   vaccinated: z.boolean().default(false),

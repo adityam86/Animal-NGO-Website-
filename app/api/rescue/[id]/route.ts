@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`rescue-track:${ip}`, 60, 60_000);
+    const rate = await checkDistributedRateLimit(`rescue-track:${ip}`, 60, 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many status lookups. Please wait a moment." },

@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
+import { shouldBypassImageOptimization } from "@/lib/image-url";
 import { approveAdoption, scheduleAdoptionVisit, rejectAdoption, updateAdoptionStatus } from "./actions";
 import { Check, Calendar, X, Home } from "lucide-react";
 
@@ -168,7 +169,13 @@ export default async function AdminAdoptionPage({
                           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
                             <div style={{ width: 44, height: 44, borderRadius: "var(--radius-md)", overflow: "hidden", position: "relative", flexShrink: 0, background: "var(--cream-100)" }}>
                               {app.animal.image && (
-                                <Image src={app.animal.image} alt={app.animal.name} fill style={{ objectFit: "cover" }} />
+                                <Image
+                                  src={app.animal.image}
+                                  alt={app.animal.name}
+                                  fill
+                                  unoptimized={shouldBypassImageOptimization(app.animal.image)}
+                                  style={{ objectFit: "cover" }}
+                                />
                               )}
                             </div>
                             <div>

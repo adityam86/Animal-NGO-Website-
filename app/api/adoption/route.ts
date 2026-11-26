@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { adoptionCreateSchema } from "@/lib/validation";
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`adoption-create:${ip}`, 6, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`adoption-create:${ip}`, 6, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { success: false, error: "Too many applications submitted. Please wait and try again." },

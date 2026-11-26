@@ -9,6 +9,7 @@ const {
   mockSponsorshipUpdate,
   mockSponsorshipUpdateMany,
   mockAuditCreate,
+  mockRazorpayPaymentFetch,
 } = vi.hoisted(() => ({
   mockDonationFindUnique: vi.fn(),
   mockDonationUpdate: vi.fn(),
@@ -17,7 +18,18 @@ const {
   mockSponsorshipUpdate: vi.fn(),
   mockSponsorshipUpdateMany: vi.fn(),
   mockAuditCreate: vi.fn(),
+  mockRazorpayPaymentFetch: vi.fn(),
 }));
+
+vi.mock("razorpay", () => {
+  return {
+    default: class MockRazorpay {
+      payments = {
+        fetch: (...args: unknown[]) => mockRazorpayPaymentFetch(...args),
+      };
+    },
+  };
+});
 
 vi.mock("@/lib/prisma", () => {
   const client = {
@@ -34,7 +46,7 @@ vi.mock("@/lib/prisma", () => {
     auditLog: {
       create: mockAuditCreate,
     },
-    $transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb(client)),
+    $transaction: async (cb: (tx: unknown) => Promise<unknown>) => cb(client),
   };
   return { default: client, prisma: client };
 });
@@ -47,7 +59,11 @@ import { POST as webhookPost } from "@/app/api/webhooks/razorpay/route";
 const TEST_SECRET = "rzp_test_secret_for_signature_checks_987654";
 const WEBHOOK_SECRET = "whsec_test_webhook_secret_abcdef";
 
-describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
+function signPayment(orderId: string, paymentId: string) {
+  return createHmac("sha256", TEST_SECRET).update(`${orderId}|${paymentId}`).digest("hex");
+}
+
+describe("Razorpay Order, Replay, Amount & Webhook Regression Security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRateLimitStore();
@@ -95,11 +111,40 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
       })
     );
     expect(mockVerifyRes.status).toBe(403);
-    const body = await mockVerifyRes.json();
-    expect(body.verified).toBe(false);
+    expect((await mockVerifyRes.json()).verified).toBe(false);
   });
 
-  it("rejects invalid Razorpay HMAC signatures and binds verification to matching DB order ID", async () => {
+  it("rejects verification when DB record has null razorpayOrderId (cheaper-order replay prevention)", async () => {
+    const cheapOrderId = "order_cheap_10";
+    const cheapPaymentId = "pay_cheap_10";
+
+    mockDonationFindUnique.mockResolvedValue({
+      id: "don_50k",
+      amount: 50000,
+      paymentStatus: "Pending",
+      razorpayOrderId: null, // Unbound expensive pending donation
+      razorpayPaymentId: null,
+    });
+
+    const replayRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: cheapOrderId,
+          razorpay_payment_id: cheapPaymentId,
+          razorpay_signature: signPayment(cheapOrderId, cheapPaymentId),
+          donationId: "don_50k",
+        }),
+      })
+    );
+
+    expect(replayRes.status).toBe(400);
+    expect(mockDonationUpdate).not.toHaveBeenCalled();
+    expect(mockRazorpayPaymentFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid HMAC signatures and different order IDs without corrupting records", async () => {
     mockDonationFindUnique.mockResolvedValue({
       id: "don_2",
       amount: 2500,
@@ -123,39 +168,141 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
     expect(badSigRes.status).toBe(400);
     expect(mockDonationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { paymentStatus: "Failed" },
+        where: expect.objectContaining({ razorpayOrderId: "order_real_999" }),
+        data: expect.objectContaining({ paymentStatus: "Failed" }),
       })
     );
-
-    // Valid signature for wrong order ID must be rejected
-    const validSigOtherOrder = createHmac("sha256", TEST_SECRET)
-      .update("order_cheap_10|pay_real_222")
-      .digest("hex");
 
     const mismatchRes = await verifyPaymentPost(
       new Request("http://localhost:3000/api/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          razorpay_order_id: "order_cheap_10",
+          razorpay_order_id: "order_other_123",
           razorpay_payment_id: "pay_real_222",
-          razorpay_signature: validSigOtherOrder,
+          razorpay_signature: signPayment("order_other_123", "pay_real_222"),
           donationId: "don_2",
         }),
       })
     );
     expect(mismatchRes.status).toBe(400);
+    expect(mockDonationUpdate).not.toHaveBeenCalled();
   });
 
-  it("verifies valid Razorpay signatures and prevents duplicate payment processing", async () => {
+  it("rejects payloads specifying both donationId and sponsorshipId", async () => {
+    const bothRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: "order_1",
+          razorpay_payment_id: "pay_1",
+          razorpay_signature: signPayment("order_1", "pay_1"),
+          donationId: "don_1",
+          sponsorshipId: "sp_1",
+        }),
+      })
+    );
+    expect(bothRes.status).toBe(400);
+  });
+
+  it("rejects wrong Razorpay API amount, wrong order linkage, and non-captured statuses", async () => {
+    const orderId = "order_srv_500";
+    const paymentId = "pay_srv_500";
+    mockDonationFindUnique.mockResolvedValue({
+      id: "don_5000",
+      amount: 5000,
+      paymentStatus: "Pending",
+      razorpayOrderId: orderId,
+      razorpayPaymentId: null,
+    });
+
+    // Case 1: Wrong paid amount returned by Razorpay server API (1000 paise instead of 500000)
+    mockRazorpayPaymentFetch.mockResolvedValueOnce({
+      id: paymentId,
+      order_id: orderId,
+      amount: 1000,
+      currency: "INR",
+      status: "captured",
+    });
+    const wrongAmtRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signPayment(orderId, paymentId),
+          donationId: "don_5000",
+        }),
+      })
+    );
+    expect(wrongAmtRes.status).toBe(400);
+    expect((await wrongAmtRes.json()).error).toMatch(/amount/i);
+    expect(mockDonationUpdate).not.toHaveBeenCalled();
+
+    // Case 2: Razorpay says payment belongs to a different order
+    mockRazorpayPaymentFetch.mockResolvedValueOnce({
+      id: paymentId,
+      order_id: "order_different_xyz",
+      amount: 500000,
+      currency: "INR",
+      status: "captured",
+    });
+    const wrongOrderRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signPayment(orderId, paymentId),
+          donationId: "don_5000",
+        }),
+      })
+    );
+    expect(wrongOrderRes.status).toBe(400);
+
+    // Case 3: Razorpay reports payment failed
+    mockRazorpayPaymentFetch.mockResolvedValueOnce({
+      id: paymentId,
+      order_id: orderId,
+      amount: 500000,
+      currency: "INR",
+      status: "failed",
+    });
+    const failedRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signPayment(orderId, paymentId),
+          donationId: "don_5000",
+        }),
+      })
+    );
+    expect(failedRes.status).toBe(400);
+    expect(mockDonationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ paymentStatus: "Failed" }) })
+    );
+  });
+
+  it("verifies valid Razorpay payments, handles repeated verification idempotently, and blocks reused paymentId", async () => {
     const orderId = "order_valid_555";
     const paymentId = "pay_valid_777";
-    const validSig = createHmac("sha256", TEST_SECRET)
-      .update(`${orderId}|${paymentId}`)
-      .digest("hex");
+    const validSig = signPayment(orderId, paymentId);
 
-    // 1st lookup: target donation
-    // 2nd lookup: check paymentId uniqueness
+    mockRazorpayPaymentFetch.mockResolvedValue({
+      id: paymentId,
+      order_id: orderId,
+      amount: 100000, // ₹1000 in paise
+      currency: "INR",
+      status: "captured",
+    });
+
+    // Step 1 pre-check -> Step 4 tx check (donation) + tx re-read
     mockDonationFindUnique
       .mockResolvedValueOnce({
         id: "don_555",
@@ -164,7 +311,15 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
         razorpayOrderId: orderId,
         razorpayPaymentId: null,
       })
-      .mockResolvedValueOnce(null);
+      .mockResolvedValueOnce(null) // existingDonationPayment
+      .mockResolvedValueOnce({
+        id: "don_555",
+        amount: 1000,
+        paymentStatus: "Pending",
+        razorpayOrderId: orderId,
+        razorpayPaymentId: null,
+      });
+    mockSponsorshipFindUnique.mockResolvedValueOnce(null); // existingSponsorshipPayment
     mockDonationUpdate.mockResolvedValue({});
 
     const okRes = await verifyPaymentPost(
@@ -180,24 +335,26 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
       })
     );
     expect(okRes.status).toBe(200);
-    const okJson = await okRes.json();
-    expect(okJson.verified).toBe(true);
-
-    // Reusing the same payment ID for a DIFFERENT donation is blocked (409)
-    mockDonationFindUnique
-      .mockResolvedValueOnce({
-        id: "don_other",
-        amount: 5000,
-        paymentStatus: "Pending",
-        razorpayOrderId: orderId,
-        razorpayPaymentId: null,
+    expect((await okRes.json()).verified).toBe(true);
+    expect(mockDonationUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          paymentStatus: "Completed",
+          razorpayPaymentId: paymentId,
+          verifiedAt: expect.any(Date),
+        }),
       })
-      .mockResolvedValueOnce({
-        id: "don_555",
-        razorpayPaymentId: paymentId,
-      });
+    );
 
-    const replayRes = await verifyPaymentPost(
+    // Repeated valid verification on same completed donation is idempotent (200)
+    mockDonationFindUnique.mockResolvedValueOnce({
+      id: "don_555",
+      amount: 1000,
+      paymentStatus: "Completed",
+      razorpayOrderId: orderId,
+      razorpayPaymentId: paymentId,
+    });
+    const repeatRes = await verifyPaymentPost(
       new Request("http://localhost:3000/api/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -205,11 +362,57 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
           razorpay_order_id: orderId,
           razorpay_payment_id: paymentId,
           razorpay_signature: validSig,
-          donationId: "don_other",
+          donationId: "don_555",
         }),
       })
     );
-    expect(replayRes.status).toBe(409);
+    expect(repeatRes.status).toBe(200);
+    expect((await repeatRes.json()).alreadyCompleted).toBe(true);
+
+    // Reusing same paymentId on a DIFFERENT sponsorship record (cross-table replay) -> 409
+    mockSponsorshipFindUnique
+      .mockResolvedValueOnce({
+        id: "sp_other",
+        tier: "Full Care - 3000",
+        amount: 3000,
+        paymentStatus: "Pending",
+        razorpayOrderId: orderId,
+        razorpayPaymentId: null,
+      })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "sp_other",
+        tier: "Full Care - 3000",
+        amount: 3000,
+        paymentStatus: "Pending",
+        razorpayOrderId: orderId,
+        razorpayPaymentId: null,
+      });
+    mockDonationFindUnique.mockResolvedValueOnce({
+      id: "don_555",
+      razorpayPaymentId: paymentId,
+    });
+    mockRazorpayPaymentFetch.mockResolvedValueOnce({
+      id: paymentId,
+      order_id: orderId,
+      amount: 300000,
+      currency: "INR",
+      status: "captured",
+    });
+
+    const replayCrossTable = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: validSig,
+          sponsorshipId: "sp_other",
+        }),
+      })
+    );
+    expect(replayCrossTable.status).toBe(409);
   });
 
   it("verifies Razorpay webhook HMAC signatures and processes payment.captured idempotently", async () => {
@@ -253,8 +456,7 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
       })
     );
     expect(firstOk.status).toBe(200);
-    const firstJson = await firstOk.json();
-    expect(firstJson.updated).toBe(true);
+    expect((await firstOk.json()).updated).toBe(true);
 
     // Duplicate webhook delivery must be idempotent
     mockDonationFindUnique.mockResolvedValueOnce({
@@ -273,7 +475,6 @@ describe("Razorpay Order, Signature, Webhook & Idempotency Security", () => {
       })
     );
     expect(secondOk.status).toBe(200);
-    const secondJson = await secondOk.json();
-    expect(secondJson.updated).toBe(false);
+    expect((await secondOk.json()).updated).toBe(false);
   });
 });

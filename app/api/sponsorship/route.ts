@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { SPONSORSHIP_TIERS_INR } from "@/lib/payment";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { sponsorshipCreateSchema } from "@/lib/validation";
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`sponsorship-init:${ip}`, 15, 15 * 60_000);
+    const rate = await checkDistributedRateLimit(`sponsorship-init:${ip}`, 15, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
         { success: false, error: "Too many sponsorship attempts. Please wait a moment." },

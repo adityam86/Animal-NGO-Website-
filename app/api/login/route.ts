@@ -9,7 +9,7 @@ import {
   type AdminRole,
 } from "@/lib/session-token";
 import { recordAuditLog } from "@/lib/auth-server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { loginSchema } from "@/lib/validation";
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Forbidden origin" }, { status: 403 });
     }
 
-    const ipRate = checkRateLimit(`login-ip:${ip}`, 15, 15 * 60 * 1000);
+    const ipRate = await checkDistributedRateLimit(`login-ip:${ip}`, 15, 15 * 60 * 1000);
     if (!ipRate.allowed) {
       return NextResponse.json(
         { success: false, error: "Too many login attempts. Please try again later." },
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     }
 
     const { email, password } = parsed.data;
-    const acctRate = checkRateLimit(`login-acct:${email}`, 8, 15 * 60 * 1000);
+    const acctRate = await checkDistributedRateLimit(`login-acct:${email}`, 8, 15 * 60 * 1000);
     if (!acctRate.allowed) {
       return NextResponse.json(
         { success: false, error: "Too many login attempts for this account. Try again later." },
