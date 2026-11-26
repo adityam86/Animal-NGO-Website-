@@ -9,6 +9,7 @@ type ImageUploaderProps = {
   onChange: (url: string) => void;
   label?: string;
   helperText?: string;
+  uploadEndpoint?: string;
 };
 
 export default function ImageUploader({
@@ -16,6 +17,7 @@ export default function ImageUploader({
   onChange,
   label = "Photo",
   helperText,
+  uploadEndpoint = "/api/upload",
 }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string>(value);
   const [uploading, setUploading] = useState(false);
@@ -48,7 +50,7 @@ export default function ImageUploader({
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/upload", {
+      const res = await fetch(uploadEndpoint || "/api/upload", {
         method: "POST",
         body: formData,
       });

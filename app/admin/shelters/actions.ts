@@ -2,39 +2,66 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { recordAuditLog, requireAdminSession } from "@/lib/auth-server";
+import { sanitizePlainText } from "@/lib/security";
 
 export async function addShelter(formData: FormData) {
-  const name = formData.get("name") as string;
-  const address = formData.get("address") as string;
-  const capacity = parseInt(formData.get("capacity") as string) || 0;
-  const type = formData.get("type") as string;
+  const session = await requireAdminSession(["SUPER_ADMIN", "ADMIN"]);
 
-  if (!name || !address || !capacity || !type) {
+  const name = sanitizePlainText(formData.get("name"), 120);
+  const address = sanitizePlainText(formData.get("address"), 250);
+  const capacity = parseInt(String(formData.get("capacity") || "0"), 10);
+  const type = sanitizePlainText(formData.get("type"), 60);
+
+  if (!name || !address || !Number.isFinite(capacity) || capacity <= 0 || !type) {
     throw new Error("Missing required fields for shelter location");
   }
 
-  await prisma.shelterLocation.create({
+  const shelter = await prisma.shelterLocation.create({
     data: {
       name,
       address,
-      capacity,
+      capacity: Math.min(capacity, 10_000),
       type,
     },
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: "ADD_SHELTER",
+    resource: `shelter:${shelter.id}`,
+    details: `${shelter.name} (${shelter.type})`,
   });
 
   revalidatePath("/admin/shelters");
 }
 
 export async function assignAnimalToShelter(animalId: string, shelterLocationId: string | null) {
-  await prisma.animal.update({
-    where: { id: animalId },
-    data: {
-      shelterLocationId: shelterLocationId || null,
-      // Keep the string column for backup compatibility
-      shelter: shelterLocationId 
-        ? (await prisma.shelterLocation.findUnique({ where: { id: shelterLocationId } }))?.name || "Unassigned"
-        : "Unassigned",
-    },
+  const session = await requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"]);
+  const cleanAnimalId = sanitizePlainText(animalId, 80);
+  const cleanShelterId = shelterLocationId ? sanitizePlainText(shelterLocationId, 80) : null;
+
+  if (!cleanAnimalId) throw new Error("Invalid animal ID");
+
+  await prisma.$transaction(async (tx) => {
+    const shelter = cleanShelterId
+      ? await tx.shelterLocation.findUnique({ where: { id: cleanShelterId } })
+      : null;
+
+    await tx.animal.update({
+      where: { id: cleanAnimalId },
+      data: {
+        shelterLocationId: shelter ? shelter.id : null,
+        shelter: shelter ? shelter.name : "Unassigned",
+      },
+    });
+  });
+
+  await recordAuditLog({
+    userId: session.userId,
+    action: "ASSIGN_SHELTER",
+    resource: `animal:${cleanAnimalId}`,
+    details: cleanShelterId ? `Assigned to shelter ${cleanShelterId}` : "Unassigned from shelter",
   });
 
   revalidatePath("/admin/shelters");
