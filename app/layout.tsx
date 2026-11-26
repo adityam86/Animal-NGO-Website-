@@ -20,12 +20,13 @@ const inter = Inter({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#ea580c",
+  themeColor: "#15803d",
   width: "device-width",
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ayudar.org"),
   title: {
     default: "Ayudar Animal Welfare Foundation | Raniganj",
     template: "%s | Ayudar Animal Welfare Foundation",
@@ -82,6 +83,20 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/images/logo.jpg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "NGO",
+              name: "Ayudar Animal Welfare Foundation",
+              url: process.env.NEXT_PUBLIC_SITE_URL || "https://ayudar.org",
+              areaServed: ["Raniganj", "Asansol", "Durgapur", "West Bengal"],
+              telephone: "+91-98000-00000",
+              sameAs: [],
+            }),
+          }}
+        />
       </head>
       <body>
         <ThemeProvider>
