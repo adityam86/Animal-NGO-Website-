@@ -13,7 +13,8 @@
 - [ ] **Razorpay Test Mode** — Create or use an existing Razorpay Test Mode account. Record `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`, and `RAZORPAY_WEBHOOK_SECRET`.
   - Ensure Razorpay dashboard has **auto-capture enabled** (or pass `payment_capture: 1` in `orders.create`).
   - Configure a webhook URL pointing to `https://<staging-domain>/api/webhooks/razorpay` with events: `payment.captured`, `payment.failed`, `order.paid`.
-- [ ] **Vercel Blob Storage** — Provision a Vercel Blob store on the staging Vercel project. Record `BLOB_READ_WRITE_TOKEN`.
+- [ ] **Vercel Blob Storage** — Provision a Vercel Blob store on the staging Vercel project. Record `BLOB_READ_WRITE_TOKEN` (for public animal and story images).
+- [ ] **Private Object Storage (S3 / Cloudflare R2)** — Provision a private bucket for sensitive rescue incident photos. Record `PRIVATE_STORAGE_BUCKET`, `PRIVATE_STORAGE_ENDPOINT`, `PRIVATE_STORAGE_ACCESS_KEY`, and `PRIVATE_STORAGE_SECRET_KEY`.
 - [ ] **Upstash Redis REST** — Provision an Upstash Redis database. Record `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 - [ ] **Session Secret** — Generate: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. Record as `SESSION_SECRET` (≥ 32 chars).
 - [ ] **Admin Seed Credentials** — Choose strong `ADMIN_SEED_EMAIL` and `ADMIN_SEED_PASSWORD` (never reuse legacy MVP credentials `admin@ayudar.org` / `Ayudar@2026`).

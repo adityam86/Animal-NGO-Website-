@@ -5,6 +5,29 @@ import { getClientIp } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Generalizes the location for public status tracking so exact GPS coordinates,
+ * house/flat numbers, and private caller address specifics are never exposed publicly.
+ */
+function generalizePublicLocation(rawLocation: string | null | undefined): string {
+  if (!rawLocation) return "Location logged with dispatch";
+
+  // 1. Strip raw GPS coordinates
+  let loc = rawLocation
+    .replace(/\(?GPS:?\s*-?\d+\.?\d*,\s*-?\d+\.?\d*\)?/gi, "")
+    .trim();
+
+  // 2. Strip precise door/house/flat/apartment/plot numbers
+  loc = loc
+    .replace(/\b(flat|house|plot|door|room|shop|building|bldg|no\.?|#)\s*[\w\d\/-]+/gi, "")
+    .replace(/\b\d+[\/-]\d+\b/g, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[,.\s-]+|[,.\s-]+$/g, "")
+    .trim();
+
+  return loc ? `${loc} (Location logged with dispatch)` : "Location logged with dispatch";
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -53,17 +76,13 @@ export async function GET(
       return NextResponse.json({ error: "Rescue case not found" }, { status: 404 });
     }
 
-    // Redact exact GPS coordinates from public tracking responses
-    const redactedLocation = rescueCase.location
-      ? rescueCase.location
-          .replace(/\(GPS:\s*-?\d+\.?\d*,\s*-?\d+\.?\d*\)/gi, "(Location logged with dispatch)")
-          .replace(/GPS:\s*-?\d+\.?\d*,\s*-?\d+\.?\d*/gi, "Location logged with dispatch")
-      : rescueCase.location;
+    // Redact exact GPS coordinates and precise house/flat address from public tracking response
+    const sanitizedLocation = generalizePublicLocation(rescueCase.location);
 
     return NextResponse.json(
       {
         ...rescueCase,
-        location: redactedLocation,
+        location: sanitizedLocation,
       },
       { headers: { "Cache-Control": "no-store" } }
     );

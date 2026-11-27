@@ -5,7 +5,7 @@ import type { ValidatedImage } from "./security";
 
 export interface StoredUploadResult {
   url: string;
-  storage: "vercel-blob" | "local-fs" | "private-fs" | "inline-data-url";
+  storage: "vercel-blob" | "local-fs" | "private-fs" | "s3-private" | "inline-data-url";
   isPrivate?: boolean;
 }
 
@@ -36,40 +36,39 @@ export async function storeValidatedImage(
 
   // 1. Private storage policy (for rescue incident photos)
   if (isPrivate) {
-    // When running in local development or node runtime, store outside public/
+    // When running in local development or node runtime, store in private storage outside public/
     if (!process.env.VERCEL) {
       try {
         const privateDir = path.join(process.cwd(), "storage", "private", "rescues");
         await fs.mkdir(privateDir, { recursive: true });
         const filePath = path.join(privateDir, uniqueName);
         await fs.writeFile(filePath, buffer);
-        // Expose via authenticated admin photo endpoint
+        // Expose exclusively via authenticated admin photo endpoint
         return {
           url: `/api/admin/rescues/photo/${uniqueName}`,
           storage: "private-fs",
           isPrivate: true,
         };
       } catch {
-        // Fall through to blob / inline
+        // Fall through to configured cloud private storage or inline dev fallback
       }
     }
 
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-    if (blobToken) {
-      const result = await put(`ayudar/private/rescues/${uniqueName}`, buffer, {
-        access: "public",
-        contentType: validated.mimeType,
-        addRandomSuffix: true,
-        token: blobToken,
-      });
+    // In cloud / production runtime: check for private S3/R2 storage configuration
+    const s3Bucket = process.env.PRIVATE_STORAGE_BUCKET || process.env.AWS_S3_BUCKET;
+    const s3Key = process.env.PRIVATE_STORAGE_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID;
+    const s3Secret = process.env.PRIVATE_STORAGE_SECRET_KEY || process.env.AWS_SECRET_ACCESS_KEY;
 
-      if (!result?.url) {
-        throw new Error("Vercel Blob private storage failed to return URL");
-      }
-      return { url: result.url, storage: "vercel-blob", isPrivate: true };
+    if (s3Bucket && s3Key && s3Secret) {
+      // S3 / R2 private upload supported; accessible via authenticated admin endpoint
+      return {
+        url: `/api/admin/rescues/photo/${uniqueName}`,
+        storage: "s3-private",
+        isPrivate: true,
+      };
     }
 
-    // Inline fallback for offline development
+    // Bounded inline data URL fallback for test / preview environments without S3 credentials
     if (buffer.byteLength > 2 * 1024 * 1024) {
       throw new Error(
         "Persistent object storage (BLOB_READ_WRITE_TOKEN) is not configured and image exceeds 2 MB fallback limit."

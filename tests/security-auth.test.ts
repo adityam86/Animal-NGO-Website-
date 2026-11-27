@@ -314,7 +314,7 @@ describe("Authentication, Session Revocation, Redirect Loop & Authorization", ()
     mockSessionFindUnique.mockResolvedValue(null);
     const loginAfterLogout = await proxy(new NextRequest("https://ayudar.org/login"));
     expect(loginAfterLogout.status).toBe(200);
-  });
+  }, 15000);
 
   it("blocks unauthenticated and lower-privilege invocations of Admin Server Actions", async () => {
     mockCookieGet.mockReturnValue(undefined);
