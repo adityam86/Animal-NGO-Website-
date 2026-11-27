@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
+import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
+import { chatMessageSchema } from "@/lib/validation";
+
+const FIRST_AID_DISCLAIMER =
+  "Note: This information is supportive first-aid guidance only and is not a substitute for qualified veterinary diagnosis or emergency clinic treatment.";
 
 interface TriageTopic {
   keywords: string[];
@@ -136,11 +142,38 @@ const GENERAL_KNOWLEDGE = [
 
 export async function POST(request: Request) {
   try {
-    const { message } = await request.json();
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
+
+    const ip = getClientIp(request);
+    const rate = await checkDistributedRateLimit(`ai-chat:${ip}`, 30, 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          reply: "Please slow down slightly — for immediate animal emergencies call +91 98000 00000.",
+          isEmergency: false,
+        },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+      );
+    }
+
+    const bodyResult = await readBoundedJson(request, 16 * 1024);
+    if (!bodyResult.ok) {
+      return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
+    }
+
+    const parsed = chatMessageSchema.safeParse(bodyResult.data);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid chat message" }, { status: 400 });
+    }
+
+    const message = parsed.data.message || "";
     if (!message) {
       return NextResponse.json({
-        reply: "Hello! I am the Ayudar AI Emergency & Animal Care Assistant. How can I assist you today?",
-        isEmergency: false
+        reply: "Hello! I am the Ayudar Emergency & Animal Care Assistant. How can I assist you today?",
+        isEmergency: false,
+        disclaimer: FIRST_AID_DISCLAIMER,
       });
     }
 
@@ -148,15 +181,16 @@ export async function POST(request: Request) {
 
     // 1. Check for Emergency Triage Match
     for (const triage of EMERGENCY_TRIAGE) {
-      if (triage.keywords.some(k => cleanMsg.includes(k))) {
+      if (triage.keywords.some((k) => cleanMsg.includes(k))) {
         return NextResponse.json({
-          reply: triage.response,
+          reply: `${triage.response}\n\n${FIRST_AID_DISCLAIMER}`,
           isEmergency: true,
           title: triage.title,
           steps: triage.firstAidSteps,
           warnings: triage.safetyWarnings,
+          disclaimer: FIRST_AID_DISCLAIMER,
           dispatchUrl: "/rescue",
-          hotline: "+91 98000 00000"
+          hotline: "+91 98000 00000",
         });
       }
     }

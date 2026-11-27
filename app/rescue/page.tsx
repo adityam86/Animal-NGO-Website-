@@ -67,7 +67,6 @@ export default function RescuePage() {
       const reporterPhone = (document.getElementById("reporter-phone") as HTMLInputElement).value;
       const reporterEmail = (document.getElementById("reporter-email") as HTMLInputElement).value;
       const rawDesc = (document.getElementById("description") as HTMLTextAreaElement).value;
-      const description = photoUrl ? `${rawDesc}\n\n[Incident Photo: ${photoUrl}]` : rawDesc;
       const locationInput = (document.getElementById("location-text") as HTMLInputElement).value;
       const finalLocation = coords
         ? `${locationInput || address} (GPS: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`
@@ -83,7 +82,8 @@ export default function RescuePage() {
           animalType,
           emergencyLevel: emergency,
           condition,
-          description,
+          description: rawDesc,
+          photoUrl,
           location: finalLocation,
         }),
       });
@@ -376,6 +376,7 @@ export default function RescuePage() {
                   label="Upload Animal Incident Photo (optional)"
                   value={photoUrl}
                   onChange={(url) => setPhotoUrl(url)}
+                  uploadEndpoint="/api/rescue/upload"
                   helperText="Upload a photo of the injured or stranded animal. This helps our field rescue team prepare medical kits and dispatch the right vehicle."
                 />
               </div>

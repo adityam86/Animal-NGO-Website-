@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Menu, X, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NAV_LINKS } from "@/lib/data";
@@ -10,6 +11,7 @@ import PulseBeacon from "@/components/motion/PulseBeacon";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -35,12 +37,16 @@ export default function Navbar() {
         boxShadow: scrolled ? "0 4px 20px rgba(0,0,0,0.06)" : "none",
       }}
     >
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+
       <div className="container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "68px" }}>
         {/* Logo */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.65rem", textDecoration: "none" }}>
           <Image src="/images/logo.jpg" alt="Ayudar Logo" width={40} height={40} style={{ borderRadius: "50%", objectFit: "cover" }} />
           <div>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "1.05rem", color: "var(--stone-800)", lineHeight: 1.2 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.08rem", color: "var(--green-700)", lineHeight: 1.2 }}>
               Ayudar
             </div>
             <div style={{ fontSize: "0.65rem", color: "var(--stone-500)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
@@ -50,35 +56,40 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav style={{ display: "flex", alignItems: "center", gap: "0.2rem" }} className="hide-mobile">
-          {NAV_LINKS.slice(0, 7).map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              style={{
-                padding: "0.45rem 0.85rem",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                color: "var(--stone-700)",
-                borderRadius: "var(--radius-full)",
-                transition: "all 0.2s ease",
-                textDecoration: "none",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--saffron-600)";
-                (e.currentTarget as HTMLElement).style.background = "var(--saffron-50)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--stone-700)";
-                (e.currentTarget as HTMLElement).style.background = "transparent";
-              }}
-            >
-              {link.label}
-            </Link>
-          ))}
+        <nav aria-label="Primary navigation" style={{ display: "flex", alignItems: "center", gap: "0.2rem" }} className="hide-mobile">
+          {NAV_LINKS.slice(0, 7).map((link) => {
+            const isActive = link.href === "/" ? pathname === "/" : pathname === link.href || pathname.startsWith(`${link.href}/`);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? "page" : undefined}
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  fontSize: "0.875rem",
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? "var(--green-700)" : "var(--stone-700)",
+                  background: isActive ? "var(--green-50)" : "transparent",
+                  borderRadius: "var(--radius-full)",
+                  transition: "all 0.2s ease",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.color = "var(--green-700)";
+                  (e.currentTarget as HTMLElement).style.background = "var(--green-50)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.color = isActive ? "var(--green-700)" : "var(--stone-700)";
+                  (e.currentTarget as HTMLElement).style.background = isActive ? "var(--green-50)" : "transparent";
+                }}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right CTAs with motion */}
+        {/* Right CTAs */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }} className="hide-mobile">
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
             <Link
@@ -92,12 +103,11 @@ export default function Navbar() {
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-            <Link href="/donate" className="btn btn-primary btn-sm" style={{ padding: "0.45rem 1rem" }}>
+            <Link href="/donate" className="btn btn-primary btn-sm" style={{ padding: "0.45rem 1.05rem" }}>
               Donate
             </Link>
           </motion.div>
 
-          {/* Theme Toggle Button */}
           <ThemeToggle />
         </div>
 
@@ -106,13 +116,14 @@ export default function Navbar() {
           className="hide-desktop"
           onClick={() => setOpen(!open)}
           style={{ background: "none", border: "none", cursor: "pointer", padding: "0.5rem", color: "var(--stone-700)" }}
-          aria-label="Toggle menu"
+          aria-label="Toggle navigation menu"
+          aria-expanded={open}
         >
           {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* Mobile Menu with smooth slide/fade */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -128,24 +139,29 @@ export default function Navbar() {
             className="hide-desktop mobile-nav-drawer"
           >
             <div style={{ padding: "1.25rem 1rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  style={{
-                    padding: "0.75rem 1rem",
-                    fontSize: "0.95rem",
-                    fontWeight: 500,
-                    color: "var(--stone-700)",
-                    borderRadius: "var(--radius-md)",
-                    textDecoration: "none",
-                    display: "block",
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {NAV_LINKS.map((link) => {
+                const isActive = link.href === "/" ? pathname === "/" : pathname === link.href || pathname.startsWith(`${link.href}/`);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => setOpen(false)}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      fontSize: "0.95rem",
+                      fontWeight: isActive ? 700 : 500,
+                      color: isActive ? "var(--green-700)" : "var(--stone-700)",
+                      background: isActive ? "var(--green-50)" : "transparent",
+                      borderRadius: "var(--radius-md)",
+                      textDecoration: "none",
+                      display: "block",
+                    }}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
 
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid var(--cream-200)" }}>
                 <Link
@@ -174,7 +190,7 @@ export default function Navbar() {
                   alignItems: "center",
                   gap: "0.5rem",
                   padding: "0.75rem 1rem",
-                  color: "var(--green-600)",
+                  color: "var(--green-700)",
                   fontWeight: 600,
                   fontSize: "0.9rem",
                   textDecoration: "none",

@@ -1,77 +1,91 @@
 import { NextResponse } from "next/server";
-import path from "path";
-import fs from "fs/promises";
+import { AuthError, recordAuditLog, requireAdminSession } from "@/lib/auth-server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
+import { getClientIp, isSameOriginRequest } from "@/lib/security";
+import { storeValidatedImage } from "@/lib/storage";
+import { processAndSanitizeImage, ImageProcessingError } from "@/lib/image-processing";
 
 export const dynamic = "force-dynamic";
 
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8 MB
+
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginRequest(request)) {
+      return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
+    }
+
+    const session = await requireAdminSession();
+
+    const ip = getClientIp(request);
+    const rate = await checkDistributedRateLimit(`admin-upload:${session.userId}:${ip}`, 30, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Upload rate limit exceeded. Please wait before uploading more images." },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate mime type
-    const validMimes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
-    if (!validMimes.includes(file.type)) {
+    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
       return NextResponse.json(
-        { error: "Invalid file type. Only JPG, PNG, WEBP, and GIF images are allowed." },
+        { error: "File size must be between 1 byte and 8 MB." },
         { status: 400 }
       );
     }
 
-    // Validate size (max 10MB)
-    const MAX_SIZE = 10 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 10 MB." },
-        { status: 400 }
-      );
-    }
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Sanitize filename and create unique name
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}-${sanitizedName}`;
-
+    // Server-side image decoding, metadata stripping (EXIF/GPS), and raster re-encoding
+    let processed;
     try {
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      await fs.mkdir(uploadDir, { recursive: true });
-
-      const filePath = path.join(uploadDir, uniqueName);
-      await fs.writeFile(filePath, buffer);
-
-      return NextResponse.json({
-        success: true,
-        url: `/uploads/${uniqueName}`,
-        fileName: file.name,
-        size: file.size,
+      processed = await processAndSanitizeImage(rawBuffer, file.name, file.type, {
+        maxBytes: MAX_UPLOAD_BYTES,
+        maxDimension: 4096,
+        outputFormat: "webp",
       });
-    } catch (fsError) {
-      // Read-only serverless environments (e.g. Vercel): fall back to inline data URL for images <= 2 MB
-      if (file.size > 2 * 1024 * 1024) {
-        console.error("Serverless upload size limit exceeded:", fsError);
-        return NextResponse.json(
-          { error: "Server storage is read-only; please upload an image under 2 MB or paste an image URL." },
-          { status: 413 }
-        );
-      }
-      const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
-      return NextResponse.json({
-        success: true,
-        url: dataUrl,
-        fileName: file.name,
-        size: file.size,
-      });
+    } catch (err) {
+      const msg = err instanceof ImageProcessingError ? err.message : "Invalid or corrupted image file.";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
+
+    const stored = await storeValidatedImage(
+      processed.buffer,
+      processed,
+      file.name,
+      "admin",
+      { isPrivate: false }
+    );
+
+    await recordAuditLog({
+      userId: session.userId,
+      action: "ADMIN_UPLOAD_IMAGE",
+      resource: "/api/upload",
+      details: `Uploaded ${processed.mimeType} (${processed.width}x${processed.height}, ${processed.buffer.length} bytes) via ${stored.storage}`,
+      ipAddress: ip,
+    });
+
+    return NextResponse.json({
+      success: true,
+      url: stored.url,
+      fileName: file.name,
+      size: processed.buffer.length,
+      storage: stored.storage,
+      width: processed.width,
+      height: processed.height,
+    });
   } catch (error) {
-    console.error("Upload handler error:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("Admin upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload file. Please try again." },
+      { error: error instanceof Error ? error.message : "Failed to upload image." },
       { status: 500 }
     );
   }

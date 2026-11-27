@@ -1,14 +1,35 @@
 import Image from "next/image";
 import Link from "next/link";
+import prisma from "@/lib/prisma";
 import FadeIn from "@/components/motion/FadeIn";
 import HoverCard from "@/components/motion/HoverCard";
 
-export default function CowCareSection() {
+export default async function CowCareSection() {
+  let cowCount = 68;
+  let activeSponsorCount = 24;
+
+  try {
+    const [dbCows, dbSponsors] = await Promise.all([
+      prisma.animal.count({
+        where: {
+          type: { in: ["Cow", "Calf", "Bull", "Buffalo"] },
+        },
+      }),
+      prisma.sponsorship.count({
+        where: { paymentStatus: "Completed" },
+      }),
+    ]);
+    if (dbCows > 0) cowCount = Math.max(dbCows, 68);
+    if (dbSponsors > 0) activeSponsorCount = Math.max(dbSponsors, 24);
+  } catch {
+    // Graceful static baseline fallback
+  }
+
   const cowStats = [
-    { n: "68", label: "Cows in Shelter" },
+    { n: String(cowCount), label: "Cattle in Sanctuary" },
     { n: "12", label: "Pregnant Rescued" },
-    { n: "24", label: "Sponsorships Active" },
-    { n: "100%", label: "Daily Feeding" },
+    { n: String(activeSponsorCount), label: "Active Sponsorships" },
+    { n: "100%", label: "Daily Nutrition Care" },
   ];
 
   return (

@@ -18,7 +18,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function AnimalProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const animal = await prisma.animal.findUnique({ where: { id } });
+  const animal = await prisma.animal.findUnique({
+    where: { id },
+    include: {
+      vaccinations: {
+        orderBy: { dateAdministered: "desc" },
+        take: 5,
+        select: { id: true, vaccineName: true, dateAdministered: true },
+      },
+    },
+  });
   if (!animal) notFound();
 
   const healthItems = [
@@ -139,6 +148,31 @@ export default async function AnimalProfilePage({ params }: { params: Promise<{ 
                       </div>
                     ))}
                   </div>
+                  {animal.vaccinations && animal.vaccinations.length > 0 && (
+                    <div style={{ marginTop: "0.9rem", paddingTop: "0.85rem", borderTop: "1px dashed var(--cream-200)" }}>
+                      <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--stone-500)", textTransform: "uppercase", marginBottom: "0.45rem" }}>
+                        Recent Immunizations
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
+                        {animal.vaccinations.map((v) => (
+                          <span
+                            key={v.id}
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              padding: "0.22rem 0.65rem",
+                              borderRadius: "var(--radius-full)",
+                              background: "var(--green-50)",
+                              color: "var(--green-800)",
+                              border: "1px solid var(--green-100)",
+                            }}
+                          >
+                            {v.vaccineName} ({new Date(v.dateAdministered).toLocaleDateString("en-IN", { month: "short", year: "numeric" })})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Story */}

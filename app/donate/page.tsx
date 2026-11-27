@@ -54,6 +54,10 @@ function DonateContent() {
   const [frequency, setFrequency] = useState<"one-time" | "monthly">("one-time");
   const [submitted, setSubmitted] = useState(false);
   const [donationId, setDonationId] = useState("");
+  const [paymentId, setPaymentId] = useState("");
+  const [donorSummary, setDonorSummary] = useState<{ name: string; email: string } | null>(null);
+  const [serverReceiptAmount, setServerReceiptAmount] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadRazorpayScript = () => {
@@ -75,6 +79,7 @@ function DonateContent() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!finalAmount) return;
+    setErrorMsg(null);
     setLoading(true);
 
     try {
@@ -84,52 +89,71 @@ function DonateContent() {
       const email = String(formData.get("email") || "").trim();
       const pan = String(formData.get("pan") || "").trim();
 
-      // 1. Create Donation Record
+      // 1. Create Pending Donation Record
       const res = await fetch("/api/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: finalAmount, purpose, frequency, name, phone, email, pan }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error("Failed to create donation");
+      if (!res.ok) throw new Error(data.error || "Failed to initiate donation.");
 
-      // 2. Create Order
+      // 2. Create Server-Bound Razorpay Order
       const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: finalAmount, purpose }),
+        body: JSON.stringify({ recordType: "donation", recordId: data.id }),
       });
       const order = await orderRes.json();
-      if (!orderRes.ok) throw new Error(order.error || "Failed to create order");
+      if (!orderRes.ok) throw new Error(order.error || "Failed to create payment order.");
 
-      // 3. Presentation / Demo Mode when Razorpay live keys are not configured
-      if (order.isMock) {
-        await fetch("/api/verify-payment", {
+      const finalizeVerifiedPayment = async (payload: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => {
+        const verifyRes = await fetch("/api/verify-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            razorpay_order_id: order.id,
-            razorpay_payment_id: `pay_mock_${Date.now()}`,
-            razorpay_signature: "sig_mock",
+            ...payload,
             donationId: data.id,
           }),
         });
-        setDonationId(data.id || "DON-" + Date.now().toString().slice(-6));
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok || !verifyData.verified) {
+          throw new Error(verifyData.error || "Payment verification failed.");
+        }
+        setDonationId(data.id);
+        setPaymentId(verifyData.paymentId || payload.razorpay_payment_id);
+        if (typeof verifyData.amount === "number" && verifyData.amount > 0) {
+          setServerReceiptAmount(verifyData.amount);
+        }
+        setDonorSummary({ name, email });
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
+      };
+
+      // 3. Explicit Non-Production Demo Mode Only (rejected in production)
+      if (order.isMock) {
+        await finalizeVerifiedPayment({
+          razorpay_order_id: order.id,
+          razorpay_payment_id: `pay_mock_${Date.now()}`,
+          razorpay_signature: "sig_mock_demo",
+        });
         return;
       }
 
       // 4. Live Razorpay Checkout
       const resScript = await loadRazorpayScript();
       if (!resScript) {
-        alert("Razorpay SDK failed to load. Are you online?");
+        setErrorMsg("Razorpay Checkout SDK could not be loaded. Please check your connection.");
         return;
       }
 
       const RazorpayClass = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
       if (!RazorpayClass) {
-        alert("Payment gateway unavailable.");
+        setErrorMsg("Payment gateway is temporarily unavailable.");
         return;
       }
 
@@ -141,32 +165,35 @@ function DonateContent() {
         description: `Donation: ${purpose}`,
         order_id: order.id,
         handler: async (response: RazorpayResponse) => {
-          await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+          try {
+            await finalizeVerifiedPayment({
               razorpay_order_id: response.razorpay_order_id || order.id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              donationId: data.id,
-            }),
-          });
-          setDonationId(data.id || "DON-" + Date.now().toString().slice(-6));
-          setSubmitted(true);
-          window.scrollTo({ top: 0, behavior: "smooth" });
+              razorpay_payment_id: response.razorpay_payment_id || "",
+              razorpay_signature: response.razorpay_signature || "",
+            });
+          } catch (verifyErr) {
+            setErrorMsg(
+              verifyErr instanceof Error
+                ? verifyErr.message
+                : "Could not verify payment signature. Please contact support."
+            );
+          }
         },
         prefill: { name, email, contact: phone },
-        theme: { color: "#f97316" },
+        theme: { color: "#15803d" },
       };
 
       const rzp = new RazorpayClass(options);
       rzp.on("payment.failed", () => {
-        alert("Payment failed. Please try again.");
+        setErrorMsg("Payment was declined or cancelled. No verified receipt was issued.");
       });
       rzp.open();
     } catch (err) {
-      console.error(err);
-      alert("An error occurred while initiating your donation.");
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred while initiating your donation."
+      );
     } finally {
       setLoading(false);
     }
@@ -210,7 +237,7 @@ function DonateContent() {
 
               <div style={{ padding: "1.25rem", background: "var(--saffron-50)", borderRadius: "var(--radius-lg)", marginBottom: "1.25rem", border: "1px solid var(--saffron-200)" }}>
                 <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--stone-800)", fontFamily: "var(--font-display)" }}>
-                  ₹{finalAmount.toLocaleString("en-IN")}
+                  ₹{(serverReceiptAmount ?? finalAmount).toLocaleString("en-IN")}
                 </div>
                 <div style={{ fontSize: "0.88rem", color: "var(--stone-600)", marginTop: "0.25rem" }}>
                   {purpose} • {frequency === "monthly" ? "Monthly Commitment" : "One-time Gift"}
@@ -218,7 +245,8 @@ function DonateContent() {
               </div>
 
               <p style={{ color: "var(--stone-600)", lineHeight: 1.7, fontSize: "0.9rem", margin: 0 }}>
-                A confirmation receipt with 80G tax exemption details has been recorded. Your kindness directly feeds and treats animals in need.
+                {donorSummary ? `Issued to ${donorSummary.name} (${donorSummary.email}). ` : ""}
+                Payment Ref: <strong style={{ color: "var(--stone-800)" }}>{paymentId || "Verified"}</strong>. Your kindness directly feeds and treats animals in need.
               </p>
             </div>
 
@@ -418,6 +446,24 @@ function DonateContent() {
                     ₹{finalAmount ? finalAmount.toLocaleString("en-IN") : "—"}
                   </div>
                 </div>
+
+                {errorMsg && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginBottom: "1rem",
+                      padding: "0.85rem 1rem",
+                      borderRadius: "var(--radius-md)",
+                      background: "hsl(0, 80%, 96%)",
+                      border: "1px solid hsl(0, 70%, 82%)",
+                      color: "hsl(0, 72%, 38%)",
+                      fontSize: "0.88rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {errorMsg}
+                  </div>
+                )}
 
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <button

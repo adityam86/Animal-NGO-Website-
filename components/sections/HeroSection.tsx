@@ -24,10 +24,10 @@ export default function HeroSection() {
             style={{ objectFit: "cover", objectPosition: "center 30%" }}
           />
         </motion.div>
-        {/* Cinematic Gradient overlay */}
+        {/* Cinematic Forest & Earth Gradient overlay */}
         <div style={{
           position: "absolute", inset: 0,
-          background: "linear-gradient(105deg, rgba(15,10,5,0.85) 0%, rgba(15,10,5,0.60) 50%, rgba(15,10,5,0.20) 100%)",
+          background: "linear-gradient(105deg, rgba(8,22,14,0.88) 0%, rgba(10,28,18,0.65) 52%, rgba(8,20,12,0.22) 100%)",
         }} />
       </div>
 
@@ -42,10 +42,10 @@ export default function HeroSection() {
             <div style={{
               display: "inline-flex", alignItems: "center", gap: "0.6rem",
               padding: "0.45rem 1.1rem",
-              background: "hsla(26,88%,50%,0.22)",
-              border: "1px solid hsla(26,88%,50%,0.45)",
+              background: "rgba(21, 128, 61, 0.28)",
+              border: "1px solid rgba(74, 222, 128, 0.45)",
               borderRadius: "var(--radius-full)",
-              color: "var(--saffron-300)",
+              color: "#bbf7d0",
               fontSize: "0.8rem",
               fontWeight: 700,
               letterSpacing: "0.06em",
@@ -53,7 +53,7 @@ export default function HeroSection() {
               marginBottom: "1.5rem",
               backdropFilter: "blur(8px)",
             }}>
-              <PulseBeacon color="var(--saffron-400)" size={8} pulseScale={2.5} />
+              <PulseBeacon color="#4ade80" size={8} pulseScale={2.5} />
               Ayudar Animal Welfare Foundation
             </div>
           </motion.div>
@@ -73,7 +73,7 @@ export default function HeroSection() {
           >
             Every Animal Deserves a
             <br />
-            <span style={{ color: "var(--saffron-400)" }}>Second Chance</span>
+            <span style={{ color: "#fbbf24" }}>Second Chance</span>
           </motion.h1>
 
           {/* Description */}

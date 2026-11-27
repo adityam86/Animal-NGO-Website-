@@ -1,4 +1,4 @@
-const CACHE_NAME = "ayudar-pwa-v1";
+const CACHE_NAME = "ayudar-pwa-v2";
 const STATIC_ASSETS = [
   "/",
   "/rescue",
@@ -39,8 +39,14 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // Don't intercept API calls or non-GET requests
-  if (request.method !== "GET" || request.url.includes("/api/")) {
+  // Never intercept or cache API, admin, or authentication routes
+  const url = new URL(request.url);
+  if (
+    request.method !== "GET" ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/admin") ||
+    url.pathname === "/login"
+  ) {
     return;
   }
 

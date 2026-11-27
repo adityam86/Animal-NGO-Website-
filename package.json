@@ -7,12 +7,19 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "test": "vitest run",
+    "postinstall": "prisma generate",
+    "db:migrate:sqlite-to-pg": "tsx scripts/migrate-sqlite-to-postgres.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1178.0",
+    "@aws-sdk/s3-request-presigner": "^3.1178.0",
+    "@neon/config": "^1.14.8",
+    "@neon/env": "^2.1.11",
     "@prisma/client": "^5.22.0",
     "@types/leaflet": "^1.9.22",
-    "clsx": "^2.1.1",
+    "@vercel/blob": "^2.9.0",
+    "dotenv": "^18.0.10",
     "framer-motion": "^13.1.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.31.0",
@@ -21,8 +28,7 @@
     "razorpay": "^2.9.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-hook-form": "^7.85.0",
-    "tailwind-merge": "^3.6.0",
+    "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -34,7 +40,8 @@
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

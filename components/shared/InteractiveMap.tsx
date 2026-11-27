@@ -76,6 +76,7 @@ export default function InteractiveMap({
   const markerRef = useRef<Leaflet.Marker | null>(null);
 
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(
     selectedLat && selectedLng ? { lat: selectedLat, lng: selectedLng } : null
   );
@@ -245,8 +246,9 @@ export default function InteractiveMap({
   }, []);
 
   const handleUseCurrentLocation = () => {
+    setGeoError(null);
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      setGeoError("Geolocation is not supported by your browser.");
       return;
     }
 
@@ -278,7 +280,7 @@ export default function InteractiveMap({
       (err) => {
         setLoadingLocation(false);
         console.error("Geolocation error:", err);
-        alert("Unable to retrieve your location. Please ensure location permissions are granted.");
+        setGeoError("Unable to retrieve your location. Please ensure location permissions are granted.");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -336,6 +338,23 @@ export default function InteractiveMap({
           boxShadow: "0 1px 4px rgba(0,0,0,0.15)"
         }}>
           📍 GPS: {currentCoords.lat.toFixed(5)}, {currentCoords.lng.toFixed(5)}
+        </div>
+      )}
+      {geoError && (
+        <div
+          role="alert"
+          style={{
+            marginTop: "8px",
+            padding: "8px 12px",
+            borderRadius: "8px",
+            backgroundColor: "#FEF2F2",
+            border: "1px solid #FECACA",
+            color: "#B91C1C",
+            fontSize: "12px",
+            fontWeight: 500,
+          }}
+        >
+          {geoError}
         </div>
       )}
     </div>

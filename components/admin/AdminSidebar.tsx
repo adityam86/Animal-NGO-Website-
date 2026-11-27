@@ -16,6 +16,9 @@ import {
   BarChart2,
   ExternalLink,
   X,
+  HeartHandshake,
+  Inbox,
+  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -25,18 +28,24 @@ const NAV_ITEMS = [
   { href: "/admin/animals", icon: Heart, label: "Animals" },
   { href: "/admin/medical", icon: Stethoscope, label: "Medical Portal" },
   { href: "/admin/donations", icon: IndianRupee, label: "Donations" },
+  { href: "/admin/sponsorships", icon: HeartHandshake, label: "Sponsorships" },
   { href: "/admin/volunteers", icon: Users, label: "Volunteers" },
+  { href: "/admin/inquiries", icon: Inbox, label: "Inquiries" },
   { href: "/admin/shelters", icon: Building, label: "Shelters" },
   { href: "/admin/reports", icon: BarChart2, label: "Reports & Analytics" },
   { href: "/admin/stories", icon: BookOpen, label: "Rescue Stories" },
+  { href: "/admin/settings", icon: ShieldCheck, label: "Team & Audit" },
 ];
+
+import type { AdminUserSummary } from "./AdminShell";
 
 interface AdminSidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  adminUser?: AdminUserSummary;
 }
 
-export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ isOpen = false, onClose, adminUser }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -59,7 +68,7 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                 fontFamily: "var(--font-display)",
                 fontSize: "1.2rem",
                 fontWeight: 800,
-                color: "#f97316",
+                color: "#4ade80",
                 letterSpacing: "-0.01em",
               }}
             >
@@ -131,12 +140,12 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
                 justifyContent: "space-between",
                 padding: "0.65rem 0.9rem",
                 borderRadius: "var(--radius-md)",
-                color: isActive ? "#fb923c" : "#94a3b8",
+                color: isActive ? "#4ade80" : "#94a3b8",
                 background: isActive
-                  ? "rgba(249, 115, 22, 0.12)"
+                  ? "rgba(34, 197, 94, 0.14)"
                   : "transparent",
                 borderLeft: isActive
-                  ? "3px solid #f97316"
+                  ? "3px solid #22c55e"
                   : "3px solid transparent",
                 textDecoration: "none",
                 fontWeight: isActive ? 700 : 500,
@@ -157,7 +166,7 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <Icon size={17} style={{ color: isActive ? "#f97316" : "#64748b", flexShrink: 0 }} />
+                <Icon size={17} style={{ color: isActive ? "#22c55e" : "#64748b", flexShrink: 0 }} />
                 <span>{item.label}</span>
               </div>
               {item.badge && (
@@ -218,6 +227,26 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
           <ExternalLink size={15} style={{ color: "#64748b" }} />
           <span>View Public Site</span>
         </Link>
+
+        {adminUser && (
+          <div
+            style={{
+              padding: "0.5rem 0.75rem",
+              borderRadius: "var(--radius-md)",
+              background: "rgba(255, 255, 255, 0.04)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              fontSize: "0.75rem",
+              color: "#cbd5e1",
+            }}
+          >
+            <div style={{ fontWeight: 700, color: "#f8fafc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {adminUser.name}
+            </div>
+            <div style={{ fontSize: "0.68rem", color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {adminUser.role} · {adminUser.email}
+            </div>
+          </div>
+        )}
 
         <form action="/api/logout" method="POST">
           <button

@@ -41,7 +41,7 @@ export default function Footer() {
                     transition: "background 0.2s",
                     textDecoration: "none",
                   }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--saffron-500)"}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--green-600)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "hsla(0,0%,100%,0.12)"}
                 >
                   {s.toUpperCase()}
@@ -61,7 +61,7 @@ export default function Footer() {
                   <Link
                     href={link.href}
                     style={{ color: "hsla(0,0%,100%,0.65)", fontSize: "0.875rem", textDecoration: "none", transition: "color 0.2s" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--saffron-300)"}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "#86efac"}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "hsla(0,0%,100%,0.65)"}
                   >
                     {link.label}
@@ -89,7 +89,7 @@ export default function Footer() {
                   <Link
                     href={link.href}
                     style={{ color: "hsla(0,0%,100%,0.65)", fontSize: "0.875rem", textDecoration: "none", transition: "color 0.2s" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "var(--saffron-300)"}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "#86efac"}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "hsla(0,0%,100%,0.65)"}
                   >
                     {link.label}

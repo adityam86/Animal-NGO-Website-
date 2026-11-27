@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
+import { shouldBypassImageOptimization } from "@/lib/image-url";
 import { Sparkles, MoveHorizontal } from "lucide-react";
 
 interface BeforeAfterSliderProps {
@@ -119,6 +120,7 @@ export default function BeforeAfterSlider({
             src={afterImage}
             alt={afterLabel}
             fill
+            unoptimized={shouldBypassImageOptimization(afterImage)}
             style={{ objectFit: "cover" }}
             sizes="(max-width: 768px) 100vw, 800px"
           />
@@ -136,6 +138,7 @@ export default function BeforeAfterSlider({
             src={beforeImage}
             alt={beforeLabel}
             fill
+            unoptimized={shouldBypassImageOptimization(beforeImage)}
             style={{ objectFit: "cover" }}
             sizes="(max-width: 768px) 100vw, 800px"
           />

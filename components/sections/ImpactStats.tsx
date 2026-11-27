@@ -43,7 +43,7 @@ function CountUp({ target, suffix }: { target: number; suffix: string }) {
         fontSize: "clamp(2.5rem, 4vw, 3.5rem)",
         fontFamily: "var(--font-display)",
         fontWeight: 700,
-        color: "var(--saffron-500)",
+        color: "var(--green-600)",
         lineHeight: 1,
       }}
     >
@@ -53,7 +53,13 @@ function CountUp({ target, suffix }: { target: number; suffix: string }) {
   );
 }
 
-export default function ImpactStats() {
+interface StatItem {
+  value: number;
+  suffix: string;
+  label: string;
+}
+
+export default function ImpactStats({ stats = IMPACT_STATS }: { stats?: StatItem[] }) {
   return (
     <section style={{ background: "white", borderBottom: "1px solid var(--cream-200)" }}>
       <div className="container" style={{ paddingBlock: "4.5rem" }}>
@@ -76,7 +82,7 @@ export default function ImpactStats() {
             gap: "2rem",
           }}
         >
-          {IMPACT_STATS.map((stat, i) => (
+          {stats.map((stat, i) => (
             <FadeIn key={stat.label} delay={i * 0.1} direction="up" distance={20}>
               <HoverCard lift={8} scale={1.02}>
                 <div

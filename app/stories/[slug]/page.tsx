@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { shouldBypassImageOptimization } from "@/lib/image-url";
 import { ArrowLeft } from "lucide-react";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -37,7 +38,14 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
     <main style={{ paddingTop: "68px" }}>
       {/* Hero Banner */}
       <section style={{ position: "relative", height: 500, overflow: "hidden" }}>
-        <Image src={story.coverImage} alt={story.title} fill style={{ objectFit: "cover" }} priority />
+        <Image
+          src={story.coverImage}
+          alt={story.title}
+          fill
+          unoptimized={shouldBypassImageOptimization(story.coverImage)}
+          style={{ objectFit: "cover" }}
+          priority
+        />
         <div
           style={{
             position: "absolute",

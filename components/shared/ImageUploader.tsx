@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import { isSafeImageUrl, shouldBypassImageOptimization } from "@/lib/image-url";
 import { Upload, X, Link as LinkIcon, Loader2 } from "lucide-react";
 
 type ImageUploaderProps = {
@@ -9,6 +10,7 @@ type ImageUploaderProps = {
   onChange: (url: string) => void;
   label?: string;
   helperText?: string;
+  uploadEndpoint?: string;
 };
 
 export default function ImageUploader({
@@ -16,6 +18,7 @@ export default function ImageUploader({
   onChange,
   label = "Photo",
   helperText,
+  uploadEndpoint = "/api/upload",
 }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string>(value);
   const [uploading, setUploading] = useState(false);
@@ -48,8 +51,24 @@ export default function ImageUploader({
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/upload", {
+      const headers: Record<string, string> = {};
+      if (uploadEndpoint?.includes("/api/rescue/upload")) {
+        try {
+          const tokenRes = await fetch("/api/rescue/upload-token", { method: "POST" });
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            if (tokenData.token) {
+              headers["x-upload-token"] = tokenData.token;
+            }
+          }
+        } catch {
+          // Fall through, server will report token requirement
+        }
+      }
+
+      const res = await fetch(uploadEndpoint || "/api/upload", {
         method: "POST",
+        headers,
         body: formData,
       });
 
@@ -86,10 +105,15 @@ export default function ImageUploader({
   };
 
   const handleUrlSubmit = () => {
-    if (manualUrl) {
-      setPreview(manualUrl);
-      onChange(manualUrl);
+    const trimmed = manualUrl.trim();
+    if (!trimmed) return;
+    if (!isSafeImageUrl(trimmed)) {
+      setError("URL must start with /images/, /uploads/, or an allowed Vercel Blob / Neon Object Storage URL");
+      return;
     }
+    setError(null);
+    setPreview(trimmed);
+    onChange(trimmed);
   };
 
   return (
@@ -155,7 +179,7 @@ export default function ImageUploader({
             alt="Upload preview"
             fill
             style={{ objectFit: "cover" }}
-            unoptimized={preview.startsWith("blob:") || preview.startsWith("data:")}
+            unoptimized={shouldBypassImageOptimization(preview)}
           />
 
           {uploading && (

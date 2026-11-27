@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { shouldBypassImageOptimization } from "@/lib/image-url";
 import { Clock, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import HoverCard from "@/components/motion/HoverCard";
@@ -58,7 +59,13 @@ export default function StoryCard({
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             style={{ width: "100%", height: "100%", position: "relative" }}
           >
-            <Image src={coverImage} alt={title} fill style={{ objectFit: "cover" }} />
+            <Image
+              src={coverImage}
+              alt={title}
+              fill
+              unoptimized={shouldBypassImageOptimization(coverImage)}
+              style={{ objectFit: "cover" }}
+            />
           </motion.div>
           <div
             style={{

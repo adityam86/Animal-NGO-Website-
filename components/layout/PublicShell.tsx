@@ -17,7 +17,9 @@ export default function PublicShell({ children }: { children: React.ReactNode })
   return (
     <>
       <Navbar />
-      <main>{children}</main>
+      <div id="main-content" tabIndex={-1}>
+        {children}
+      </div>
       <Footer />
       <EmergencyFAB />
       <AIChatbot />

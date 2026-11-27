@@ -14,7 +14,7 @@ export async function GET(
         slug,
       },
       include: {
-        phases: true,
+        phases: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
       },
     });
 
