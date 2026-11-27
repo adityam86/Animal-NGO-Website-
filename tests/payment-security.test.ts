@@ -441,6 +441,10 @@ describe("Razorpay Order, Replay, Amount & Webhook Regression Security", () => {
 
     const validWhSig = createHmac("sha256", WEBHOOK_SECRET).update(payload, "utf8").digest("hex");
 
+    // Cross-table replay check: no existing payment with this paymentId
+    mockDonationFindUnique.mockResolvedValueOnce(null); // razorpayPaymentId lookup
+    mockSponsorshipFindUnique.mockResolvedValueOnce(null); // razorpayPaymentId lookup
+    // Then the razorpayOrderId lookup returns the pending donation
     mockDonationFindUnique.mockResolvedValueOnce({
       id: "don_wh_1",
       amount: 500,
@@ -459,6 +463,13 @@ describe("Razorpay Order, Replay, Amount & Webhook Regression Security", () => {
     expect((await firstOk.json()).updated).toBe(true);
 
     // Duplicate webhook delivery must be idempotent
+    // Cross-table replay check returns existing completed donation
+    mockDonationFindUnique.mockResolvedValueOnce({
+      id: "don_wh_1",
+      razorpayPaymentId: "pay_wh_1",
+    }); // razorpayPaymentId lookup finds existing
+    mockSponsorshipFindUnique.mockResolvedValueOnce(null);
+    // razorpayOrderId lookup
     mockDonationFindUnique.mockResolvedValueOnce({
       id: "don_wh_1",
       amount: 500,

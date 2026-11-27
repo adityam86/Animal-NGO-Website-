@@ -316,12 +316,9 @@ export async function createStory(formData: FormData) {
   const excerpt = sanitizePlainText(formData.get("excerpt"), 1500);
   const readTime = sanitizePlainText(formData.get("readTime") || "3 min read", 40);
   const rawCover = String(formData.get("coverImage") || "").trim();
+  const { isSafeImageUrl } = await import("@/lib/image-url");
   const coverImage =
-    rawCover &&
-    (rawCover.startsWith("/images/") ||
-      rawCover.startsWith("/uploads/") ||
-      rawCover.startsWith("https://") ||
-      rawCover.startsWith("data:image/"))
+    rawCover && isSafeImageUrl(rawCover)
       ? rawCover
       : "/images/rescue_story_banner.jpg";
 

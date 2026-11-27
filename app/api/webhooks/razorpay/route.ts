@@ -59,7 +59,22 @@ export async function POST(request: Request) {
     const ip = getClientIp(request);
 
     if (event === "payment.captured" || event === "order.paid") {
+      // Validate webhook entity fields
+      const entityCurrency = typeof entity?.currency === "string" ? entity.currency.toUpperCase() : null;
+      if (entityCurrency && entityCurrency !== "INR") {
+        return NextResponse.json(
+          { error: "Webhook currency is not INR" },
+          { status: 400 }
+        );
+      }
+
       const outcome = await prisma.$transaction(async (tx) => {
+        // Cross-table razorpayPaymentId replay check
+        const [existingDonPay, existingSponPay] = await Promise.all([
+          tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } }),
+          tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } }),
+        ]);
+
         const donation = await tx.donation.findUnique({
           where: { razorpayOrderId: orderId },
         });
@@ -74,8 +89,14 @@ export async function POST(request: Request) {
           ) {
             return { mismatch: true, kind: "donation", id: donation.id };
           }
+          if (
+            (existingDonPay && existingDonPay.id !== donation.id) ||
+            existingSponPay
+          ) {
+            return { replay: true, kind: "donation", id: donation.id };
+          }
           await tx.donation.update({
-            where: { id: donation.id },
+            where: { id: donation.id, paymentStatus: { not: "Completed" } },
             data: {
               paymentStatus: "Completed",
               razorpayPaymentId: paymentId,
@@ -92,14 +113,22 @@ export async function POST(request: Request) {
           if (sponsorship.paymentStatus === "Completed") {
             return { updated: false, kind: "sponsorship", id: sponsorship.id };
           }
+          const { SPONSORSHIP_TIERS_INR } = await import("@/lib/payment");
+          const expectedAmount = SPONSORSHIP_TIERS_INR[sponsorship.tier] ?? Number(sponsorship.amount);
           if (
             typeof entity?.amount === "number" &&
-            Math.round(sponsorship.amount * 100) !== entity.amount
+            Math.round(expectedAmount * 100) !== entity.amount
           ) {
             return { mismatch: true, kind: "sponsorship", id: sponsorship.id };
           }
+          if (
+            (existingSponPay && existingSponPay.id !== sponsorship.id) ||
+            existingDonPay
+          ) {
+            return { replay: true, kind: "sponsorship", id: sponsorship.id };
+          }
           await tx.sponsorship.update({
-            where: { id: sponsorship.id },
+            where: { id: sponsorship.id, paymentStatus: { not: "Completed" } },
             data: {
               paymentStatus: "Completed",
               razorpayPaymentId: paymentId,
@@ -116,6 +145,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: "Captured amount mismatch against stored order amount" },
           { status: 400 }
+        );
+      }
+
+      if ("replay" in outcome && outcome.replay) {
+        return NextResponse.json(
+          { error: "Duplicate payment ID detected via webhook" },
+          { status: 409 }
         );
       }
 

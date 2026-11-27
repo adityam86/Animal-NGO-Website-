@@ -97,34 +97,59 @@ export async function checkDistributedRateLimit(
       });
 
       if (res.ok) {
-        const data = (await res.json()) as Array<{ result?: number }>;
-        const count = Number(data?.[0]?.result ?? 1);
-        let ttlMs = Number(data?.[1]?.result ?? -1);
+        const data = (await res.json()) as Array<{ result?: number; error?: string }>;
 
-        if (ttlMs < 0) {
-          await fetch(`${base}/pexpire/${encodeURIComponent(bucketKey)}/${windowMs}`, {
-            method: "POST",
-            headers: { authorization: `Bearer ${redisToken}` },
-            signal: AbortSignal.timeout(1500),
-          });
-          ttlMs = windowMs;
+        // Validate pipeline responses — reject if any command returned an error
+        if (data?.[0]?.error || data?.[1]?.error) {
+          console.warn("Upstash pipeline command error:", data);
+          // Fall through to memory fallback
+        } else {
+          const count = Number(data?.[0]?.result);
+          let ttlMs = Number(data?.[1]?.result);
+
+          // Guard against NaN from non-numeric pipeline results
+          if (!Number.isFinite(count) || !Number.isFinite(ttlMs)) {
+            console.warn("Upstash pipeline returned non-numeric result:", data);
+            // Fall through to memory fallback
+          } else {
+            if (ttlMs < 0) {
+              try {
+                const expireRes = await fetch(
+                  `${base}/pexpire/${encodeURIComponent(bucketKey)}/${windowMs}`,
+                  {
+                    method: "POST",
+                    headers: { authorization: `Bearer ${redisToken}` },
+                    signal: AbortSignal.timeout(1500),
+                  }
+                );
+                if (!expireRes.ok) {
+                  console.warn(`Upstash PEXPIRE returned HTTP ${expireRes.status}`);
+                }
+              } catch (expireErr) {
+                console.warn("Upstash PEXPIRE failed:", expireErr);
+              }
+              ttlMs = windowMs;
+            }
+
+            if (count > maxRequests) {
+              return {
+                allowed: false,
+                remaining: 0,
+                retryAfterSeconds: Math.max(1, Math.ceil(ttlMs / 1000)),
+                backend: "upstash-redis",
+              };
+            }
+
+            return {
+              allowed: true,
+              remaining: Math.max(0, maxRequests - count),
+              retryAfterSeconds: 0,
+              backend: "upstash-redis",
+            };
+          }
         }
-
-        if (count > maxRequests) {
-          return {
-            allowed: false,
-            remaining: 0,
-            retryAfterSeconds: Math.max(1, Math.ceil(ttlMs / 1000)),
-            backend: "upstash-redis",
-          };
-        }
-
-        return {
-          allowed: true,
-          remaining: Math.max(0, maxRequests - count),
-          retryAfterSeconds: 0,
-          backend: "upstash-redis",
-        };
+      } else {
+        console.warn(`Upstash /pipeline returned HTTP ${res.status}`);
       }
     } catch (err) {
       console.warn("Distributed rate limiter error; falling back to memory store:", err);

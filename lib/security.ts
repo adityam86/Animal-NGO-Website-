@@ -1,18 +1,24 @@
 export { isSafeImageUrl, shouldBypassImageOptimization } from "./image-url";
 
+const IP_RE = /^[\da-fA-F.:]{3,45}$/;
+
 export function getClientIp(request: Request): string {
-  const vercelIp = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
-  if (vercelIp) return vercelIp;
+  // On Vercel, x-vercel-forwarded-for is set by the edge and cannot be spoofed
+  if (process.env.VERCEL) {
+    const vercelIp = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+    if (vercelIp && IP_RE.test(vercelIp)) return vercelIp;
+  }
+  // Behind Cloudflare only when not on Vercel (Vercel already includes real IP)
   const cfIp = request.headers.get("cf-connecting-ip")?.trim();
-  if (cfIp) return cfIp;
+  if (cfIp && IP_RE.test(cfIp)) return cfIp;
   const realIp = request.headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp;
+  if (realIp && IP_RE.test(realIp)) return realIp;
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
+    if (first && IP_RE.test(first)) return first;
   }
-  return "local";
+  return "unknown";
 }
 
 /**

@@ -278,7 +278,7 @@ export async function POST(request: Request) {
         }
 
         await tx.donation.update({
-          where: { id: donation.id },
+          where: { id: donation.id, paymentStatus: { not: "Completed" } },
           data: {
             paymentStatus: "Completed",
             razorpayOrderId: razorpay_order_id,
@@ -311,7 +311,7 @@ export async function POST(request: Request) {
         }
 
         await tx.sponsorship.update({
-          where: { id: sponsorship.id },
+          where: { id: sponsorship.id, paymentStatus: { not: "Completed" } },
           data: {
             paymentStatus: "Completed",
             razorpayOrderId: razorpay_order_id,

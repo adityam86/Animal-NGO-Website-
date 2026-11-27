@@ -78,7 +78,7 @@ export async function verifyPaymentWithRazorpayApi(params: {
   expectedAmountInr: number;
   keyId: string;
   keySecret: string;
-}): Promise<{ ok: true } | { ok: false; status: number; error: string; gatewayFailed?: boolean }> {
+}): Promise<{ ok: true } | { ok: false; status: number; error: string; gatewayFailed?: boolean; authorized?: boolean }> {
   const razorpay = new Razorpay({
     key_id: params.keyId,
     key_secret: params.keySecret,
@@ -126,7 +126,16 @@ export async function verifyPaymentWithRazorpayApi(params: {
     };
   }
 
-  if (payment.status !== "captured" && payment.status !== "authorized") {
+  if (payment.status === "authorized") {
+    return {
+      ok: false,
+      status: 400,
+      error: "Payment is authorized but not yet captured — funds have not been collected",
+      authorized: true,
+    };
+  }
+
+  if (payment.status !== "captured") {
     return {
       ok: false,
       status: 400,
