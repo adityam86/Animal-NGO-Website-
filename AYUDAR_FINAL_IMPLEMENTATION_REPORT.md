@@ -27,9 +27,9 @@ The following capabilities and security hardening controls have been fully imple
 - **Sharp Server-Side Re-encoding (`lib/image-processing.ts`):** Decodes uploaded images with `failOn: "error"`, auto-rotates via `.rotate()`, and re-encodes as clean WebP/JPEG raster data, permanently stripping all EXIF, GPS coordinates, camera model, author, and auxiliary metadata tags.
 - **Content & Polyglot Rejection:** Enforces maximum image dimensions ($\le 4096\text{px}$) and maximum file size boundaries. Pre-scans raw buffers to strictly reject `<svg`, `<html`, `<?xml`, `<script`, and binary executable (`MZ`, `ELF`) headers.
 - **Private vs Public Storage Policy Separation (`lib/storage.ts`):** 
-  - Public animal and story images are routed to public CDN paths.
-  - Sensitive rescue incident photos are stored in private storage (`storage/private/rescues/` or private S3/R2) and are never exposed via public static web directories.
-- **Authenticated Photo Endpoint (`app/api/admin/rescues/photo/[filename]/route.ts`):** Serves private incident photos exclusively to verified admin and coordinator sessions (`requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"])`), enforcing strict filename regex sanitization (`SAFE_FILENAME_RE`) and directory traversal prevention.
+  - Public animal and story images are routed to public CDN paths (`access: "public"`).
+  - Sensitive rescue incident photos are stored in private storage (Vercel Blob `access: "private"`, private S3/R2, or local private storage in development) and are never exposed via public static web directories. In production runtime, fails safe if persistent private storage is unavailable without leaking or falling back to public storage, data URLs, or ephemeral local files.
+- **Authenticated Photo Endpoint (`app/api/admin/rescues/photo/[filename]/route.ts`):** Serves private incident photos exclusively to verified admin and coordinator sessions (`requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"])`), retrieving directly from private Vercel Blob streams or private local storage, enforcing strict filename regex sanitization (`SAFE_FILENAME_RE`) and directory traversal prevention.
 - **Public Rescue Tracking Privacy (`app/api/rescue/[id]/route.ts`):** Redacts exact GPS coordinates (e.g. `(GPS: lat, lng)`) and precise street/flat addresses from public tracking responses, returning only generalized landmark status information.
 
 ### 2. Rescue Upload Abuse Defense
@@ -46,9 +46,9 @@ The following capabilities and security hardening controls have been fully imple
 
 ### 4. Payment Security & Razorpay Integration
 - **Strict Capture Enforcement:** Requires `payment.status === "captured"` for success; rejects `authorized`, `created`, and `failed` statuses. Authorized payments remain in `Pending` state and are never marked as collected.
-- **Auto-Capture Configuration (`app/api/create-order/route.ts`):** Configures explicit `payment_capture: 1` in `razorpay.orders.create` to ensure authorized funds are automatically captured upon authorization.
+- **Dashboard Auto-Capture Configuration:** Automatic capture is controlled via the Razorpay Dashboard (`Settings` → `Payment Capture`). Removed deprecated `payment_capture: 1` parameter from `app/api/create-order/route.ts` in accordance with modern Razorpay API guidelines.
 - **Webhook Hardening (`app/api/webhooks/razorpay/route.ts`):** Validates HMAC-SHA256 signatures in constant time, enforces `currency === "INR"`, validates amount against stored server database records, and implements cross-table replay guards preventing duplicate payment IDs across donations and sponsorships.
-- **Refund & Dispute Webhooks:** Implemented idempotent handlers for `payment.refunded`, `refund.processed`, and dispute events, marking status as `Refunded` without incorrectly creating or treating refunds as donations.
+- **Refund & Dispute Webhooks:** Implemented idempotent handlers for documented refund events (`refund.processed`, `refund.created`, `refund.failed`, `refund.speed_changed`). Distinguishes partial refunds (marked as `Partially Refunded`, never `Refunded`) from full refunds (`Refunded`). Logs `RAZORPAY_REFUND_FAILED` for failed refunds without changing payment status. Dispatches dispute events (`payment.dispute.created`, `payment.dispute.won`) without ever marking records as `Refunded`.
 - **Server-Sourced Receipt Amounts (`app/donate/page.tsx`):** Displays donation receipt amounts strictly from the server verification response (`serverReceiptAmount`), preventing client-side DOM tampering.
 
 ### 5. PostgreSQL Migration & Configuration

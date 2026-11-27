@@ -36,31 +36,27 @@ export async function storeValidatedImage(
 
   // 1. Private storage policy (for rescue incident photos)
   if (isPrivate) {
-    // When running in local development or node runtime, store in private storage outside public/
-    if (!process.env.VERCEL) {
-      try {
-        const privateDir = path.join(process.cwd(), "storage", "private", "rescues");
-        await fs.mkdir(privateDir, { recursive: true });
-        const filePath = path.join(privateDir, uniqueName);
-        await fs.writeFile(filePath, buffer);
-        // Expose exclusively via authenticated admin photo endpoint
-        return {
-          url: `/api/admin/rescues/photo/${uniqueName}`,
-          storage: "private-fs",
-          isPrivate: true,
-        };
-      } catch {
-        // Fall through to configured cloud private storage or inline dev fallback
-      }
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (blobToken) {
+      const blobKey = `ayudar/private/rescues/${uniqueName}`;
+      await put(blobKey, buffer, {
+        access: "private",
+        contentType: validated.mimeType,
+        token: blobToken,
+      });
+      return {
+        url: `/api/admin/rescues/photo/${uniqueName}`,
+        storage: "vercel-blob",
+        isPrivate: true,
+      };
     }
 
-    // In cloud / production runtime: check for private S3/R2 storage configuration
+    // Check for private S3/R2 storage configuration
     const s3Bucket = process.env.PRIVATE_STORAGE_BUCKET || process.env.AWS_S3_BUCKET;
     const s3Key = process.env.PRIVATE_STORAGE_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID;
     const s3Secret = process.env.PRIVATE_STORAGE_SECRET_KEY || process.env.AWS_SECRET_ACCESS_KEY;
 
     if (s3Bucket && s3Key && s3Secret) {
-      // S3 / R2 private upload supported; accessible via authenticated admin endpoint
       return {
         url: `/api/admin/rescues/photo/${uniqueName}`,
         storage: "s3-private",
@@ -68,7 +64,32 @@ export async function storeValidatedImage(
       };
     }
 
-    // Bounded inline data URL fallback for test / preview environments without S3 credentials
+    // When running in local development or test runtime, store in private storage outside public/
+    if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
+      try {
+        const privateDir = path.join(process.cwd(), "storage", "private", "rescues");
+        await fs.mkdir(privateDir, { recursive: true });
+        const filePath = path.join(privateDir, uniqueName);
+        await fs.writeFile(filePath, buffer);
+        return {
+          url: `/api/admin/rescues/photo/${uniqueName}`,
+          storage: "private-fs",
+          isPrivate: true,
+        };
+      } catch {
+        // Fall through cleanly if disk is read-only
+      }
+    }
+
+    // In production runtime, fail safely if persistent private storage is unavailable.
+    // Do not fall back to public storage, inline data URLs, or ephemeral local files.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "Persistent private object storage (BLOB_READ_WRITE_TOKEN with private access) is not configured. Sensitive incident photo upload cannot proceed in production."
+      );
+    }
+
+    // Bounded inline data URL fallback strictly for local test / preview environments
     if (buffer.byteLength > 2 * 1024 * 1024) {
       throw new Error(
         "Persistent object storage (BLOB_READ_WRITE_TOKEN) is not configured and image exceeds 2 MB fallback limit."

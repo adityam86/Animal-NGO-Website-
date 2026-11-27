@@ -16,6 +16,8 @@ interface RazorpayWebhookPayload {
         amount?: number;
         currency?: string;
         status?: string;
+        amount_refunded?: number;
+        refund_status?: string;
       };
     };
     order?: {
@@ -257,80 +259,173 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, status: "marked_failed" });
     }
 
-    // 3. Refund webhooks (payment.refunded, refund.processed, refund.created)
+    // 3. Documented refund webhooks (refund.processed, refund.created, refund.failed, refund.speed_changed)
     if (
-      event === "payment.refunded" ||
       event === "refund.processed" ||
-      event === "refund.created"
+      event === "refund.created" ||
+      event === "refund.failed" ||
+      event === "refund.speed_changed"
     ) {
-      if (!paymentId && !orderId) {
+      const refundId = refundEntity?.id;
+      if (!paymentId && !orderId && !refundId) {
         return NextResponse.json({ received: true, ignored: true });
       }
 
-      const refundResult = await prisma.$transaction(async (tx) => {
-        // Locate matching donation or sponsorship by payment ID or order ID
-        let donation = paymentId
-          ? await tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } })
-          : null;
-        if (!donation && orderId) {
-          donation = await tx.donation.findUnique({ where: { razorpayOrderId: orderId } });
-        }
-
-        if (donation) {
-          if (donation.paymentStatus === "Refunded") {
-            return { updated: false, kind: "donation", id: donation.id, alreadyRefunded: true };
-          }
-          await tx.donation.update({
-            where: { id: donation.id },
-            data: { paymentStatus: "Refunded" },
-          });
-          return { updated: true, kind: "donation", id: donation.id };
-        }
-
-        let sponsorship = paymentId
-          ? await tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } })
-          : null;
-        if (!sponsorship && orderId) {
-          sponsorship = await tx.sponsorship.findUnique({ where: { razorpayOrderId: orderId } });
-        }
-
-        if (sponsorship) {
-          if (sponsorship.paymentStatus === "Refunded") {
-            return { updated: false, kind: "sponsorship", id: sponsorship.id, alreadyRefunded: true };
-          }
-          await tx.sponsorship.update({
-            where: { id: sponsorship.id },
-            data: { paymentStatus: "Refunded" },
-          });
-          return { updated: true, kind: "sponsorship", id: sponsorship.id };
-        }
-
-        return { notFound: true };
-      });
-
-      if ("updated" in refundResult && refundResult.updated) {
+      // Handle refund.failed
+      if (event === "refund.failed" || refundEntity?.status === "failed") {
         await recordAuditLog({
-          action: "RAZORPAY_WEBHOOK_REFUNDED",
-          resource: `${refundResult.kind}:${refundResult.id}`,
-          details: `Payment refunded via webhook event ${event}`,
+          action: "RAZORPAY_REFUND_FAILED",
+          resource: `refund:${refundId || "unknown"}`,
+          details: `Refund attempt failed for payment ${paymentId || "unknown"}`,
           ipAddress: ip,
         });
+        return NextResponse.json({ received: true, status: "refund_failed_logged" });
       }
 
-      return NextResponse.json({ received: true, status: "marked_refunded", ...refundResult });
+      // Handle refund.created or refund.speed_changed (in-flight state updates)
+      if (event === "refund.created" || event === "refund.speed_changed") {
+        await recordAuditLog({
+          action: `RAZORPAY_${event.toUpperCase().replace(".", "_")}`,
+          resource: `refund:${refundId || "unknown"}`,
+          details: `Refund event ${event} received for payment ${paymentId || "unknown"}`,
+          ipAddress: ip,
+        });
+        return NextResponse.json({ received: true, status: "refund_status_logged" });
+      }
+
+      // Handle refund.processed
+      if (event === "refund.processed") {
+        const refundResult = await prisma.$transaction(async (tx) => {
+          let donation = paymentId
+            ? await tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } })
+            : null;
+          if (!donation && orderId) {
+            donation = await tx.donation.findUnique({ where: { razorpayOrderId: orderId } });
+          }
+
+          if (donation) {
+            const originalPaise = Math.round(Number(donation.amount) * 100);
+            const cumulativeRefundPaise = typeof paymentEntity?.amount_refunded === "number"
+              ? paymentEntity.amount_refunded
+              : (refundEntity?.amount ?? 0);
+
+            const isFullRefund =
+              paymentEntity?.refund_status === "full" ||
+              cumulativeRefundPaise >= originalPaise;
+
+            const targetStatus = isFullRefund ? "Refunded" : "Partially Refunded";
+
+            // Idempotency: if already at the target status, return without re-updating
+            if (donation.paymentStatus === targetStatus) {
+              return { updated: false, kind: "donation", id: donation.id, status: targetStatus, alreadyProcessed: true };
+            }
+
+            await tx.donation.update({
+              where: { id: donation.id },
+              data: { paymentStatus: targetStatus },
+            });
+            return { updated: true, kind: "donation", id: donation.id, status: targetStatus };
+          }
+
+          let sponsorship = paymentId
+            ? await tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } })
+            : null;
+          if (!sponsorship && orderId) {
+            sponsorship = await tx.sponsorship.findUnique({ where: { razorpayOrderId: orderId } });
+          }
+
+          if (sponsorship) {
+            const { SPONSORSHIP_TIERS_INR } = await import("@/lib/payment");
+            const expectedAmount = SPONSORSHIP_TIERS_INR[sponsorship.tier] ?? Number(sponsorship.amount);
+            const originalPaise = Math.round(expectedAmount * 100);
+            const cumulativeRefundPaise = typeof paymentEntity?.amount_refunded === "number"
+              ? paymentEntity.amount_refunded
+              : (refundEntity?.amount ?? 0);
+
+            const isFullRefund =
+              paymentEntity?.refund_status === "full" ||
+              cumulativeRefundPaise >= originalPaise;
+
+            const targetStatus = isFullRefund ? "Refunded" : "Partially Refunded";
+
+            if (sponsorship.paymentStatus === targetStatus) {
+              return { updated: false, kind: "sponsorship", id: sponsorship.id, status: targetStatus, alreadyProcessed: true };
+            }
+
+            await tx.sponsorship.update({
+              where: { id: sponsorship.id },
+              data: { paymentStatus: targetStatus },
+            });
+            return { updated: true, kind: "sponsorship", id: sponsorship.id, status: targetStatus };
+          }
+
+          return { notFound: true };
+        });
+
+        if ("updated" in refundResult && refundResult.updated) {
+          await recordAuditLog({
+            action: refundResult.status === "Refunded" ? "RAZORPAY_REFUND_PROCESSED_FULL" : "RAZORPAY_REFUND_PROCESSED_PARTIAL",
+            resource: `${refundResult.kind}:${refundResult.id}`,
+            details: `Refund processed (${refundResult.status}) for refund ID ${refundId || "unknown"}`,
+            ipAddress: ip,
+          });
+        }
+
+        return NextResponse.json({ received: true, status: "refund_processed", ...refundResult });
+      }
     }
 
     // 4. Dispute webhooks (payment.dispute.created, payment.dispute.won, payment.dispute.lost)
+    // Dispute events must never automatically change a donation to Refunded
     if (event.startsWith("payment.dispute.")) {
       if (paymentId) {
+        const disputeAction =
+          event === "payment.dispute.created"
+            ? "RAZORPAY_DISPUTE_CREATED"
+            : event === "payment.dispute.won"
+            ? "RAZORPAY_DISPUTE_WON"
+            : event === "payment.dispute.lost"
+            ? "RAZORPAY_DISPUTE_LOST"
+            : "RAZORPAY_DISPUTE_UPDATED";
+
         await recordAuditLog({
-          action: "RAZORPAY_WEBHOOK_DISPUTE",
+          action: disputeAction,
           resource: `payment:${paymentId}`,
           details: `Dispute event ${event} received for payment ${paymentId}`,
           ipAddress: ip,
         });
+
+        if (event === "payment.dispute.created") {
+          await prisma.$transaction(async (tx) => {
+            const donation = await tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } });
+            if (donation && donation.paymentStatus === "Completed") {
+              await tx.donation.update({
+                where: { id: donation.id },
+                data: { paymentStatus: "Disputed" },
+              });
+            }
+            const sponsorship = await tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } });
+            if (sponsorship && sponsorship.paymentStatus === "Completed") {
+              await tx.sponsorship.update({
+                where: { id: sponsorship.id },
+                data: { paymentStatus: "Disputed" },
+              });
+            }
+          });
+        } else if (event === "payment.dispute.won") {
+          await prisma.$transaction(async (tx) => {
+            await tx.donation.updateMany({
+              where: { razorpayPaymentId: paymentId, paymentStatus: "Disputed" },
+              data: { paymentStatus: "Completed" },
+            });
+            await tx.sponsorship.updateMany({
+              where: { razorpayPaymentId: paymentId, paymentStatus: "Disputed" },
+              data: { paymentStatus: "Completed" },
+            });
+          });
+        }
       }
-      return NextResponse.json({ received: true, status: "dispute_logged" });
+      return NextResponse.json({ received: true, status: "dispute_handled" });
     }
 
     return NextResponse.json({ received: true, ignored: true });

@@ -60,11 +60,16 @@ Before initiating live staging deployment and external integration verification,
 - In `app/donate/page.tsx`, the verified 80G tax receipt UI sources its amount strictly from the server verification response (`serverReceiptAmount`), preventing client-side DOM manipulation of receipt amounts.
 
 ### Additional Fix 7 — Razorpay Auto-Capture Configuration
-- In `app/api/create-order/route.ts`, explicitly configured `payment_capture: 1` in `razorpay.orders.create()`. This instructs Razorpay to automatically capture authorized funds, preventing donations from remaining in an uncaptured "authorized" state.
+- In `app/api/create-order/route.ts`, removed deprecated `payment_capture: 1` in `razorpay.orders.create()` following modern Razorpay API guidelines. Documented the required dashboard setting (`Settings` → `Payment Capture`) in deployment guides and staging checklists.
 
 ### Additional Fix 8 — Refund & Dispute Webhook Handling
-- In `app/api/webhooks/razorpay/route.ts`, implemented safe idempotent handling for refund events (`payment.refunded`, `refund.processed`, `refund.created`) by marking matching records with `paymentStatus: "Refunded"`. Refunds are never treated as new donations.
-- Handled dispute events (`payment.dispute.created`, `payment.dispute.won`, `payment.dispute.lost`) with security audit logging.
+- In `app/api/webhooks/razorpay/route.ts`, implemented safe idempotent handling for documented refund events (`refund.processed`, `refund.created`, `refund.failed`, `refund.speed_changed`).
+- Distinguishes partial refunds from full refunds using cumulative `amount_refunded`: partial refunds mark status as `Partially Refunded` and never fully `Refunded`. Full refunds mark `Refunded`. Failed refunds log `RAZORPAY_REFUND_FAILED` without marking as refunded.
+- Handled dispute events (`payment.dispute.created`, `payment.dispute.won`, `payment.dispute.lost`) independently. Dispute events update dispute status or log audits and never automatically change a donation to `Refunded`.
+
+### Additional Fix 9 — Private Vercel Blob & Fail-Safe Storage Policies
+- In `lib/storage.ts` and `app/api/admin/rescues/photo/[filename]/route.ts`, integrated `@vercel/blob` private access model (`put(..., { access: "private" })` and `get(..., { access: "private" })`).
+- In production runtime, fails safe if persistent private storage is unavailable, strictly preventing fallback to public storage, inline data URLs, or ephemeral local files.
 
 ### Additional Fix 9 — Tracing & Gitignore Hygiene
 - Updated `next.config.ts`: Changed `outputFileTracingIncludes` from `["./prisma/**/*"]` to `["./prisma/schema.prisma", "./prisma/migrations/**/*"]`, ensuring `prisma/dev.db` is strictly excluded from Vercel serverless deployment bundles.
@@ -74,19 +79,19 @@ Before initiating live staging deployment and external integration verification,
 
 ## Verification Test Results
 
-### 1. Vitest Test Suite (45/45 Passed)
+### 1. Vitest Test Suite (52/52 Passed)
 ```
 ✓ tests/migration-live.test.ts (1 test)
 ✓ tests/payment-security.test.ts (7 tests)
 ✓ tests/security-auth.test.ts (6 tests)
 ✓ tests/migration-and-utils.test.ts (4 tests)
-✓ tests/final-security-hardening.test.ts (15 tests)
+✓ tests/final-security-hardening.test.ts (22 tests)
 ✓ tests/storage-and-rate-limit.test.ts (8 tests)
 ✓ tests/api-privacy-uploads.test.ts (4 tests)
 
 Test Files  7 passed (7)
-Tests       45 passed (45)
-Duration    9.11s
+Tests       52 passed (52)
+Duration    17.90s
 ```
 
 ### 2. TypeScript Static Typecheck (`npx tsc --noEmit`)

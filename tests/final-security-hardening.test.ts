@@ -4,39 +4,61 @@ import { processAndSanitizeImage, ImageProcessingError } from "@/lib/image-proce
 import { generateUploadToken, verifyUploadToken } from "@/lib/upload-token";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { verifyDummyPassword } from "@/lib/password";
+import { storeValidatedImage } from "@/lib/storage";
 import sharp from "sharp";
 
 const {
   mockRescueFindUnique,
   mockDonationFindUnique,
   mockDonationUpdate,
+  mockDonationUpdateMany,
   mockSponsorshipFindUnique,
   mockSponsorshipUpdate,
+  mockSponsorshipUpdateMany,
   mockAuditLogCreate,
   mockUserFindUnique,
   mockAdminSessionCreate,
   mockAdminSessionFindUnique,
   mockUserUpdate,
   mockCookieGet,
+  mockBlobPut,
+  mockBlobGet,
 } = vi.hoisted(() => ({
   mockRescueFindUnique: vi.fn(),
   mockDonationFindUnique: vi.fn(),
   mockDonationUpdate: vi.fn(),
+  mockDonationUpdateMany: vi.fn(),
   mockSponsorshipFindUnique: vi.fn(),
   mockSponsorshipUpdate: vi.fn(),
+  mockSponsorshipUpdateMany: vi.fn(),
   mockAuditLogCreate: vi.fn(),
   mockUserFindUnique: vi.fn(),
   mockAdminSessionCreate: vi.fn(),
   mockAdminSessionFindUnique: vi.fn(),
   mockUserUpdate: vi.fn(),
   mockCookieGet: vi.fn(),
+  mockBlobPut: vi.fn(),
+  mockBlobGet: vi.fn(),
+}));
+
+vi.mock("@vercel/blob", () => ({
+  put: mockBlobPut,
+  get: mockBlobGet,
 }));
 
 vi.mock("@/lib/prisma", () => {
   const client = {
     rescueCase: { findUnique: mockRescueFindUnique },
-    donation: { findUnique: mockDonationFindUnique, update: mockDonationUpdate },
-    sponsorship: { findUnique: mockSponsorshipFindUnique, update: mockSponsorshipUpdate },
+    donation: {
+      findUnique: mockDonationFindUnique,
+      update: mockDonationUpdate,
+      updateMany: mockDonationUpdateMany,
+    },
+    sponsorship: {
+      findUnique: mockSponsorshipFindUnique,
+      update: mockSponsorshipUpdate,
+      updateMany: mockSponsorshipUpdateMany,
+    },
     auditLog: { create: mockAuditLogCreate },
     user: { findUnique: mockUserFindUnique, update: mockUserUpdate },
     adminSession: {
@@ -126,6 +148,85 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
         { params: Promise.resolve({ filename: "malware.exe" }) }
       );
       expect(res.status).toBe(400);
+    });
+
+    it("uploads sensitive rescue incident photos with access: 'private' using @vercel/blob when token is present", async () => {
+      vi.stubEnv("BLOB_READ_WRITE_TOKEN", "mock_vercel_blob_rw_token_123");
+      mockBlobPut.mockResolvedValueOnce({
+        url: "https://mock.blob.vercel-storage.com/ayudar/private/rescues/rescue-abc.webp",
+      });
+
+      const buffer = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x00]);
+      const res = await storeValidatedImage(
+        buffer,
+        { mimeType: "image/webp", extension: "webp" },
+        "incident.jpg",
+        "rescue"
+      );
+
+      expect(res.storage).toBe("vercel-blob");
+      expect(res.isPrivate).toBe(true);
+      expect(mockBlobPut).toHaveBeenCalledWith(
+        expect.stringMatching(/^ayudar\/private\/rescues\/rescue-/),
+        buffer,
+        expect.objectContaining({
+          access: "private",
+          contentType: "image/webp",
+          token: "mock_vercel_blob_rw_token_123",
+        })
+      );
+    });
+
+    it("fails safely in production runtime if persistent private storage is unavailable without leaking or fallback to public", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+      vi.stubEnv("PRIVATE_STORAGE_BUCKET", "");
+
+      const buffer = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x00]);
+      await expect(
+        storeValidatedImage(
+          buffer,
+          { mimeType: "image/webp", extension: "webp" },
+          "incident.jpg",
+          "rescue"
+        )
+      ).rejects.toThrow(/Persistent private object storage/i);
+    });
+
+    it("retrieves private rescue incident photo from Vercel Blob with access: 'private' for authenticated admins", async () => {
+      await authenticateAs("ADMIN");
+      vi.stubEnv("BLOB_READ_WRITE_TOKEN", "mock_vercel_blob_rw_token_123");
+
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0x52, 0x49, 0x46, 0x46]));
+          controller.close();
+        },
+      });
+
+      mockBlobGet.mockResolvedValueOnce({
+        statusCode: 200,
+        stream,
+        blob: {
+          contentType: "image/webp",
+        },
+      });
+
+      const res = await adminRescuePhotoGet(
+        new Request("http://localhost:3000/api/admin/rescues/photo/rescue-test-blob-123.webp"),
+        { params: Promise.resolve({ filename: "rescue-test-blob-123.webp" }) }
+      );
+
+      expect(res.status).toBe(200);
+      expect(mockBlobGet).toHaveBeenCalledWith(
+        "ayudar/private/rescues/rescue-test-blob-123.webp",
+        expect.objectContaining({
+          access: "private",
+          token: "mock_vercel_blob_rw_token_123",
+        })
+      );
+      expect(res.headers.get("Content-Type")).toBe("image/webp");
+      expect(res.headers.get("Cache-Control")).toContain("private");
     });
   });
 
@@ -329,25 +430,34 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
   });
 
   describe("Fix 8 — Refund & Dispute Webhook Idempotency", () => {
-    it("handles payment.refunded webhooks by marking paymentStatus as Refunded without treating as a donation", async () => {
+    it("handles refund.processed with full refund by marking paymentStatus as Refunded", async () => {
       mockDonationFindUnique.mockResolvedValue({
-        id: "don_refund_1",
+        id: "don_refund_full_1",
         amount: 5000,
         paymentStatus: "Completed",
-        razorpayOrderId: "order_refund_1",
-        razorpayPaymentId: "pay_refund_1",
+        razorpayOrderId: "order_refund_full_1",
+        razorpayPaymentId: "pay_refund_full_1",
       });
 
       const payload = JSON.stringify({
-        event: "payment.refunded",
+        event: "refund.processed",
         payload: {
-          payment: {
+          refund: {
             entity: {
-              id: "pay_refund_1",
-              order_id: "order_refund_1",
+              id: "rfnd_full_1",
+              payment_id: "pay_refund_full_1",
               amount: 500000,
               currency: "INR",
-              status: "refunded",
+              status: "processed",
+            },
+          },
+          payment: {
+            entity: {
+              id: "pay_refund_full_1",
+              order_id: "order_refund_full_1",
+              amount: 500000,
+              amount_refunded: 500000,
+              refund_status: "full",
             },
           },
         },
@@ -368,16 +478,189 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.status).toBe("marked_refunded");
+      expect(data.status).toBe("Refunded");
       expect(mockDonationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "don_refund_1" },
+          where: { id: "don_refund_full_1" },
           data: { paymentStatus: "Refunded" },
+        })
+      );
+      expect(mockAuditLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "RAZORPAY_REFUND_PROCESSED_FULL",
+            resource: "donation:don_refund_full_1",
+          }),
         })
       );
     });
 
-    it("handles dispute webhooks idempotently with audit logging", async () => {
+    it("handles refund.processed with partial refund by marking paymentStatus as Partially Refunded and never fully Refunded", async () => {
+      mockDonationFindUnique.mockResolvedValue({
+        id: "don_refund_part_1",
+        amount: 5000,
+        paymentStatus: "Completed",
+        razorpayOrderId: "order_refund_part_1",
+        razorpayPaymentId: "pay_refund_part_1",
+      });
+
+      const payload = JSON.stringify({
+        event: "refund.processed",
+        payload: {
+          refund: {
+            entity: {
+              id: "rfnd_part_1",
+              payment_id: "pay_refund_part_1",
+              amount: 200000,
+              currency: "INR",
+              status: "processed",
+            },
+          },
+          payment: {
+            entity: {
+              id: "pay_refund_part_1",
+              order_id: "order_refund_part_1",
+              amount: 500000,
+              amount_refunded: 200000,
+              refund_status: "partial",
+            },
+          },
+        },
+      });
+
+      const signature = createHmac("sha256", WEBHOOK_SECRET).update(payload, "utf8").digest("hex");
+
+      const res = await webhookPost(
+        new Request("http://localhost:3000/api/webhooks/razorpay", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-razorpay-signature": signature,
+          },
+          body: payload,
+        })
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBe("Partially Refunded");
+      expect(mockDonationUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "don_refund_part_1" },
+          data: { paymentStatus: "Partially Refunded" },
+        })
+      );
+      expect(mockAuditLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "RAZORPAY_REFUND_PROCESSED_PARTIAL",
+            resource: "donation:don_refund_part_1",
+          }),
+        })
+      );
+    });
+
+    it("handles refund.failed without marking donation as refunded and logs audit record", async () => {
+      const payload = JSON.stringify({
+        event: "refund.failed",
+        payload: {
+          refund: {
+            entity: {
+              id: "rfnd_failed_99",
+              payment_id: "pay_failed_99",
+              amount: 100000,
+              status: "failed",
+            },
+          },
+        },
+      });
+
+      const signature = createHmac("sha256", WEBHOOK_SECRET).update(payload, "utf8").digest("hex");
+
+      const res = await webhookPost(
+        new Request("http://localhost:3000/api/webhooks/razorpay", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-razorpay-signature": signature,
+          },
+          body: payload,
+        })
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBe("refund_failed_logged");
+      expect(mockDonationUpdate).not.toHaveBeenCalled();
+      expect(mockAuditLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "RAZORPAY_REFUND_FAILED",
+            resource: "refund:rfnd_failed_99",
+          }),
+        })
+      );
+    });
+
+    it("ensures duplicate refund webhook deliveries are strictly idempotent", async () => {
+      mockDonationFindUnique.mockResolvedValue({
+        id: "don_refund_dupe",
+        amount: 5000,
+        paymentStatus: "Refunded", // Already refunded!
+        razorpayOrderId: "order_refund_dupe",
+        razorpayPaymentId: "pay_refund_dupe",
+      });
+
+      const payload = JSON.stringify({
+        event: "refund.processed",
+        payload: {
+          refund: {
+            entity: {
+              id: "rfnd_dupe_1",
+              payment_id: "pay_refund_dupe",
+              amount: 500000,
+              status: "processed",
+            },
+          },
+          payment: {
+            entity: {
+              id: "pay_refund_dupe",
+              amount: 500000,
+              amount_refunded: 500000,
+              refund_status: "full",
+            },
+          },
+        },
+      });
+
+      const signature = createHmac("sha256", WEBHOOK_SECRET).update(payload, "utf8").digest("hex");
+
+      const res = await webhookPost(
+        new Request("http://localhost:3000/api/webhooks/razorpay", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-razorpay-signature": signature,
+          },
+          body: payload,
+        })
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBe("Refunded");
+      expect(data.alreadyProcessed).toBe(true);
+      expect(mockDonationUpdate).not.toHaveBeenCalled();
+    });
+
+    it("handles payment.dispute.created by setting status to Disputed without marking as Refunded", async () => {
+      mockDonationFindUnique.mockResolvedValue({
+        id: "don_dispute_1",
+        amount: 3000,
+        paymentStatus: "Completed",
+        razorpayPaymentId: "pay_disputed_999",
+      });
+
       const payload = JSON.stringify({
         event: "payment.dispute.created",
         payload: {
@@ -385,7 +668,7 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
             entity: {
               id: "disp_123",
               payment_id: "pay_disputed_999",
-              amount: 100000,
+              amount: 300000,
               status: "under_review",
             },
           },
@@ -407,12 +690,66 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.status).toBe("dispute_logged");
+      expect(data.status).toBe("dispute_handled");
+      // Set to Disputed, NOT Refunded!
+      expect(mockDonationUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "don_dispute_1" },
+          data: { paymentStatus: "Disputed" },
+        })
+      );
       expect(mockAuditLogCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            action: "RAZORPAY_WEBHOOK_DISPUTE",
+            action: "RAZORPAY_DISPUTE_CREATED",
             resource: "payment:pay_disputed_999",
+          }),
+        })
+      );
+    });
+
+    it("handles payment.dispute.won by restoring status to Completed", async () => {
+      const payload = JSON.stringify({
+        event: "payment.dispute.won",
+        payload: {
+          dispute: {
+            entity: {
+              id: "disp_won_1",
+              payment_id: "pay_disputed_won",
+              amount: 300000,
+              status: "won",
+            },
+          },
+        },
+      });
+
+      const signature = createHmac("sha256", WEBHOOK_SECRET).update(payload, "utf8").digest("hex");
+
+      const res = await webhookPost(
+        new Request("http://localhost:3000/api/webhooks/razorpay", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-razorpay-signature": signature,
+          },
+          body: payload,
+        })
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBe("dispute_handled");
+      expect(mockDonationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { razorpayPaymentId: "pay_disputed_won", paymentStatus: "Disputed" },
+          data: { paymentStatus: "Completed" },
+        })
+      );
+      expect(mockAuditLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "RAZORPAY_DISPUTE_WON",
+            resource: "payment:pay_disputed_won",
           }),
         })
       );

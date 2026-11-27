@@ -10,9 +10,9 @@ This guide documents the operational procedures for provisioning, deploying, and
 |---|---|---|---|
 | **Web Hosting** | Vercel (Preview Branch) | Vercel (Production Domain) | Next.js 16 (Turbopack, SSR, API routes) |
 | **Relational Database** | Managed PostgreSQL (Neon / Supabase / RDS) | Managed PostgreSQL with automated backups | Application state, transactions, audit logs |
-| **Payment Gateway** | Razorpay Test Mode | Razorpay Live Mode | INR donations, 80G tax receipts, sponsorships |
+| **Payment Gateway** | Razorpay Test Mode | Razorpay Live Mode | INR donations, 80G tax receipts, sponsorships (Dashboard auto-capture enabled) |
 | **Public Storage** | Vercel Blob (Staging Store) | Vercel Blob (Production Store) | Public animal gallery, adoption profiles, blog images |
-| **Private Storage** | Private S3 / Cloudflare R2 | Private S3 / Cloudflare R2 | Citizen rescue incident photos (authenticated access) |
+| **Private Storage** | Vercel Blob (private access) / Private S3 / R2 | Vercel Blob (private access) / Private S3 / R2 | Citizen rescue incident photos (authenticated admin stream) |
 | **Rate Limiter / Cache** | Upstash Redis REST | Upstash Redis REST | Distributed IP & account rate limiting |
 
 ---

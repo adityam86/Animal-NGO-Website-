@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
+import { get } from "@vercel/blob";
 import { AuthError, requireAdminSession } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
@@ -23,35 +24,62 @@ export async function GET(
       return NextResponse.json({ error: "Invalid photo filename" }, { status: 400 });
     }
 
-    // 3. Resolve path in private storage directory
-    const privateDir = path.join(process.cwd(), "storage", "private", "rescues");
-    const filePath = path.join(privateDir, cleanFilename);
-
-    let fileBuffer: Buffer;
-    try {
-      fileBuffer = await fs.readFile(filePath);
-    } catch {
-      return NextResponse.json({ error: "Incident photo not found" }, { status: 404 });
-    }
-
     const ext = cleanFilename.split(".").pop()?.toLowerCase();
-    const contentType =
+    const defaultContentType =
       ext === "webp"
         ? "image/webp"
         : ext === "png"
         ? "image/png"
         : "image/jpeg";
 
-    return new Response(new Uint8Array(fileBuffer), {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Content-Length": String(fileBuffer.byteLength),
-        "Cache-Control": "private, no-cache, no-store, must-revalidate",
-        "X-Content-Type-Options": "nosniff",
-        "Content-Disposition": `inline; filename="${cleanFilename}"`,
-      },
-    });
+    // 3. Check local private storage directory first (if dev or local node)
+    const privateDir = path.join(process.cwd(), "storage", "private", "rescues");
+    const filePath = path.join(privateDir, cleanFilename);
+
+    let fileBuffer: Buffer | null = null;
+    try {
+      fileBuffer = await fs.readFile(filePath);
+    } catch {
+      // Not on local filesystem; check Vercel private blob
+    }
+
+    if (fileBuffer) {
+      return new Response(new Uint8Array(fileBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": defaultContentType,
+          "Content-Length": String(fileBuffer.byteLength),
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Disposition": `inline; filename="${cleanFilename}"`,
+        },
+      });
+    }
+
+    // 4. Retrieve from private Vercel Blob if configured
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (blobToken) {
+      try {
+        const blobKey = `ayudar/private/rescues/${cleanFilename}`;
+        const blobResult = await get(blobKey, { access: "private", token: blobToken });
+        if (blobResult && blobResult.statusCode === 200 && blobResult.stream) {
+          const contentType = blobResult.blob?.contentType || defaultContentType;
+          return new Response(blobResult.stream, {
+            status: 200,
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "private, no-cache, no-store, must-revalidate",
+              "X-Content-Type-Options": "nosniff",
+              "Content-Disposition": `inline; filename="${cleanFilename}"`,
+            },
+          });
+        }
+      } catch (blobError) {
+        console.error("Vercel Blob private retrieval error:", blobError);
+      }
+    }
+
+    return NextResponse.json({ error: "Incident photo not found" }, { status: 404 });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
