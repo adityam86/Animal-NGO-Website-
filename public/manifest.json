@@ -1,11 +1,11 @@
 {
-  "name": "Ayudar Animal Welfare Foundation",
+  "name": "Ayudar — The voice of Animals",
   "short_name": "Ayudar",
-  "description": "24/7 Animal Rescue, Gaushala, Shelter & Adoption in Raniganj",
+  "description": "The mission of Ayudar is to bring relief to suffering animals. 24/7 Rescue, Gaushala, Shelter & Adoption.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf9f5",
-  "theme_color": "#15803d",
+  "background_color": "#FAF7F2",
+  "theme_color": "#1E3A2F",
   "orientation": "portrait-primary",
   "icons": [
     {

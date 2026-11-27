@@ -239,7 +239,13 @@ export const SERVICES = [
   },
 ];
 
-export const DONATION_AMOUNTS = [100, 500, 1000, 2500, 5000];
+export const DONATION_AMOUNTS = [500, 1500, 3500, 5000];
+export const DONATION_IMPACT_MAP: Record<number, string> = {
+  500: "Feeds 10 shelter dogs for a full day",
+  1500: "Covers emergency wound dressing & antibiotics",
+  3500: "Funds full vaccination, deworming & recovery care",
+  5000: "Sponsors critical rescue surgery & 1 week ICU",
+};
 export const DONATION_PURPOSES = [
   "General Fund",
   "Animal Food",
@@ -249,25 +255,111 @@ export const DONATION_PURPOSES = [
   "Emergency Rescue",
 ];
 
+export const URGENT_MEDICAL_CASES = [
+  {
+    id: "CASE-BRUNO-MED",
+    name: "Bruno",
+    species: "Dog",
+    age: "~2 years",
+    image: "/images/dog_bruno.jpg",
+    summary: "Hit by a vehicle near NH-19; needs orthopedic follow-up & physiotherapy.",
+    raisedInr: 8400,
+    goalInr: 12000,
+    supporters: 19,
+    suggestedAmount: 1500,
+    purpose: "Medical Treatment",
+  },
+  {
+    id: "CASE-NANDINI-MED",
+    name: "Nandini",
+    species: "Cow",
+    age: "~5 years",
+    image: "/images/cow_lakshmi.jpg",
+    summary: "Highway trauma & hoof infection; receiving daily antiseptic dressing & fodder.",
+    raisedInr: 11200,
+    goalInr: 15000,
+    supporters: 27,
+    suggestedAmount: 2500,
+    purpose: "Cow Care",
+  },
+  {
+    id: "CASE-MIA-MED",
+    name: "Mia",
+    species: "Cat",
+    age: "~1 year",
+    image: "/images/cat_mia.jpg",
+    summary: "Malnourished kitten rescued from market; needs diagnostic bloodwork & supplements.",
+    raisedInr: 4800,
+    goalInr: 7500,
+    supporters: 14,
+    suggestedAmount: 500,
+    purpose: "Medical Treatment",
+  },
+];
+
+export const SHELTER_WISHLIST = [
+  {
+    item: "Dry Dog & Puppy Kibble (10–20 kg bags)",
+    need: "High Priority",
+    note: "Feeds 65+ shelter & community dogs daily",
+    searchQuery: "Pedigree Drools dog food 10kg",
+  },
+  {
+    item: "Betadine, Sterile Gauze & Cotton Rolls",
+    need: "Daily Medical Need",
+    note: "Used every morning for street trauma wound care",
+    searchQuery: "Betadine solution sterile cotton gauze roll",
+  },
+  {
+    item: "ORS, Glucose & Saline IV Fluids",
+    need: "Heat & Shock Care",
+    note: "Critical for dehydrated & heat-stroke rescues",
+    searchQuery: "ORS electrolytes veterinary glucose",
+  },
+  {
+    item: "Clean Old Blankets, Towels & Cotton Sheets",
+    need: "Bedding",
+    note: "Used for post-op recovery kennels & winter warmth",
+    searchQuery: "pet fleece blanket shelter bedding",
+  },
+];
+
+export const AYUDAR_LEGAL = {
+  name: "Ayudar Animal Welfare Foundation",
+  shortName: "Ayudar",
+  tagline: "The voice of Animals",
+  mission: "The mission of Ayudar is to bring relief to suffering animals.",
+  regNo: "IV-2304-00031/2022",
+  nitiAayogId: "WB/2025/0825517",
+  csrRegNo: "CSR00098110",
+  urn80G: "AAJTA6753HE20251",
+  urn80GDate: "10-OCT-25",
+  mapsUrl: "https://maps.app.goo.gl/Aug8yQi2FmTVeegx7",
+};
+
 export const NAV_LINKS = [
-  { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
-  { label: "Animals", href: "/animals" },
-  { label: "Rescue", href: "/rescue" },
-  { label: "Adoption", href: "/adoption" },
-  { label: "Cow Care", href: "/cow-care" },
-  { label: "Shelter", href: "/shelter" },
-  { label: "Stories", href: "/stories" },
-  { label: "Volunteer", href: "/volunteer" },
+  { label: "Ayuda", href: "/rescue" },
+  { label: "Adopt", href: "/adoption" },
   { label: "Donate", href: "/donate" },
-  { label: "Contact", href: "/contact" },
+  { label: "Volunteer", href: "/volunteer" },
+  { label: "Impact", href: "/about" },
+];
+
+export const FOOTER_QUICK_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "All Animals", href: "/animals" },
+  { label: "Impact & About", href: "/about" },
+  { label: "Cow Care (Gaushala)", href: "/cow-care" },
+  { label: "Our Shelter", href: "/shelter" },
+  { label: "Track Rescue Case", href: "/rescue/track" },
 ];
 
 export const CONTACT_INFO = {
-  address: "123, Civil Lines, Raniganj, West Bengal — 713347",
+  address: "Raniganj — Asansol Animal Care Sanctuary, West Bengal — 713347",
   phone: "+91 98765 43210",
   emergencyPhone: "+91 98000 00000",
   email: "help@jeevseva.org",
   rescueEmail: "rescue@jeevseva.org",
   hours: "Mon–Sat: 9 AM – 7 PM | Emergency: 24/7",
+  mapsUrl: "https://maps.app.goo.gl/Aug8yQi2FmTVeegx7",
 };

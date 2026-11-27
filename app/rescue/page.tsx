@@ -1,423 +1,900 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { Phone, AlertTriangle } from "lucide-react";
-import { motion } from "framer-motion";
-import ImageUploader from "@/components/shared/ImageUploader";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Phone,
+  MessageCircle,
+  MapPin,
+  CheckCircle,
+  AlertTriangle,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  Clock,
+  ShieldCheck,
+  Navigation,
+  HeartHandshake,
+  ExternalLink,
+} from "lucide-react";
 import FadeIn from "@/components/motion/FadeIn";
-import PulseBeacon from "@/components/motion/PulseBeacon";
+import ImageUploader from "@/components/shared/ImageUploader";
+import { CONTACT_INFO, AYUDAR_LEGAL } from "@/lib/data";
 
 const InteractiveMap = dynamic(() => import("@/components/shared/InteractiveMap"), {
   ssr: false,
   loading: () => (
     <div
       style={{
-        height: 320,
+        height: 280,
+        borderRadius: "var(--radius-lg)",
         background: "var(--cream-100)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: "var(--radius-lg)",
-        color: "var(--stone-400)",
+        color: "var(--stone-600)",
+        fontWeight: 600,
         fontSize: "0.9rem",
       }}
     >
-      Loading map...
+      Loading interactive GPS rescue map...
     </div>
   ),
 });
 
-const animalTypes = ["Dog", "Cat", "Cow", "Buffalo", "Goat", "Horse", "Bird", "Other"];
-const conditions = ["Injured", "Sick", "Abandoned", "Trapped", "Accident", "Pregnant", "Other"];
-
-type EmergencyLevel = "Critical" | "High" | "Normal";
-
-const emergencyLevels: { level: EmergencyLevel; emoji: string; color: string; bg: string; desc: string }[] = [
-  { level: "Critical", emoji: "🔴", color: "hsl(0,75%,45%)", bg: "hsl(0,80%,97%)", desc: "Life-threatening — needs immediate help" },
-  { level: "High", emoji: "🟠", color: "hsl(28,88%,45%)", bg: "hsl(28,88%,97%)", desc: "Seriously injured or trapped" },
-  { level: "Normal", emoji: "🟡", color: "hsl(45,90%,40%)", bg: "hsl(45,90%,97%)", desc: "Needs care but stable" },
+const ANIMAL_TYPES = [
+  { id: "Dog", icon: "🐕", label: "Street Dog / Puppy" },
+  { id: "Cat", icon: "🐈", label: "Cat / Kitten" },
+  { id: "Cow / Calf", icon: "🐄", label: "Cow / Calf / Bull" },
+  { id: "Bird", icon: "🕊️", label: "Bird / Raptor" },
+  { id: "Other", icon: "🐾", label: "Other Animal" },
 ];
 
-export default function RescuePage() {
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [rescueId, setRescueId] = useState("");
-  const [emergency, setEmergency] = useState<EmergencyLevel>("Normal");
-  const [animalType, setAnimalType] = useState("");
-  const [condition, setCondition] = useState("");
-  const [address, setAddress] = useState("");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+const CONDITION_CHIPS = [
+  { id: "Road Accident", icon: "🚑", label: "Road Accident", urgency: "Critical" as const },
+  { id: "Bleeding / Wound", icon: "🩸", label: "Bleeding / Wound", urgency: "Critical" as const },
+  { id: "Abandoned Puppy / Kitten", icon: "🍼", label: "Abandoned Puppy / Kitten", urgency: "High" as const },
+  { id: "Trapped", icon: "🕸️", label: "Trapped / Stuck", urgency: "High" as const },
+  { id: "Severe Illness", icon: "🩺", label: "Severe Illness", urgency: "High" as const },
+  { id: "Weak / Dehydrated", icon: "💧", label: "Weak / Dehydrated", urgency: "Normal" as const },
+];
+
+const FIRST_AID_GUIDES = [
+  {
+    title: "Safely approaching an injured dog",
+    bullets: [
+      "Move calmly and stay low without staring directly into the animal's eyes or crowding them.",
+      "Do NOT grab a painful limb suddenly — scared dogs may bite out of reflex even if gentle.",
+      "Keep curious crowds and honking vehicles back, or place a loose cardboard barrier around them.",
+    ],
+  },
+  {
+    title: "Keeping a dehydrated or heat-shocked stray stable",
+    bullets: [
+      "Move the animal gently into shade on a clean cloth or flattened cardboard off hot asphalt.",
+      "Offer small sips of clean cool water or wet their gums — never force water down an unconscious throat.",
+      "Pour cool (not ice-cold) water gently over paws and neck while waiting for the rescue team.",
+    ],
+  },
+  {
+    title: "What NOT to feed or apply",
+    bullets: [
+      "Never give human painkillers (paracetamol, ibuprofen, aspirin) — even a single tablet can be fatal.",
+      "Avoid pouring turmeric/chilli powder, petrol, or random sprays directly onto open bleeding wounds.",
+      "Do not offer salty snacks, sweets, onion-spiced food, or milk to distressed puppies or kittens.",
+    ],
+  },
+];
+
+const SERVICE_ZONES = [
+  { zone: "Raniganj & NH-19 Corridor", eta: "15–30 min emergency target" },
+  { zone: "Asansol Municipal Belt", eta: "25–45 min dispatch window" },
+  { zone: "Durgapur & Industrial Sectors", eta: "35–60 min medical van" },
+  { zone: "Jamuria / Andal / Searsole", eta: "25–50 min rescue outreach" },
+];
+
+function buildWhatsAppHref(text: string) {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function RescuePageContent() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState("");
+  const [location, setLocation] = useState("");
+  const [animalType, setAnimalType] = useState("Dog");
+  const [condition, setCondition] = useState("Road Accident");
+  const [urgency, setUrgency] = useState<"Critical" | "High" | "Normal">("Critical");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [description, setDescription] = useState("");
+  const [reporterName, setReporterName] = useState("");
+  const [reporterPhone, setReporterPhone] = useState("");
+  const [reporterEmail, setReporterEmail] = useState("");
+  const [stayNearby, setStayNearby] = useState(true);
+  const [openGuideIdx, setOpenGuideIdx] = useState<number | null>(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
+
+  const detectGps = () => {
+    if (!navigator.geolocation) {
+      setGpsStatus("Device GPS unavailable — please tap the map or enter a landmark.");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsStatus("Acquiring GPS coordinates...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(5);
+        const lng = pos.coords.longitude.toFixed(5);
+        setLocation((prev) =>
+          prev.trim()
+            ? `${prev.trim()} (GPS: ${lat}, ${lng})`
+            : `GPS: ${lat}, ${lng} — near this pin`
+        );
+        setGpsStatus(`GPS locked (${lat}, ${lng})`);
+        setGpsLoading(false);
+      },
+      () => {
+        setGpsStatus("Location permission denied — tap a pin on the map or type the landmark.");
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSelectCondition = (chip: (typeof CONDITION_CHIPS)[number]) => {
+    setCondition(chip.id);
+    setUrgency(chip.urgency);
+  };
+
+  const validateStepAndNext = (targetStep: 1 | 2 | 3) => {
+    setErrorMsg(null);
+    if (step === 1 && targetStep > 1 && location.trim().length < 3) {
+      setErrorMsg("Please tap the map, use GPS, or type a landmark so our rescue van can find the animal.");
+      return;
+    }
+    if (step === 2 && targetStep > 2 && !animalType) {
+      setErrorMsg("Please select which animal needs rescue.");
+      return;
+    }
+    setStep(targetStep);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
+    setErrorMsg(null);
 
-    if (!animalType) {
-      setFormError("Please select the Animal Type (e.g. Dog, Cat, Cow).");
+    if (location.trim().length < 3) {
+      setStep(1);
+      setErrorMsg("Location is required to dispatch our team.");
+      return;
+    }
+    if (reporterName.trim().length < 2) {
+      setErrorMsg("Please enter your name.");
+      return;
+    }
+    if (!/^[0-9+\-\s()]{7,20}$/.test(reporterPhone.trim())) {
+      setErrorMsg("Please enter a valid 10-digit mobile number.");
       return;
     }
 
     setSubmitting(true);
-    try {
-      const reporterName = (document.getElementById("reporter-name") as HTMLInputElement).value;
-      const reporterPhone = (document.getElementById("reporter-phone") as HTMLInputElement).value;
-      const reporterEmail = (document.getElementById("reporter-email") as HTMLInputElement).value;
-      const rawDesc = (document.getElementById("description") as HTMLTextAreaElement).value;
-      const locationInput = (document.getElementById("location-text") as HTMLInputElement).value;
-      const finalLocation = coords
-        ? `${locationInput || address} (GPS: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`
-        : locationInput || address;
+    const compiledDescription = `${description.trim() || `${condition} reported for ${animalType}.`}${
+      stayNearby ? " [Caller available nearby for ~15 mins]" : ""
+    }`;
 
+    try {
       const res = await fetch("/api/rescue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reporterName,
-          reporterPhone,
-          reporterEmail,
           animalType,
-          emergencyLevel: emergency,
+          emergencyLevel: urgency,
+          location: location.trim(),
+          reporterName: reporterName.trim(),
+          reporterPhone: reporterPhone.trim(),
+          reporterEmail: reporterEmail.trim(),
           condition,
-          description: rawDesc,
-          photoUrl,
-          location: finalLocation,
+          description: compiledDescription,
+          photoUrl: photoUrl || null,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setRescueId(data.id);
-        setSubmitted(true);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        setFormError(errData.error || "Failed to submit rescue request.");
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to submit rescue alert. Please call our helpline.");
       }
+
+      setSubmittedCaseId(data.id);
     } catch (err) {
-      console.error(err);
-      setFormError("Network error while submitting request. Please call +91 98000 00000.");
+      setErrorMsg(err instanceof Error ? err.message : "Network error while sending alert.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (submitted) {
-    return (
-      <main style={{ paddingTop: "68px", minHeight: "85vh", background: "var(--cream-50)", display: "flex", alignItems: "center" }}>
-        <div className="container" style={{ textAlign: "center", maxWidth: 580 }}>
-          <motion.div
-            initial={{ scale: 0.85, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          >
-            <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>✅</div>
-            <h1 style={{ color: "var(--green-600)", marginBottom: "0.75rem" }}>Rescue Request Received</h1>
-            <div
-              style={{
-                background: "white",
-                borderRadius: "var(--radius-xl)",
-                padding: "2.25rem 2rem",
-                border: "2px solid var(--green-200)",
-                marginBottom: "2rem",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-              }}
-            >
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--stone-400)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-                Your Rescue ID
-              </div>
-              <div style={{ fontSize: "2rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--saffron-500)", letterSpacing: "0.05em", wordBreak: "break-all" }}>
-                {rescueId}
-              </div>
-              <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "var(--stone-500)", margin: 0 }}>
-                Save this ID to track real-time rescue status
-              </p>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "2rem", textAlign: "left", background: "white", borderRadius: "var(--radius-lg)", padding: "1.75rem", border: "1px solid var(--cream-200)" }}>
-              {["Rescue team notified immediately", "Team will contact you within 15 minutes", "Track your case with the Rescue ID above", "Emergency Hotline: +91 98000 00000"].map((step, i) => (
-                <div key={i} style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--green-500)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.78rem", fontWeight: 700, flexShrink: 0 }}>
-                    {i + 1}
-                  </div>
-                  <span style={{ fontSize: "0.92rem", color: "var(--stone-700)" }}>{step}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-                <Link href={`/rescue/track?id=${rescueId}`} className="btn btn-primary btn-lg">
-                  Track My Case
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-                <Link href="/" className="btn btn-outline btn-lg">
-                  Back to Home
-                </Link>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </main>
-    );
-  }
+  const whatsappSummaryText = `AYUDA EMERGENCY RESCUE ALERT${submittedCaseId ? ` (${submittedCaseId})` : ""}\nAnimal: ${animalType}\nCondition: ${condition} (${urgency})\nLocation: ${location || "Raniganj / Asansol / Durgapur"}\nReporter: ${reporterName || "Bystander"} (${reporterPhone || "Phone attached"})\nCan stay 15 min: ${stayNearby ? "Yes" : "No"}`;
 
   return (
-    <main style={{ paddingTop: "68px" }}>
-      {/* Header */}
-      <section style={{ background: "hsl(0,75%,30%)", paddingBlock: "4rem 3.5rem" }}>
-        <div className="container" style={{ textAlign: "center" }}>
-          <FadeIn direction="up" distance={20}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-              <PulseBeacon color="#ffffff" size={10} pulseScale={2.8} />
-              <span style={{ color: "hsla(0,0%,100%,0.85)", fontWeight: 700, fontSize: "0.82rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Emergency Dispatch
-              </span>
-            </div>
-            <h1 style={{ color: "white", marginBottom: "0.75rem" }}>Report an Animal in Distress</h1>
-            <p style={{ color: "hsla(0,0%,100%,0.85)", maxWidth: 520, marginInline: "auto", fontSize: "1.05rem", lineHeight: 1.75 }}>
-              Fill this form and our field rescue team will respond. For immediate life-threatening emergencies, call <strong style={{ color: "white" }}>+91 98000 00000</strong> directly.
-            </p>
-            <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.96 }} style={{ display: "inline-block", marginTop: "1.5rem" }}>
-              <a
-                href="tel:+919800000000"
+    <main style={{ background: "var(--cream-50)", minHeight: "100vh" }}>
+      {/* Urgent Action Calm Header */}
+      <section
+        style={{
+          background: "linear-gradient(135deg, #1E3A2F 0%, #264A3B 65%, #305747 100%)",
+          color: "white",
+          padding: "clamp(6.25rem, 11vw, 7.75rem) 0 clamp(2.5rem, 5vw, 3.5rem)",
+        }}
+      >
+        <div className="container">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "2rem", alignItems: "center" }}>
+            <FadeIn direction="up" distance={16}>
+              <div
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "0.6rem",
-                  padding: "0.75rem 1.75rem",
-                  background: "white",
-                  color: "hsl(0,75%,35%)",
-                  fontWeight: 700,
-                  fontSize: "1.05rem",
+                  gap: "0.45rem",
+                  background: "rgba(214, 69, 69, 0.24)",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  color: "#FFE3E3",
+                  padding: "0.35rem 0.9rem",
                   borderRadius: "var(--radius-full)",
-                  textDecoration: "none",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  marginBottom: "1rem",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
                 }}
               >
-                <Phone size={18} /> Call 24/7 Hotline
-              </a>
-            </motion.div>
-          </FadeIn>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF6B6B" }} />
+                Ayuda • 24/7 Emergency Rescue
+              </div>
+              <h1 style={{ color: "white", fontSize: "clamp(2rem, 4.4vw, 3rem)", lineHeight: 1.12, marginBottom: "0.9rem" }}>
+                Found an injured or distress animal? Report in under 30 seconds.
+              </h1>
+              <p style={{ color: "rgba(250, 247, 242, 0.86)", fontSize: "1.02rem", lineHeight: 1.7, maxWidth: "58ch", margin: 0 }}>
+                Stay calm. Share a GPS pin, photo, and phone number below — or use one-tap emergency calling when every minute counts.
+              </p>
+            </FadeIn>
+
+            <FadeIn direction="up" delay={0.08} distance={16}>
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  borderRadius: "var(--radius-xl)",
+                  padding: "1.5rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.85rem",
+                }}
+              >
+                <div style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(250,247,242,0.75)", fontWeight: 700 }}>
+                  Instant One-Tap Dispatch
+                </div>
+                <a
+                  href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`}
+                  className="btn btn-emergency btn-lg"
+                  style={{ width: "100%", justifyContent: "center", gap: "0.55rem" }}
+                >
+                  <Phone size={18} /> Call Rescue Helpline ({CONTACT_INFO.emergencyPhone})
+                </a>
+                <a
+                  href={buildWhatsAppHref(whatsappSummaryText)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn"
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    gap: "0.55rem",
+                    background: "rgba(255, 255, 255, 0.96)",
+                    color: "#1E3A2F",
+                  }}
+                >
+                  <MessageCircle size={18} /> WhatsApp Rescue Desk
+                </a>
+                <Link
+                  href="/rescue/track"
+                  style={{
+                    textAlign: "center",
+                    color: "#FAF7F2",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    textDecoration: "underline",
+                    paddingTop: "0.2rem",
+                  }}
+                >
+                  Already submitted an alert? Track Live Case Status →
+                </Link>
+              </div>
+            </FadeIn>
+          </div>
         </div>
       </section>
 
-      {/* Form */}
-      <section className="section" style={{ background: "var(--cream-50)" }}>
-        <div className="container" style={{ maxWidth: 720 }}>
-          <FadeIn direction="up" distance={25}>
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
-              {/* Reporter details */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Your Contact Details</h3>
-                <div className="responsive-grid-2">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="reporter-name">Your Name *</label>
-                    <input id="reporter-name" required className="form-input" placeholder="Full name" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="reporter-phone">Phone Number *</label>
-                    <input id="reporter-phone" required type="tel" className="form-input" placeholder="+91 XXXXX XXXXX" />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="reporter-email">Email Address</label>
-                  <input id="reporter-email" type="email" className="form-input" placeholder="your@email.com" />
-                </div>
-              </div>
-
-              {/* Animal details */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)" }}>Animal Information</h3>
-
-                <div className="form-group">
-                  <label className="form-label">Animal Type *</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                    {animalTypes.map((t) => (
-                      <motion.button
-                        key={t}
-                        type="button"
-                        whileHover={{ scale: 1.04 }}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => {
-                          setAnimalType(t);
-                          setFormError(null);
-                        }}
-                        style={{
-                          padding: "0.45rem 1rem",
-                          borderRadius: "var(--radius-full)",
-                          border: "1.5px solid",
-                          borderColor: animalType === t ? "var(--saffron-500)" : "var(--cream-300)",
-                          background: animalType === t ? "var(--saffron-50)" : "var(--color-surface)",
-                          color: animalType === t ? "var(--saffron-700)" : "var(--stone-600)",
-                          fontWeight: 600,
-                          fontSize: "0.85rem",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        {t}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Condition *</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                    {conditions.map((c) => (
-                      <motion.button
-                        key={c}
-                        type="button"
-                        whileHover={{ scale: 1.04 }}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => setCondition(c)}
-                        style={{
-                          padding: "0.45rem 1rem",
-                          borderRadius: "var(--radius-full)",
-                          border: "1.5px solid",
-                          borderColor: condition === c ? "var(--saffron-500)" : "var(--cream-300)",
-                          background: condition === c ? "var(--saffron-50)" : "var(--color-surface)",
-                          color: condition === c ? "var(--saffron-700)" : "var(--stone-600)",
-                          fontWeight: 600,
-                          fontSize: "0.85rem",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        {c}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="description">Description *</label>
-                  <textarea id="description" required className="form-textarea" placeholder="Describe the animal's condition, approximate size, colour, visible injuries..." />
-                </div>
-              </div>
-
-              {/* Location */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", display: "flex", flexDirection: "column", gap: "1.25rem", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                <div>
-                  <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)", marginBottom: "0.25rem" }}>Location & GPS Pin</h3>
-                  <p style={{ fontSize: "0.85rem", color: "var(--stone-500)", margin: 0 }}>
-                    Click on the map to pin the exact animal position or click &quot;Locate Me&quot; to use device GPS.
-                  </p>
-                </div>
-
-                <InteractiveMap
-                  mode="picker"
-                  height={280}
-                  onLocationSelect={(lat, lng, addr) => {
-                    setCoords({ lat, lng });
-                    if (addr) setAddress(addr);
+      {/* Main 3-Step SOS Form + While You Wait & Coverage Sidebar */}
+      <section className="section">
+        <div className="container">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))", gap: "2.25rem", alignItems: "start" }}>
+            {/* Left / Primary: 3-Step Progressive Rescue Form */}
+            <div style={{ gridColumn: "span 1" }}>
+              {submittedCaseId ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  style={{
+                    background: "var(--color-surface)",
+                    borderRadius: "var(--radius-xl)",
+                    padding: "clamp(1.75rem, 4vw, 2.75rem)",
+                    border: "2px solid var(--green-300)",
+                    boxShadow: "var(--shadow-lg)",
+                    textAlign: "center",
                   }}
-                />
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="location-text">Address / Landmark *</label>
-                  <input
-                    id="location-text"
-                    required
-                    className="form-input"
-                    placeholder="e.g. Near Raniganj railway station, NH-19..."
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Emergency Level */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                <h3 style={{ fontSize: "1.05rem", color: "var(--stone-800)", marginBottom: "1.25rem" }}>Emergency Urgency Level *</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  {emergencyLevels.map(({ level, emoji, color, bg, desc }) => (
-                    <motion.label
-                      key={level}
-                      whileHover={{ scale: 1.01 }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                        padding: "1rem 1.25rem",
-                        borderRadius: "var(--radius-lg)",
-                        cursor: "pointer",
-                        border: `2px solid ${emergency === level ? color : "var(--cream-200)"}`,
-                        background: emergency === level ? bg : "var(--color-surface)",
-                        transition: "all 0.15s ease",
-                      }}
+                >
+                  <div
+                    style={{
+                      width: 68,
+                      height: 68,
+                      borderRadius: "50%",
+                      background: "var(--green-50)",
+                      color: "var(--green-700)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: "0 auto 1.25rem",
+                    }}
+                  >
+                    <CheckCircle size={36} />
+                  </div>
+                  <div className="badge badge-green" style={{ marginBottom: "0.85rem" }}>
+                    Alert Logged • Rescue Team Notified
+                  </div>
+                  <h2 style={{ marginBottom: "0.65rem" }}>Case ID: {submittedCaseId}</h2>
+                  <p style={{ color: "var(--stone-600)", marginBottom: "1.5rem", maxWidth: "46ch", marginInline: "auto" }}>
+                    Our ambulance desk has received the location (<strong>{location}</strong>). Please keep your phone accessible and monitor live status or forward this pre-filled summary on WhatsApp.
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.85rem", justifyContent: "center" }}>
+                    <a
+                      href={buildWhatsAppHref(whatsappSummaryText)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-terracotta"
+                      style={{ gap: "0.45rem" }}
                     >
-                      <input
-                        type="radio"
-                        name="emergency"
-                        value={level}
-                        checked={emergency === level}
-                        onChange={() => setEmergency(level)}
-                        style={{ accentColor: color }}
-                      />
-                      <span style={{ fontSize: "1.25rem" }}>{emoji}</span>
-                      <div>
-                        <div style={{ fontWeight: 700, color, fontSize: "0.95rem" }}>{level}</div>
-                        <div style={{ fontSize: "0.82rem", color: "var(--stone-500)" }}>{desc}</div>
-                      </div>
-                    </motion.label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Upload photo */}
-              <div style={{ background: "white", borderRadius: "var(--radius-xl)", padding: "1.75rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                <ImageUploader
-                  label="Upload Animal Incident Photo (optional)"
-                  value={photoUrl}
-                  onChange={(url) => setPhotoUrl(url)}
-                  uploadEndpoint="/api/rescue/upload"
-                  helperText="Upload a photo of the injured or stranded animal. This helps our field rescue team prepare medical kits and dispatch the right vehicle."
-                />
-              </div>
-
-              {formError && (
+                      <MessageCircle size={17} /> Send on WhatsApp Backup
+                    </a>
+                    <Link href={`/rescue/track?id=${encodeURIComponent(submittedCaseId)}`} className="btn btn-primary">
+                      Track Rescue Progress →
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubmittedCaseId(null);
+                      setStep(1);
+                      setDescription("");
+                      setPhotoUrl("");
+                    }}
+                    style={{
+                      marginTop: "1.5rem",
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--stone-600)",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Report another animal
+                  </button>
+                </motion.div>
+              ) : (
                 <div
                   style={{
-                    padding: "0.85rem 1rem",
-                    borderRadius: "var(--radius-md)",
-                    background: "var(--red-100)",
-                    border: "1px solid var(--red-200)",
-                    color: "var(--red-700)",
-                    fontSize: "0.9rem",
-                    fontWeight: 600,
+                    background: "var(--color-surface)",
+                    borderRadius: "var(--radius-xl)",
+                    padding: "clamp(1.5rem, 3.5vw, 2.25rem)",
+                    border: "1px solid var(--cream-200)",
+                    boxShadow: "var(--shadow-md)",
                   }}
                 >
-                  ⚠️ {formError}
+                  {/* Step Progress Tabs */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.6rem", marginBottom: "1.75rem" }}>
+                    {[
+                      { num: 1 as const, label: "1. Location" },
+                      { num: 2 as const, label: "2. Animal & Photo" },
+                      { num: 3 as const, label: "3. Contact" },
+                    ].map((s) => {
+                      const active = step === s.num;
+                      const completed = step > s.num;
+                      return (
+                        <button
+                          key={s.num}
+                          type="button"
+                          onClick={() => (s.num < step ? setStep(s.num) : validateStepAndNext(s.num))}
+                          style={{
+                            padding: "0.7rem 0.65rem",
+                            borderRadius: "var(--radius-md)",
+                            border: "1.5px solid",
+                            borderColor: active ? "var(--crimson)" : completed ? "var(--green-500)" : "var(--cream-200)",
+                            background: active ? "var(--emergency-50)" : completed ? "var(--green-50)" : "var(--cream-50)",
+                            color: active ? "var(--crimson)" : completed ? "var(--green-700)" : "var(--stone-600)",
+                            fontWeight: 700,
+                            fontSize: "0.84rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {completed ? "✓ " : ""}
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <form onSubmit={handleSubmit}>
+                    <AnimatePresence mode="wait">
+                      {step === 1 && (
+                        <motion.div
+                          key="rescue-step-1"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ display: "flex", flexDirection: "column", gap: "1.15rem" }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+                            <div>
+                              <h2 style={{ fontSize: "1.35rem", marginBottom: "0.2rem" }}>Where is the animal right now?</h2>
+                              <p style={{ fontSize: "0.86rem", color: "var(--stone-600)", margin: 0 }}>
+                                Use 1-tap GPS or drop a pin on the map, then add a nearby shop or landmark.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={detectGps}
+                              disabled={gpsLoading}
+                              className="btn btn-primary btn-sm"
+                              style={{ gap: "0.4rem" }}
+                            >
+                              <Navigation size={15} /> {gpsLoading ? "Locating..." : "Use My Current GPS"}
+                            </button>
+                          </div>
+
+                          {gpsStatus && (
+                            <div style={{ fontSize: "0.82rem", color: "var(--green-700)", fontWeight: 600 }}>
+                              <MapPin size={14} style={{ display: "inline", marginRight: 4 }} />
+                              {gpsStatus}
+                            </div>
+                          )}
+
+                          <InteractiveMap
+                            mode="picker"
+                            height={250}
+                            onLocationSelect={(lat, lng, addr) => {
+                              setLocation(addr ? `${addr} (${lat.toFixed(4)}, ${lng.toFixed(4)})` : `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+                            }}
+                          />
+
+                          <div className="form-group">
+                            <label className="form-label" htmlFor="rescue-location">Exact Location / Nearby Landmark *</label>
+                            <input
+                              id="rescue-location"
+                              type="text"
+                              className="form-input"
+                              placeholder="e.g., Opposite Raniganj Petrol Pump, NH-19"
+                              value={location}
+                              onChange={(e) => setLocation(e.target.value)}
+                              required
+                            />
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              onClick={() => validateStepAndNext(2)}
+                              className="btn btn-terracotta"
+                              style={{ gap: "0.4rem" }}
+                            >
+                              Next: Animal &amp; Condition <ChevronRight size={17} />
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {step === 2 && (
+                        <motion.div
+                          key="rescue-step-2"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+                        >
+                          <div>
+                            <h2 style={{ fontSize: "1.35rem", marginBottom: "0.2rem" }}>Animal type, condition &amp; photo</h2>
+                            <p style={{ fontSize: "0.86rem", color: "var(--stone-600)", margin: 0 }}>
+                              Tap what matches best so our responders pack the right medical kit.
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="form-label" style={{ display: "block", marginBottom: "0.5rem" }}>
+                              Animal Type *
+                            </label>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "0.6rem" }}>
+                              {ANIMAL_TYPES.map((a) => {
+                                const selected = animalType === a.id;
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() => setAnimalType(a.id)}
+                                    style={{
+                                      padding: "0.7rem 0.65rem",
+                                      borderRadius: "var(--radius-md)",
+                                      border: "1.5px solid",
+                                      borderColor: selected ? "var(--green-600)" : "var(--cream-200)",
+                                      background: selected ? "var(--green-50)" : "var(--color-surface)",
+                                      color: "var(--stone-800)",
+                                      fontWeight: 700,
+                                      fontSize: "0.82rem",
+                                      cursor: "pointer",
+                                      textAlign: "left",
+                                    }}
+                                  >
+                                    <span style={{ marginRight: "0.35rem" }}>{a.icon}</span>
+                                    {a.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="form-label" style={{ display: "block", marginBottom: "0.5rem" }}>
+                              Primary Condition *
+                            </label>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.55rem" }}>
+                              {CONDITION_CHIPS.map((c) => {
+                                const selected = condition === c.id;
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => handleSelectCondition(c)}
+                                    style={{
+                                      padding: "0.55rem 0.9rem",
+                                      borderRadius: "var(--radius-full)",
+                                      border: "1.5px solid",
+                                      borderColor: selected ? "var(--crimson)" : "var(--cream-300)",
+                                      background: selected ? "var(--crimson)" : "var(--cream-50)",
+                                      color: selected ? "white" : "var(--stone-800)",
+                                      fontWeight: 600,
+                                      fontSize: "0.84rem",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    {c.icon} {c.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <ImageUploader
+                            uploadEndpoint="/api/rescue/upload"
+                            value={photoUrl}
+                            onChange={setPhotoUrl}
+                            label="Photo of the Animal / Spot (Recommended)"
+                            helperText="Helps vet triage injuries before the ambulance arrives (JPG/PNG/WebP)"
+                          />
+
+                          <div className="form-group">
+                            <label className="form-label" htmlFor="rescue-desc">Quick Notes (optional)</label>
+                            <textarea
+                              id="rescue-desc"
+                              className="form-textarea"
+                              style={{ minHeight: 82 }}
+                              placeholder="e.g., Unable to stand, conscious, hiding near the blue gate..."
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                            />
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem" }}>
+                            <button type="button" onClick={() => setStep(1)} className="btn btn-outline" style={{ gap: "0.35rem" }}>
+                              <ChevronLeft size={16} /> Back
+                            </button>
+                            <button type="button" onClick={() => validateStepAndNext(3)} className="btn btn-terracotta" style={{ gap: "0.4rem" }}>
+                              Next: Your Contact <ChevronRight size={17} />
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {step === 3 && (
+                        <motion.div
+                          key="rescue-step-3"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ display: "flex", flexDirection: "column", gap: "1.15rem" }}
+                        >
+                          <div>
+                            <h2 style={{ fontSize: "1.35rem", marginBottom: "0.2rem" }}>So our driver can reach you</h2>
+                            <p style={{ fontSize: "0.86rem", color: "var(--stone-600)", margin: 0 }}>
+                              Our team calls only to coordinate pickup. Never shared publicly.
+                            </p>
+                          </div>
+
+                          <div className="responsive-grid-2" style={{ gap: "1rem" }}>
+                            <div className="form-group">
+                              <label className="form-label" htmlFor="rescue-name">Your Name *</label>
+                              <input
+                                id="rescue-name"
+                                type="text"
+                                className="form-input"
+                                placeholder="e.g., Ananya Das"
+                                value={reporterName}
+                                onChange={(e) => setReporterName(e.target.value)}
+                                required
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label" htmlFor="rescue-phone">Mobile Number *</label>
+                              <input
+                                id="rescue-phone"
+                                type="tel"
+                                className="form-input"
+                                placeholder="+91 98XXX XXXXX"
+                                value={reporterPhone}
+                                onChange={(e) => setReporterPhone(e.target.value)}
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label" htmlFor="rescue-email">Email (optional — for status updates)</label>
+                            <input
+                              id="rescue-email"
+                              type="email"
+                              className="form-input"
+                              placeholder="you@example.com"
+                              value={reporterEmail}
+                              onChange={(e) => setReporterEmail(e.target.value)}
+                            />
+                          </div>
+
+                          <label
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.75rem",
+                              padding: "0.9rem 1rem",
+                              borderRadius: "var(--radius-md)",
+                              background: "var(--green-50)",
+                              border: "1px solid var(--green-200)",
+                              cursor: "pointer",
+                              fontWeight: 600,
+                              fontSize: "0.9rem",
+                              color: "var(--green-700)",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={stayNearby}
+                              onChange={(e) => setStayNearby(e.target.checked)}
+                              style={{ width: 18, height: 18, accentColor: "var(--green-700)" }}
+                            />
+                            I can stay near the animal for 15 mins to guide the team
+                          </label>
+
+                          <div
+                            style={{
+                              padding: "0.85rem 1rem",
+                              borderRadius: "var(--radius-md)",
+                              background: "var(--cream-50)",
+                              border: "1px solid var(--cream-200)",
+                              fontSize: "0.84rem",
+                              color: "var(--stone-700)",
+                              lineHeight: 1.55,
+                            }}
+                          >
+                            <strong>Summary:</strong> {animalType} ({condition} • {urgency}) at{" "}
+                            <strong>{location}</strong>
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+                            <button type="button" onClick={() => setStep(2)} className="btn btn-outline" style={{ gap: "0.35rem" }}>
+                              <ChevronLeft size={16} /> Back
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={submitting}
+                              className="btn btn-emergency btn-lg"
+                              style={{ flex: 1, minWidth: 210, justifyContent: "center", gap: "0.5rem" }}
+                            >
+                              <AlertTriangle size={18} />
+                              {submitting ? "Dispatching Alert..." : "Send Rescue Alert"}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {errorMsg && (
+                      <div
+                        role="alert"
+                        style={{
+                          marginTop: "1rem",
+                          padding: "0.85rem 1rem",
+                          borderRadius: "var(--radius-md)",
+                          background: "#FDF0F0",
+                          border: "1px solid #F9CACA",
+                          color: "#A62828",
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {errorMsg}
+                      </div>
+                    )}
+                  </form>
                 </div>
               )}
+            </div>
 
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="btn btn-emergency btn-lg"
-                  style={{ width: "100%", justifyContent: "center", fontSize: "1.1rem", padding: "1rem" }}
+            {/* Right Sidebar: While You Wait First-Aid Accordion + Service Coverage */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {/* First-Aid Accordion */}
+              <FadeIn direction="up" delay={0.08} distance={16}>
+                <div
+                  style={{
+                    background: "var(--color-surface)",
+                    borderRadius: "var(--radius-xl)",
+                    padding: "1.65rem",
+                    border: "1px solid var(--cream-200)",
+                    boxShadow: "var(--shadow-sm)",
+                  }}
                 >
-                  {submitting ? "Dispatching..." : "🚨 Submit Rescue Request"}
-                </button>
-              </motion.div>
-            </form>
-          </FadeIn>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem", color: "var(--terracotta-hover)", fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    <HeartHandshake size={16} /> While You Wait
+                  </div>
+                  <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem" }}>First-Aid Micro-Guides</h3>
 
-          <div style={{ marginTop: "1.75rem", padding: "1.1rem 1.35rem", background: "var(--saffron-50)", borderRadius: "var(--radius-lg)", border: "1px solid var(--saffron-200)", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-            <AlertTriangle size={18} style={{ color: "var(--saffron-600)", marginTop: "2px", flexShrink: 0 }} />
-            <p style={{ fontSize: "0.88rem", color: "var(--stone-700)", margin: 0, lineHeight: 1.65 }}>
-              For life-threatening emergencies, please call <strong>+91 98000 00000</strong> immediately instead of — or in addition to — submitting this form.
-            </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                    {FIRST_AID_GUIDES.map((guide, idx) => {
+                      const isOpen = openGuideIdx === idx;
+                      return (
+                        <div
+                          key={guide.title}
+                          style={{
+                            borderRadius: "var(--radius-md)",
+                            border: "1px solid var(--cream-200)",
+                            background: isOpen ? "var(--green-50)" : "var(--cream-50)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setOpenGuideIdx(isOpen ? null : idx)}
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "0.75rem",
+                              padding: "0.85rem 1rem",
+                              background: "transparent",
+                              border: "none",
+                              textAlign: "left",
+                              fontWeight: 700,
+                              fontSize: "0.9rem",
+                              color: "var(--stone-800)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span>{guide.title}</span>
+                            <ChevronDown
+                              size={16}
+                              style={{
+                                flexShrink: 0,
+                                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                transition: "transform 0.2s ease",
+                              }}
+                            />
+                          </button>
+                          {isOpen && (
+                            <ul style={{ margin: 0, padding: "0 1.15rem 1rem 2rem", fontSize: "0.85rem", color: "var(--stone-700)", lineHeight: 1.65 }}>
+                              {guide.bullets.map((b) => (
+                                <li key={b} style={{ marginBottom: "0.35rem" }}>
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </FadeIn>
+
+              {/* Service Area & Ambulance Hours */}
+              <FadeIn direction="up" delay={0.14} distance={16}>
+                <div
+                  style={{
+                    background: "var(--color-surface)",
+                    borderRadius: "var(--radius-xl)",
+                    padding: "1.65rem",
+                    border: "1px solid var(--cream-200)",
+                    boxShadow: "var(--shadow-sm)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem", color: "var(--green-600)", fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    <Clock size={15} /> Ambulance &amp; Coverage Zones
+                  </div>
+                  <h3 style={{ fontSize: "1.2rem", marginBottom: "0.85rem" }}>Where We Operate</h3>
+                  <p style={{ fontSize: "0.86rem", color: "var(--stone-600)", marginBottom: "1rem" }}>
+                    {CONTACT_INFO.hours}
+                  </p>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem", marginBottom: "1.15rem" }}>
+                    {SERVICE_ZONES.map((z) => (
+                      <div
+                        key={z.zone}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.6rem 0.8rem",
+                          background: "var(--cream-50)",
+                          borderRadius: "var(--radius-md)",
+                          fontSize: "0.84rem",
+                        }}
+                      >
+                        <strong style={{ color: "var(--stone-800)" }}>{z.zone}</strong>
+                        <span style={{ color: "var(--green-700)", fontWeight: 600, fontSize: "0.78rem" }}>{z.eta}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <a
+                    href={AYUDAR_LEGAL.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm"
+                    style={{ width: "100%", justifyContent: "center", gap: "0.4rem" }}
+                  >
+                    <MapPin size={15} /> Open Sanctuary on Google Maps <ExternalLink size={13} />
+                  </a>
+
+                  <div style={{ marginTop: "0.95rem", display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.76rem", color: "var(--stone-500)" }}>
+                    <ShieldCheck size={14} style={{ color: "var(--green-600)", flexShrink: 0 }} />
+                    <span>{AYUDAR_LEGAL.name} • Reg: {AYUDAR_LEGAL.regNo}</span>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
           </div>
         </div>
       </section>
     </main>
+  );
+}
+
+export default function RescuePage() {
+  return (
+    <Suspense fallback={<main className="section"><div className="container">Loading Ayuda rescue form...</div></main>}>
+      <RescuePageContent />
+    </Suspense>
   );
 }
