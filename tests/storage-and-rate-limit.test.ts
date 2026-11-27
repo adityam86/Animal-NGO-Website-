@@ -1,13 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockBlobPut, mockMkdir, mockWriteFile } = vi.hoisted(() => ({
+const { mockBlobPut, mockS3Send, mockMkdir, mockWriteFile } = vi.hoisted(() => ({
   mockBlobPut: vi.fn(),
+  mockS3Send: vi.fn(),
   mockMkdir: vi.fn(async () => undefined),
   mockWriteFile: vi.fn(async () => undefined),
 }));
 
 vi.mock("@vercel/blob", () => ({
   put: mockBlobPut,
+}));
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: class {
+    send = mockS3Send;
+  },
+  PutObjectCommand: class {
+    input: unknown;
+    constructor(input: unknown) {
+      this.input = input;
+    }
+  },
+  GetObjectCommand: class {
+    input: unknown;
+    constructor(input: unknown) {
+      this.input = input;
+    }
+  },
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -20,12 +39,21 @@ import { isSafeImageUrl, shouldBypassImageOptimization } from "@/lib/image-url";
 import { checkDistributedRateLimit, resetRateLimitStore } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/security";
 
-describe("Vercel Blob Storage, Image URL Validation & Distributed Rate Limiting", () => {
+describe("Vercel Blob & Neon S3 Storage, Image URL Validation & Distributed Rate Limiting", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRateLimitStore();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+    vi.stubEnv("AWS_ACCESS_KEY_ID", "");
+    vi.stubEnv("AWS_SECRET_ACCESS_KEY", "");
+    vi.stubEnv("AWS_ENDPOINT_URL_S3", "");
+    vi.stubEnv("PRIVATE_STORAGE_BUCKET", "");
+    vi.stubEnv("PRIVATE_STORAGE_ACCESS_KEY", "");
+    vi.stubEnv("PRIVATE_STORAGE_SECRET_KEY", "");
+    vi.stubEnv("PRIVATE_STORAGE_ENDPOINT", "");
+    vi.stubEnv("PUBLIC_STORAGE_BUCKET", "");
   });
 
   it("uploads via official @vercel/blob SDK when BLOB_READ_WRITE_TOKEN is set and propagates safe errors", async () => {
@@ -86,13 +114,79 @@ describe("Vercel Blob Storage, Image URL Validation & Distributed Rate Limiting"
     expect(isSafeImageUrl("/images/dog_bruno.jpg")).toBe(true);
     expect(isSafeImageUrl("/uploads/rescue-123.png")).toBe(true);
     expect(isSafeImageUrl("https://my-store.public.blob.vercel-storage.com/ayudar/cat.webp")).toBe(true);
+    expect(
+      isSafeImageUrl(
+        "https://br-purple-night-bdewoyit.storage.c-8.us-east-2.aws.neon.tech/assets/public/dog.webp"
+      )
+    ).toBe(true);
     expect(isSafeImageUrl("data:image/jpeg;base64,/9j/4AAQ")).toBe(true);
 
+    expect(
+      isSafeImageUrl(
+        "https://br-purple-night-bdewoyit.storage.c-8.us-east-2.aws.neon.tech/rescues/secret.webp"
+      )
+    ).toBe(false);
+    expect(
+      isSafeImageUrl(
+        "https://br-purple-night-bdewoyit.storage.c-8.us-east-2.aws.neon.tech/assets/bad.svg"
+      )
+    ).toBe(false);
     expect(isSafeImageUrl("data:image/svg+xml;base64,PHN2Zz4=")).toBe(false);
     expect(isSafeImageUrl("/images/malicious.svg")).toBe(false);
     expect(isSafeImageUrl("/images/../.env")).toBe(false);
     expect(isSafeImageUrl("https://evil.attacker.example/tracker.png")).toBe(false);
     expect(isSafeImageUrl("javascript:alert(1)")).toBe(false);
+  });
+
+  it("uploads public and private images via Neon Object Storage S3 when AWS_* credentials are configured", async () => {
+    vi.stubEnv("AWS_ENDPOINT_URL_S3", "https://br-test.storage.c-8.us-east-2.aws.neon.tech");
+    vi.stubEnv("AWS_ACCESS_KEY_ID", "nak_test_123");
+    vi.stubEnv("AWS_SECRET_ACCESS_KEY", "nsk_test_secret");
+    vi.stubEnv("AWS_REGION", "us-east-2");
+    mockS3Send.mockResolvedValue({});
+
+    const buf = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x00]);
+
+    const pubRes = await storeValidatedImage(
+      buf,
+      { mimeType: "image/webp", extension: "webp" },
+      "dog.jpg",
+      "animal"
+    );
+    expect(pubRes.storage).toBe("s3-public");
+    expect(pubRes.isPrivate).toBe(false);
+    expect(pubRes.url).toMatch(
+      /^https:\/\/br-test\.storage\.c-8\.us-east-2\.aws\.neon\.tech\/assets\/public\/animal-.*\.webp$/
+    );
+    expect(mockS3Send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          Bucket: "assets",
+          Body: buf,
+          ContentType: "image/webp",
+        }),
+      })
+    );
+
+    const privRes = await storeValidatedImage(
+      buf,
+      { mimeType: "image/webp", extension: "webp" },
+      "injured.jpg",
+      "rescue"
+    );
+    expect(privRes.storage).toBe("s3-private");
+    expect(privRes.isPrivate).toBe(true);
+    expect(privRes.url).toMatch(/^\/api\/admin\/rescues\/photo\/rescue-.*\.webp$/);
+    expect(mockS3Send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          Bucket: "rescues",
+          Body: buf,
+          ContentType: "image/webp",
+          CacheControl: "private, no-store",
+        }),
+      })
+    );
   });
 
   it("supports distributed Upstash Redis REST limiting and safely falls back to memory when unconfigured", async () => {

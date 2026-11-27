@@ -97,6 +97,14 @@ describe("Data Privacy, CSV Security, Uploads & Public Endpoints", () => {
     vi.stubEnv("SESSION_SECRET", TEST_SECRET);
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+    vi.stubEnv("AWS_ACCESS_KEY_ID", "");
+    vi.stubEnv("AWS_SECRET_ACCESS_KEY", "");
+    vi.stubEnv("AWS_ENDPOINT_URL_S3", "");
+    vi.stubEnv("PRIVATE_STORAGE_BUCKET", "");
+    vi.stubEnv("PRIVATE_STORAGE_ACCESS_KEY", "");
+    vi.stubEnv("PRIVATE_STORAGE_SECRET_KEY", "");
+    vi.stubEnv("PRIVATE_STORAGE_ENDPOINT", "");
+    vi.stubEnv("PUBLIC_STORAGE_BUCKET", "");
   });
 
   it("blocks unauthenticated and lower-privilege CSV exports and neutralizes CSV formula injection", async () => {

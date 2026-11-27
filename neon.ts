@@ -3,6 +3,7 @@ import { defineConfig } from "@neon/config/v1";
 export default defineConfig({
   buckets: {
     assets: { access: "public_read" },
+    rescues: {}, // private bucket for sensitive citizen rescue incident photos
   },
   // Branch policy: per-branch tuning
   branch: (branch) => {

@@ -108,7 +108,7 @@ export default function ImageUploader({
     const trimmed = manualUrl.trim();
     if (!trimmed) return;
     if (!isSafeImageUrl(trimmed)) {
-      setError("URL must start with /images/, /uploads/, or https://*.public.blob.vercel-storage.com");
+      setError("URL must start with /images/, /uploads/, or an allowed Vercel Blob / Neon Object Storage URL");
       return;
     }
     setError(null);

@@ -27,9 +27,9 @@ The following capabilities and security hardening controls have been fully imple
 - **Sharp Server-Side Re-encoding (`lib/image-processing.ts`):** Decodes uploaded images with `failOn: "error"`, auto-rotates via `.rotate()`, and re-encodes as clean WebP/JPEG raster data, permanently stripping all EXIF, GPS coordinates, camera model, author, and auxiliary metadata tags.
 - **Content & Polyglot Rejection:** Enforces maximum image dimensions ($\le 4096\text{px}$) and maximum file size boundaries. Pre-scans raw buffers to strictly reject `<svg`, `<html`, `<?xml`, `<script`, and binary executable (`MZ`, `ELF`) headers.
 - **Private vs Public Storage Policy Separation (`lib/storage.ts`):** 
-  - Public animal and story images are routed to public CDN paths (`access: "public"`).
-  - Sensitive rescue incident photos are stored in private storage (Vercel Blob `access: "private"`, private S3/R2, or local private storage in development) and are never exposed via public static web directories. In production runtime, fails safe if persistent private storage is unavailable without leaking or falling back to public storage, data URLs, or ephemeral local files.
-- **Authenticated Photo Endpoint (`app/api/admin/rescues/photo/[filename]/route.ts`):** Serves private incident photos exclusively to verified admin and coordinator sessions (`requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"])`), retrieving directly from private Vercel Blob streams or private local storage, enforcing strict filename regex sanitization (`SAFE_FILENAME_RE`) and directory traversal prevention.
+  - Public animal and story images are routed to Neon Object Storage (`assets` `public_read` bucket) or Vercel Blob (`access: "public"`).
+  - Sensitive rescue incident photos are uploaded via `@aws-sdk/client-s3` into the private `rescues` bucket (`CacheControl: private, no-store`), Vercel Blob (`access: "private"`), or local private storage in development, and are never exposed via public static web directories. In production runtime, fails safe if persistent private storage is unavailable without leaking or falling back to public storage, data URLs, or ephemeral local files.
+- **Authenticated Photo Endpoint (`app/api/admin/rescues/photo/[filename]/route.ts`):** Serves private incident photos exclusively to verified admin and coordinator sessions (`requireAdminSession(["SUPER_ADMIN", "ADMIN", "COORDINATOR"])`), retrieving directly from private Neon S3 / private S3 (`GetObjectCommand`), private Vercel Blob streams, or private local storage, enforcing strict filename regex sanitization (`SAFE_FILENAME_RE`) and directory traversal prevention.
 - **Public Rescue Tracking Privacy (`app/api/rescue/[id]/route.ts`):** Redacts exact GPS coordinates (e.g. `(GPS: lat, lng)`) and precise street/flat addresses from public tracking responses, returning only generalized landmark status information.
 
 ### 2. Rescue Upload Abuse Defense
@@ -70,7 +70,7 @@ The following behaviors were validated using isolated Vitest unit and regression
 2. **Razorpay Webhooks:** Webhook payloads (`payment.captured`, `order.paid`, `payment.failed`, `payment.refunded`, `payment.dispute.created`) were signed and verified using local HMAC fixtures against mock database transactions.
 3. **Upstash Redis REST API:** Distributed rate limiter fail-closed and fail-open behaviors during Redis network outages were tested using simulated `fetch` failure mocks.
 4. **Prisma PostgreSQL Live Transaction:** Database upserts and foreign key cascading were tested using an in-memory transactional mock client. Real PostgreSQL TCP connections were not initiated during unit testing.
-5. **Vercel Blob Storage Client:** Put requests to `@vercel/blob` were verified using mock token and URL responses.
+5. **Object Storage Clients (`@aws-sdk/client-s3` & `@vercel/blob`):** Private (`rescues`) and public (`assets`) Neon S3 uploads/retrievals as well as Vercel Blob private/public flows were verified using mock S3/Blob clients in unit suites, in addition to live end-to-end tests against Neon Object Storage.
 
 ---
 
@@ -94,11 +94,9 @@ The following external services require real user credentials and account owners
    - Activate Test Mode in the Razorpay Dashboard.
    - Obtain `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `NEXT_PUBLIC_RAZORPAY_KEY_ID`.
    - Configure a webhook URL (`https://<staging-url>/api/webhooks/razorpay`) with `RAZORPAY_WEBHOOK_SECRET` for events `payment.captured`, `payment.failed`, `order.paid`, and `payment.refunded`.
-3. **Private Object Storage (S3 / Cloudflare R2):**
-   - Provision a private bucket for sensitive rescue incident photos.
-   - Configure `PRIVATE_STORAGE_BUCKET`, `PRIVATE_STORAGE_ENDPOINT`, `PRIVATE_STORAGE_ACCESS_KEY`, and `PRIVATE_STORAGE_SECRET_KEY`.
-4. **Public Object Storage (Vercel Blob):**
-   - Provision a Vercel Blob store on the staging project to receive `BLOB_READ_WRITE_TOKEN` for public animal and story images.
+3. **Object Storage (Neon Object Storage or Vercel Blob):**
+   - Neon Object Storage (`assets` public bucket + `rescues` private bucket) is wired via `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` (or `BLOB_READ_WRITE_TOKEN` if using Vercel Blob instead).
+   - Ensure these variables are added to Vercel Project Settings for both Preview and Production.
 5. **Upstash Redis:**
    - Provision an Upstash Redis database and record `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 6. **Administrator Credentials & Session Secret:**
@@ -125,6 +123,6 @@ The following external services require real user credentials and account owners
 | **Prisma Generation** | `npx prisma generate` | **Passed** | Generated Prisma Client v5.22.0 in 377ms |
 | **Static Typecheck** | `npx tsc --noEmit` | **Passed** | 0 TypeScript errors |
 | **Code Quality Lint** | `npm run lint` | **Passed** | 0 ESLint errors, 0 warnings |
-| **Unit & Regression Suite** | `npm test` | **Passed** | **45/45 tests passed** across 7 test files in 9.11s |
-| **Production Build** | `npm run build` | **Passed** | Turbopack compiled successfully in 26.8s; 41 routes generated |
+| **Unit & Regression Suite** | `npm test` | **Passed** | **54/54 tests passed** across 7 test files |
+| **Production Build** | `npm run build` | **Passed** | Turbopack compiled successfully; 52 routes generated |
 | **SQLite Migration Dry-Run** | `npx tsx scripts/migrate-sqlite-to-postgres.ts --dry-run` | **Passed** | 18 models parsed; `AdminSession` intentionally excluded |

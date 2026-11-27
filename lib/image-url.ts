@@ -1,3 +1,5 @@
+const NEON_STORAGE_HOST_RE = /^[a-z0-9-]+\.storage\.[a-z0-9.-]+\.aws\.neon\.tech$/i;
+
 export function isSafeImageUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return true;
@@ -16,9 +18,18 @@ export function isSafeImageUrl(url: string): boolean {
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== "https:") return false;
-    // Block SVG via pathname regardless of query/fragment
-    if (parsed.pathname.toLowerCase().endsWith(".svg")) return false;
-    return parsed.hostname.endsWith(".public.blob.vercel-storage.com");
+    // Block SVG and path traversal via pathname regardless of query/fragment
+    if (parsed.pathname.includes("..") || parsed.pathname.toLowerCase().endsWith(".svg")) {
+      return false;
+    }
+    if (parsed.hostname.endsWith(".public.blob.vercel-storage.com")) {
+      return true;
+    }
+    if (NEON_STORAGE_HOST_RE.test(parsed.hostname)) {
+      // Allow public Neon Object Storage assets bucket, never private rescues bucket directly
+      return !parsed.pathname.startsWith("/rescues/");
+    }
+    return false;
   } catch {
     return false;
   }

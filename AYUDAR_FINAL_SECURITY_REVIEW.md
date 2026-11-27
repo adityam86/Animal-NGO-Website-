@@ -67,8 +67,9 @@ Before initiating live staging deployment and external integration verification,
 - Distinguishes partial refunds from full refunds using cumulative `amount_refunded`: partial refunds mark status as `Partially Refunded` and never fully `Refunded`. Full refunds mark `Refunded`. Failed refunds log `RAZORPAY_REFUND_FAILED` without marking as refunded.
 - Handled dispute events (`payment.dispute.created`, `payment.dispute.won`, `payment.dispute.lost`) independently. Dispute events update dispute status or log audits and never automatically change a donation to `Refunded`.
 
-### Additional Fix 9 — Private Vercel Blob & Fail-Safe Storage Policies
-- In `lib/storage.ts` and `app/api/admin/rescues/photo/[filename]/route.ts`, integrated `@vercel/blob` private access model (`put(..., { access: "private" })` and `get(..., { access: "private" })`).
+### Additional Fix 9 — Private Vercel Blob, Neon Object Storage S3 & Fail-Safe Storage Policies
+- In `lib/storage.ts`, `app/api/admin/rescues/photo/[filename]/route.ts`, `lib/image-url.ts`, `next.config.ts`, and `neon.ts`, wired native `@aws-sdk/client-s3` (Neon Object Storage `assets` public bucket and `rescues` private bucket) alongside `@vercel/blob` private/public access.
+- Rescue incident photos are uploaded via `PutObjectCommand` to the private `rescues` bucket (`CacheControl: private, no-store`) and streamed exclusively through authenticated admin sessions (`GetObjectCommand`), never exposed via public URLs.
 - In production runtime, fails safe if persistent private storage is unavailable, strictly preventing fallback to public storage, inline data URLs, or ephemeral local files.
 
 ### Additional Fix 9 — Tracing & Gitignore Hygiene
@@ -79,19 +80,18 @@ Before initiating live staging deployment and external integration verification,
 
 ## Verification Test Results
 
-### 1. Vitest Test Suite (52/52 Passed)
+### 1. Vitest Test Suite (54/54 Passed)
 ```
 ✓ tests/migration-live.test.ts (1 test)
 ✓ tests/payment-security.test.ts (7 tests)
 ✓ tests/security-auth.test.ts (6 tests)
 ✓ tests/migration-and-utils.test.ts (4 tests)
-✓ tests/final-security-hardening.test.ts (22 tests)
-✓ tests/storage-and-rate-limit.test.ts (8 tests)
+✓ tests/final-security-hardening.test.ts (23 tests)
+✓ tests/storage-and-rate-limit.test.ts (9 tests)
 ✓ tests/api-privacy-uploads.test.ts (4 tests)
 
 Test Files  7 passed (7)
-Tests       52 passed (52)
-Duration    17.90s
+Tests       54 passed (54)
 ```
 
 ### 2. TypeScript Static Typecheck (`npx tsc --noEmit`)

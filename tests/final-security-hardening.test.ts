@@ -23,6 +23,7 @@ const {
   mockCookieGet,
   mockBlobPut,
   mockBlobGet,
+  mockS3Send,
 } = vi.hoisted(() => ({
   mockRescueFindUnique: vi.fn(),
   mockDonationFindUnique: vi.fn(),
@@ -39,11 +40,30 @@ const {
   mockCookieGet: vi.fn(),
   mockBlobPut: vi.fn(),
   mockBlobGet: vi.fn(),
+  mockS3Send: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({
   put: mockBlobPut,
   get: mockBlobGet,
+}));
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: class {
+    send = mockS3Send;
+  },
+  PutObjectCommand: class {
+    input: unknown;
+    constructor(input: unknown) {
+      this.input = input;
+    }
+  },
+  GetObjectCommand: class {
+    input: unknown;
+    constructor(input: unknown) {
+      this.input = input;
+    }
+  },
 }));
 
 vi.mock("@/lib/prisma", () => {
@@ -120,6 +140,14 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
     vi.stubEnv("RAZORPAY_WEBHOOK_SECRET", WEBHOOK_SECRET);
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+    vi.stubEnv("AWS_ACCESS_KEY_ID", "");
+    vi.stubEnv("AWS_SECRET_ACCESS_KEY", "");
+    vi.stubEnv("AWS_ENDPOINT_URL_S3", "");
+    vi.stubEnv("PRIVATE_STORAGE_BUCKET", "");
+    vi.stubEnv("PRIVATE_STORAGE_ACCESS_KEY", "");
+    vi.stubEnv("PRIVATE_STORAGE_SECRET_KEY", "");
+    vi.stubEnv("PRIVATE_STORAGE_ENDPOINT", "");
+    vi.stubEnv("PUBLIC_STORAGE_BUCKET", "");
   });
 
   describe("Fix 1 — Private Rescue Storage & Admin Access Control", () => {
@@ -227,6 +255,52 @@ describe("AYUDAR — Final Security Hardening Regression Suite", () => {
       );
       expect(res.headers.get("Content-Type")).toBe("image/webp");
       expect(res.headers.get("Cache-Control")).toContain("private");
+    });
+
+    it("retrieves private rescue incident photo from Neon Object Storage S3 for authenticated admins and returns 404 when missing", async () => {
+      await authenticateAs("ADMIN");
+      vi.stubEnv("AWS_ENDPOINT_URL_S3", "https://br-test.storage.c-8.us-east-2.aws.neon.tech");
+      vi.stubEnv("AWS_ACCESS_KEY_ID", "nak_test_123");
+      vi.stubEnv("AWS_SECRET_ACCESS_KEY", "nsk_test_secret");
+      vi.stubEnv("AWS_REGION", "us-east-2");
+
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0x52, 0x49, 0x46, 0x46]));
+          controller.close();
+        },
+      });
+
+      mockS3Send.mockResolvedValueOnce({
+        ContentType: "image/webp",
+        Body: {
+          transformToWebStream: () => stream,
+        },
+      });
+
+      const res = await adminRescuePhotoGet(
+        new Request("http://localhost:3000/api/admin/rescues/photo/rescue-s3-123.webp"),
+        { params: Promise.resolve({ filename: "rescue-s3-123.webp" }) }
+      );
+
+      expect(res.status).toBe(200);
+      expect(mockS3Send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            Bucket: "rescues",
+            Key: "rescues/rescue-s3-123.webp",
+          },
+        })
+      );
+      expect(res.headers.get("Content-Type")).toBe("image/webp");
+      expect(res.headers.get("Cache-Control")).toContain("private");
+
+      mockS3Send.mockRejectedValueOnce({ name: "NoSuchKey" });
+      const missingRes = await adminRescuePhotoGet(
+        new Request("http://localhost:3000/api/admin/rescues/photo/rescue-missing.webp"),
+        { params: Promise.resolve({ filename: "rescue-missing.webp" }) }
+      );
+      expect(missingRes.status).toBe(404);
     });
   });
 

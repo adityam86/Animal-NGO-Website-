@@ -11,8 +11,8 @@ This guide documents the operational procedures for provisioning, deploying, and
 | **Web Hosting** | Vercel (Preview Branch) | Vercel (Production Domain) | Next.js 16 (Turbopack, SSR, API routes) |
 | **Relational Database** | Managed PostgreSQL (Neon / Supabase / RDS) | Managed PostgreSQL with automated backups | Application state, transactions, audit logs |
 | **Payment Gateway** | Razorpay Test Mode | Razorpay Live Mode | INR donations, 80G tax receipts, sponsorships (Dashboard auto-capture enabled) |
-| **Public Storage** | Vercel Blob (Staging Store) | Vercel Blob (Production Store) | Public animal gallery, adoption profiles, blog images |
-| **Private Storage** | Vercel Blob (private access) / Private S3 / R2 | Vercel Blob (private access) / Private S3 / R2 | Citizen rescue incident photos (authenticated admin stream) |
+| **Public Storage** | Neon Object Storage (`assets` bucket) / Vercel Blob | Neon Object Storage (`assets` bucket) / Vercel Blob | Public animal gallery, adoption profiles, blog images |
+| **Private Storage** | Neon Object Storage (`rescues` bucket) / Vercel Blob (`private`) / Private S3 | Neon Object Storage (`rescues` bucket) / Vercel Blob (`private`) / Private S3 | Citizen rescue incident photos (authenticated admin stream) |
 | **Rate Limiter / Cache** | Upstash Redis REST | Upstash Redis REST | Distributed IP & account rate limiting |
 
 ---
@@ -31,11 +31,15 @@ All sensitive credentials must be set in the Vercel Project Dashboard (`Settings
 | `RAZORPAY_KEY_ID` | Preview & Production | Razorpay secret API key ID | Staging: `rzp_test_...`, Prod: `rzp_live_...` |
 | `RAZORPAY_KEY_SECRET` | Preview & Production | Razorpay secret API key secret for verification | Staging: test secret, Prod: live secret |
 | `RAZORPAY_WEBHOOK_SECRET` | Preview & Production | Webhook signing secret configured in Razorpay dashboard | Staging: `whsec_test_...`, Prod: `whsec_live_...` |
-| `BLOB_READ_WRITE_TOKEN` | Preview & Production | Vercel Blob token for public animal and story images | Provided automatically when linking Vercel Blob store |
-| `PRIVATE_STORAGE_BUCKET` | Preview & Production | Private S3 / Cloudflare R2 bucket for rescue photos | `ayudar-rescue-private-staging` |
-| `PRIVATE_STORAGE_ENDPOINT` | Preview & Production | S3 API endpoint URL (for R2 / MinIO) | `https://<account-id>.r2.cloudflarestorage.com` |
-| `PRIVATE_STORAGE_ACCESS_KEY`| Preview & Production | S3 access key ID for private bucket | Secret key ID |
-| `PRIVATE_STORAGE_SECRET_KEY`| Preview & Production | S3 secret access key for private bucket | Secret key |
+| `AWS_ENDPOINT_URL_S3` | Preview & Production | Neon Object Storage branch S3 endpoint URL | `https://<branch-id>.storage.<region>.aws.neon.tech` |
+| `AWS_ACCESS_KEY_ID` | Preview & Production | Neon Object Storage / S3 access key ID (`assets` + `rescues` buckets) | Generated via `neon deploy` |
+| `AWS_SECRET_ACCESS_KEY` | Preview & Production | Neon Object Storage / S3 secret access key | Generated via `neon deploy` |
+| `AWS_REGION` | Preview & Production | Object storage AWS region | `us-east-2` |
+| `BLOB_READ_WRITE_TOKEN` | Optional Alternative | Vercel Blob token (only needed if using Vercel Blob instead of Neon S3) | Provided when linking Vercel Blob store |
+| `PRIVATE_STORAGE_BUCKET` | Optional Override | Custom private S3 / Cloudflare R2 bucket override | Defaults to `rescues` on Neon Storage |
+| `PRIVATE_STORAGE_ENDPOINT` | Optional Override | Custom S3 API endpoint override (R2 / MinIO) | `https://<account-id>.r2.cloudflarestorage.com` |
+| `PRIVATE_STORAGE_ACCESS_KEY`| Optional Override | Custom S3 access key ID override | Secret key ID |
+| `PRIVATE_STORAGE_SECRET_KEY`| Optional Override | Custom S3 secret access key override | Secret key |
 | `UPSTASH_REDIS_REST_URL` | Preview & Production | Upstash Redis REST URL for distributed rate limiting | `https://<db>.upstash.io` |
 | `UPSTASH_REDIS_REST_TOKEN` | Preview & Production | Upstash Redis REST bearer token | Secret token |
 | `ENABLE_DEMO_PAYMENTS` | Preview & Production | Opt-in flag for simulated payment IDs | **MUST BE `"false"` IN STAGING AND PRODUCTION** |
