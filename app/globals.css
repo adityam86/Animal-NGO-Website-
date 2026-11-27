@@ -17,65 +17,72 @@
   --saffron-800: hsl(16, 75%, 28%);
   --saffron-900: hsl(14, 70%, 20%);
 
+  /* Blueprint Sanctuary & Warm Earth Palette */
+  --forest-deep: #1E3A2F;
+  --sage-tint:   #E6EFE9;
+  --terracotta:  #E07A5F;
+  --terracotta-hover: #C8644B;
+  --crimson:     #D64545;
+
   /* Nature & Gaushala Healing Greens */
-  --green-50:  hsl(140, 60%, 97%);
-  --green-100: hsl(140, 55%, 90%);
-  --green-200: hsl(142, 52%, 76%);
-  --green-300: hsl(142, 52%, 60%);
-  --green-400: hsl(142, 60%, 42%);
-  --green-500: hsl(142, 68%, 30%);
-  --green-600: hsl(142, 72%, 24%);
-  --green-700: hsl(142, 75%, 18%);
-  --green-800: hsl(142, 78%, 14%);
-  --forest-50:  hsl(140, 60%, 97%);
-  --forest-700: hsl(142, 75%, 18%);
+  --green-50:  #E6EFE9;
+  --green-100: #D2E4D9;
+  --green-200: #A6CBB4;
+  --green-300: #77B08D;
+  --green-400: #4A9168;
+  --green-500: #296B47;
+  --green-600: #1E4D38;
+  --green-700: #1E3A2F;
+  --green-800: #152B22;
+  --forest-50:  #E6EFE9;
+  --forest-700: #1E3A2F;
 
   /* Warm Linen & Off-White Surfaces */
-  --cream-50:  #faf9f5;
-  --cream-100: #f3f1ea;
-  --cream-200: #e7e3d8;
-  --cream-300: #d5cfc0;
+  --cream-50:  #FAF7F2;
+  --cream-100: #F3EFE6;
+  --cream-200: #E6DFD2;
+  --cream-300: #D4CBB9;
 
   /* Deep Espresso & Charcoal Contrast */
-  --stone-900: hsl(25, 14%, 12%);
-  --stone-800: hsl(25, 12%, 18%);
-  --stone-700: hsl(25, 9%, 28%);
-  --stone-600: hsl(25, 8%, 42%);
-  --stone-500: hsl(25, 6%, 56%);
-  --stone-400: hsl(25, 6%, 70%);
-  --stone-300: hsl(25, 7%, 82%);
-  --stone-200: hsl(25, 8%, 88%);
-  --stone-100: hsl(25, 10%, 94%);
-  --stone-50:  hsl(25, 15%, 97%);
+  --stone-900: #16241D;
+  --stone-800: #1E3A2F;
+  --stone-700: #2D4439;
+  --stone-600: #4A5D53;
+  --stone-500: #687870;
+  --stone-400: #8D9B93;
+  --stone-300: #C2CBC5;
+  --stone-200: #DDE2DE;
+  --stone-100: #EFF2EF;
+  --stone-50:  #F7F8F7;
 
   /* Emergency & Rapid Ambulance */
-  --emergency-500: hsl(0, 72%, 50%);
-  --emergency-600: hsl(0, 75%, 42%);
-  --emergency-50:  hsl(0, 85%, 97%);
-  --red-100:       hsl(0, 85%, 96%);
-  --red-200:       hsl(0, 80%, 90%);
-  --red-500:       hsl(0, 78%, 52%);
-  --red-600:       hsl(0, 76%, 46%);
-  --red-700:       hsl(0, 75%, 42%);
+  --emergency-500: #D64545;
+  --emergency-600: #BC3434;
+  --emergency-50:  #FDF0F0;
+  --red-100:       #FDECEC;
+  --red-200:       #F9CACA;
+  --red-500:       #D64545;
+  --red-600:       #C43636;
+  --red-700:       #A62828;
   --blue-500:      hsl(217, 91%, 60%);
   --blue-100:      hsl(214, 95%, 93%);
 
-  /* Semantic Colors — Trustworthy Forest Green Primary + Earthy Warm Accents */
-  --color-primary:       var(--green-600);
-  --color-primary-dark:  var(--green-700);
-  --color-primary-light: var(--green-500);
-  --color-accent:        var(--saffron-600);
-  --color-accent-dark:   var(--saffron-700);
-  --color-bg:            var(--cream-50);
-  --color-surface:       #ffffff;
-  --color-text:          var(--stone-800);
-  --color-text-muted:    var(--stone-600);
-  --color-border:        var(--cream-300);
-  --navbar-bg:           rgba(250, 249, 245, 0.90);
-  --navbar-bg-scrolled:  rgba(250, 249, 245, 0.97);
-  --footer-bg:           #0f1f16;
-  --footer-text:         #ffffff;
-  --footer-border-top:   1px solid transparent;
+  /* Semantic Colors — Deep Forest Primary + Terracotta Warm Action */
+  --color-primary:       #1E3A2F;
+  --color-primary-dark:  #152B22;
+  --color-primary-light: #296B47;
+  --color-accent:        #E07A5F;
+  --color-accent-dark:   #C8644B;
+  --color-bg:            #FAF7F2;
+  --color-surface:       #FFFFFF;
+  --color-text:          #1E3A2F;
+  --color-text-muted:    #4A5D53;
+  --color-border:        #E6DFD2;
+  --navbar-bg:           rgba(250, 247, 242, 0.92);
+  --navbar-bg-scrolled:  rgba(250, 247, 242, 0.98);
+  --footer-bg:           #1E3A2F;
+  --footer-text:         #FAF7F2;
+  --footer-border-top:   2px solid #E07A5F;
 
   /* Typography */
   --font-display: var(--font-fraunces), 'Fraunces', Georgia, serif;
@@ -313,24 +320,47 @@ a { color: inherit; text-decoration: none; }
 .btn-primary {
   background: var(--green-600);
   color: white;
-  box-shadow: 0 4px 14px rgba(21, 128, 61, 0.28);
+  box-shadow: 0 4px 14px rgba(30, 58, 47, 0.28);
 }
 
 .btn-primary:hover {
   background: var(--green-700);
-  box-shadow: 0 6px 20px rgba(21, 128, 61, 0.36);
+  box-shadow: 0 6px 20px rgba(30, 58, 47, 0.36);
+  transform: translateY(-1px);
+}
+
+.btn-terracotta {
+  background: var(--terracotta, #E07A5F);
+  color: white;
+  box-shadow: 0 4px 14px rgba(224, 122, 95, 0.34);
+}
+
+.btn-terracotta:hover {
+  background: var(--terracotta-hover, #C8644B);
+  box-shadow: 0 6px 20px rgba(200, 100, 75, 0.42);
   transform: translateY(-1px);
 }
 
 .btn-emergency {
-  background: hsl(0, 80%, 52%);
+  background: var(--crimson, #D64545);
   color: white;
-  box-shadow: 0 4px 14px hsla(0, 80%, 52%, 0.4);
+  box-shadow: 0 4px 14px rgba(214, 69, 69, 0.38);
   animation: pulse-emergency 2s infinite;
 }
 
 .btn-emergency:hover {
-  background: hsl(0, 80%, 45%);
+  background: #BC3434;
+  transform: translateY(-1px);
+}
+
+.btn-emergency-outline {
+  background: transparent;
+  color: var(--crimson, #D64545);
+  border: 1.5px solid var(--crimson, #D64545);
+}
+
+.btn-emergency-outline:hover {
+  background: var(--emergency-50, #FDF0F0);
   transform: translateY(-1px);
 }
 

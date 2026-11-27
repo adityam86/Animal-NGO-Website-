@@ -1,132 +1,183 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import FadeIn from "@/components/motion/FadeIn";
+import { AYUDAR_LEGAL, DONATION_AMOUNTS, DONATION_IMPACT_MAP } from "@/lib/data";
 
 export default function DonateCTA() {
-  const amounts = [100, 500, 1000, 2500, 5000];
+  const [frequency, setFrequency] = useState<"one-time" | "monthly">("one-time");
+  const [selectedAmount, setSelectedAmount] = useState<number>(1500);
+  const [customAmount, setCustomAmount] = useState<string>("");
+
+  const effectiveAmount = customAmount ? Math.max(0, parseInt(customAmount, 10) || 0) : selectedAmount;
+
+  const impactPreview = customAmount
+    ? effectiveAmount >= 3500
+      ? "Sponsors critical medical recovery, vaccines & shelter meals"
+      : effectiveAmount >= 500
+      ? "Feeds & medicates injured street animals directly at our shelter"
+      : "Every single rupee buys bandages, ORS & nutritious meals"
+    : DONATION_IMPACT_MAP[selectedAmount] || "Direct medical & nutritional aid";
 
   return (
     <section
       className="section"
       style={{
-        background: "linear-gradient(135deg, #14532d 0%, #15803d 58%, #1e6b43 100%)",
+        background: "linear-gradient(135deg, #1E3A2F 0%, #152B22 100%)",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Decorative ambient bubbles */}
-      <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "hsla(0,0%,100%,0.06)" }} />
-      <div style={{ position: "absolute", bottom: -60, left: -40, width: 240, height: 240, borderRadius: "50%", background: "hsla(0,0%,100%,0.06)" }} />
-      <div style={{ position: "absolute", top: "30%", left: "30%", width: 160, height: 160, borderRadius: "50%", background: "hsla(0,0%,100%,0.04)" }} />
+      <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "rgba(224, 122, 95, 0.12)" }} />
+      <div style={{ position: "absolute", bottom: -60, left: -40, width: 240, height: 240, borderRadius: "50%", background: "rgba(230, 239, 233, 0.08)" }} />
 
-      <div className="container" style={{ position: "relative", textAlign: "center" }}>
+      <div className="container" style={{ position: "relative" }}>
         <FadeIn direction="up" distance={24}>
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              padding: "0.4rem 1.1rem",
-              background: "hsla(0,0%,100%,0.2)",
-              borderRadius: "var(--radius-full)",
-              color: "white",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              marginBottom: "1.5rem",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            ❤️ Make a Difference
-          </div>
-
-          <h2 style={{ color: "white", fontSize: "clamp(1.8rem, 3.8vw, 2.85rem)", marginBottom: "1rem" }}>
-            Help Us Save More Lives
-          </h2>
-          <p
-            style={{
-              color: "hsla(0,0%,100%,0.9)",
-              fontSize: "1.05rem",
-              maxWidth: 540,
+              maxWidth: 760,
               marginInline: "auto",
-              marginBottom: "2.5rem",
-              lineHeight: 1.75,
+              background: "rgba(255, 255, 255, 0.06)",
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              borderRadius: "var(--radius-xl)",
+              padding: "clamp(1.75rem, 4vw, 3rem)",
+              textAlign: "center",
+              backdropFilter: "blur(10px)",
             }}
           >
-            Your donation directly funds emergency rescue, veterinary surgery, food, and shelter for street animals who have nowhere else to go.
-          </p>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.4rem 1.05rem",
+                background: "rgba(224, 122, 95, 0.22)",
+                border: "1px solid rgba(224, 122, 95, 0.4)",
+                borderRadius: "var(--radius-full)",
+                color: "#fed7aa",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                marginBottom: "1.25rem",
+              }}
+            >
+              ❤️ Quick Impact Donation
+            </div>
 
-          {/* Quick amount chips with tactile spring motion */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.85rem",
-              justifyContent: "center",
-              marginBottom: "2.25rem",
-            }}
-          >
-            {amounts.map((amount) => (
-              <motion.div key={amount} whileHover={{ scale: 1.08, y: -2 }} whileTap={{ scale: 0.94 }}>
-                <Link
-                  href={`/donate?amount=${amount}`}
+            <h2 style={{ color: "white", fontSize: "clamp(1.75rem, 3.6vw, 2.65rem)", marginBottom: "0.75rem" }}>
+              Turn Compassion Into Immediate Care
+            </h2>
+            <p style={{ color: "rgba(250, 247, 242, 0.85)", fontSize: "1rem", maxWidth: 540, marginInline: "auto", marginBottom: "1.75rem", lineHeight: 1.7 }}>
+              Choose a preset impact tier and proceed straight to secure UPI / GPay / Card checkout via Razorpay.
+            </p>
+
+            {/* Monthly / One-Time Toggle */}
+            <div style={{ display: "inline-flex", background: "rgba(0,0,0,0.28)", borderRadius: "999px", padding: "0.3rem", marginBottom: "1.5rem" }}>
+              {(["one-time", "monthly"] as const).map((freq) => (
+                <button
+                  key={freq}
+                  type="button"
+                  onClick={() => setFrequency(freq)}
                   style={{
-                    display: "inline-block",
-                    padding: "0.65rem 1.5rem",
-                    background: "hsla(0,0%,100%,0.2)",
-                    border: "1.5px solid hsla(0,0%,100%,0.5)",
-                    borderRadius: "var(--radius-full)",
-                    color: "white",
+                    padding: "0.45rem 1.2rem",
+                    borderRadius: "999px",
+                    border: "none",
                     fontWeight: 700,
-                    fontSize: "0.95rem",
-                    textDecoration: "none",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    backdropFilter: "blur(4px)",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    background: frequency === freq ? "#E07A5F" : "transparent",
+                    color: "white",
                   }}
                 >
-                  ₹{amount.toLocaleString("en-IN")}
-                </Link>
-              </motion.div>
-            ))}
+                  {freq === "one-time" ? "One-Time Gift" : "Monthly Care"}
+                </button>
+              ))}
+            </div>
 
-            <motion.div whileHover={{ scale: 1.08, y: -2 }} whileTap={{ scale: 0.94 }}>
-              <Link
-                href="/donate"
+            {/* Preset Rupee Buttons */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center", marginBottom: "1.25rem" }}>
+              {DONATION_AMOUNTS.slice(0, 3).map((amt) => {
+                const active = !customAmount && selectedAmount === amt;
+                return (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAmount(amt);
+                      setCustomAmount("");
+                    }}
+                    style={{
+                      padding: "0.7rem 1.5rem",
+                      borderRadius: "var(--radius-full)",
+                      border: `2px solid ${active ? "#E07A5F" : "rgba(255,255,255,0.3)"}`,
+                      background: active ? "#E07A5F" : "rgba(255,255,255,0.08)",
+                      color: "white",
+                      fontWeight: 700,
+                      fontSize: "1rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ₹{amt.toLocaleString("en-IN")}
+                  </button>
+                );
+              })}
+
+              <input
+                type="number"
+                min="10"
+                placeholder="Custom ₹"
+                value={customAmount}
+                onChange={(e) => setCustomAmount(e.target.value)}
+                aria-label="Custom donation amount in rupees"
                 style={{
-                  display: "inline-block",
-                  padding: "0.65rem 1.5rem",
-                  background: "hsla(0,0%,100%,0.2)",
-                  border: "1.5px solid hsla(0,0%,100%,0.5)",
+                  width: 125,
+                  padding: "0.65rem 1rem",
                   borderRadius: "var(--radius-full)",
+                  border: `2px solid ${customAmount ? "#E07A5F" : "rgba(255,255,255,0.3)"}`,
+                  background: "rgba(255,255,255,0.1)",
                   color: "white",
                   fontWeight: 700,
-                  fontSize: "0.95rem",
-                  textDecoration: "none",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  backdropFilter: "blur(4px)",
+                  textAlign: "center",
+                  outline: "none",
                 }}
-              >
-                Custom ✏️
-              </Link>
-            </motion.div>
-          </div>
+              />
+            </div>
 
-          <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} style={{ display: "inline-block" }}>
-            <Link
-              href="/donate"
-              className="btn btn-white btn-lg"
-              style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.15)", fontSize: "1.05rem" }}
+            {/* Dynamic Live Impact Preview */}
+            <div
+              style={{
+                display: "inline-block",
+                padding: "0.65rem 1.25rem",
+                borderRadius: "var(--radius-lg)",
+                background: "rgba(230, 239, 233, 0.14)",
+                color: "#bbf7d0",
+                fontWeight: 600,
+                fontSize: "0.92rem",
+                marginBottom: "1.75rem",
+              }}
             >
-              Donate Now — Save a Life
-            </Link>
-          </motion.div>
+              ✨ Impact Preview: {impactPreview}
+            </div>
 
-          <p style={{ color: "hsla(0,0%,100%,0.7)", fontSize: "0.82rem", marginTop: "1.75rem" }}>
-            🔒 Secure payment via Razorpay &nbsp;|&nbsp; 80G Tax Exemption Available
-          </p>
+            <div>
+              <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} style={{ display: "inline-block" }}>
+                <Link
+                  href={`/donate?amount=${effectiveAmount || 500}&frequency=${frequency}#donate-form`}
+                  className="btn btn-terracotta btn-lg"
+                  style={{ boxShadow: "0 10px 26px rgba(224, 122, 95, 0.45)", fontSize: "1.05rem" }}
+                >
+                  Proceed to Donate ₹{(effectiveAmount || 500).toLocaleString("en-IN")} ({frequency === "monthly" ? "Monthly" : "Once"}) →
+                </Link>
+              </motion.div>
+            </div>
+
+            <p style={{ color: "rgba(250, 247, 242, 0.72)", fontSize: "0.8rem", marginTop: "1.35rem", marginBottom: 0 }}>
+              🔒 UPI / GPay / Cards via Razorpay • 80G Tax Exempt (URN: {AYUDAR_LEGAL.urn80G})
+            </p>
+          </div>
         </FadeIn>
       </div>
     </section>

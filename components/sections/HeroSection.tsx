@@ -4,14 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import PulseBeacon from "@/components/motion/PulseBeacon";
+import { AYUDAR_LEGAL } from "@/lib/data";
 
 export default function HeroSection() {
   return (
-    <section style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", overflow: "hidden" }}>
-      {/* Background image with gentle parallax/zoom feel */}
+    <section style={{ position: "relative", minHeight: "94vh", display: "flex", alignItems: "center", overflow: "hidden" }}>
+      {/* Background image */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <motion.div
-          initial={{ scale: 1.08 }}
+          initial={{ scale: 1.07 }}
           animate={{ scale: 1 }}
           transition={{ duration: 1.8, ease: "easeOut" }}
           style={{ width: "100%", height: "100%", position: "relative" }}
@@ -24,37 +25,44 @@ export default function HeroSection() {
             style={{ objectFit: "cover", objectPosition: "center 30%" }}
           />
         </motion.div>
-        {/* Cinematic Forest & Earth Gradient overlay */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(105deg, rgba(8,22,14,0.88) 0%, rgba(10,28,18,0.65) 52%, rgba(8,20,12,0.22) 100%)",
-        }} />
+        {/* Deep Forest & Warm Earth Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(105deg, rgba(20, 40, 31, 0.92) 0%, rgba(30, 58, 47, 0.72) 52%, rgba(20, 38, 30, 0.28) 100%)",
+          }}
+        />
       </div>
 
-      <div className="container" style={{ position: "relative", zIndex: 1, paddingTop: "7rem", paddingBottom: "4rem" }}>
-        <div style={{ maxWidth: 640 }}>
-          {/* Tag / Badge */}
+      <div className="container" style={{ position: "relative", zIndex: 1, paddingTop: "7.5rem", paddingBottom: "4.5rem" }}>
+        <div style={{ maxWidth: 660 }}>
+          {/* Verification Pill */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: "0.6rem",
-              padding: "0.45rem 1.1rem",
-              background: "rgba(21, 128, 61, 0.28)",
-              border: "1px solid rgba(74, 222, 128, 0.45)",
-              borderRadius: "var(--radius-full)",
-              color: "#bbf7d0",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              marginBottom: "1.5rem",
-              backdropFilter: "blur(8px)",
-            }}>
-              <PulseBeacon color="#4ade80" size={8} pulseScale={2.5} />
-              Ayudar Animal Welfare Foundation
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                padding: "0.45rem 1.1rem",
+                background: "rgba(230, 239, 233, 0.14)",
+                border: "1px solid rgba(230, 239, 233, 0.35)",
+                borderRadius: "var(--radius-full)",
+                color: "#E6EFE9",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                marginBottom: "1.4rem",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <PulseBeacon color="#E07A5F" size={8} pulseScale={2.5} />
+              {AYUDAR_LEGAL.shortName} • {AYUDAR_LEGAL.tagline} • Reg. {AYUDAR_LEGAL.regNo}
             </div>
           </motion.div>
 
@@ -65,35 +73,33 @@ export default function HeroSection() {
             transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
             style={{
               color: "white",
-              fontSize: "clamp(2.4rem, 5.5vw, 4rem)",
-              lineHeight: 1.1,
+              fontSize: "clamp(2.45rem, 5.5vw, 4.1rem)",
+              lineHeight: 1.08,
               marginBottom: "1.25rem",
               fontWeight: 600,
             }}
           >
-            Every Animal Deserves a
-            <br />
-            <span style={{ color: "#fbbf24" }}>Second Chance</span>
+            Every street life deserves a{" "}
+            <span style={{ color: "#E07A5F" }}>second chance</span>
           </motion.h1>
 
-          {/* Description */}
+          {/* Official Mission + Local Scope */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              color: "hsla(0,0%,100%,0.85)",
-              fontSize: "clamp(1rem, 2vw, 1.2rem)",
+              color: "rgba(250, 247, 242, 0.88)",
+              fontSize: "clamp(1rem, 2vw, 1.18rem)",
               lineHeight: 1.75,
-              marginBottom: "2.5rem",
-              maxWidth: 520,
+              marginBottom: "2.25rem",
+              maxWidth: 550,
             }}
           >
-            We rescue, heal, and find loving homes for injured and abandoned animals across Raniganj, Asansol & Durgapur.
-            Report an animal in distress — our team responds 24/7.
+            {AYUDAR_LEGAL.mission} Rapid 24/7 street rescue, veterinary surgery, gaushala shelter, and vetted adoptions across Raniganj, Asansol &amp; Durgapur.
           </motion.p>
 
-          {/* CTAs with tactile spring hover */}
+          {/* Dual-Intent CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -101,72 +107,53 @@ export default function HeroSection() {
             style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}
           >
             <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}>
-              <Link href="/rescue" className="btn btn-emergency btn-lg" style={{ boxShadow: "0 8px 20px hsla(0, 80%, 45%, 0.4)" }}>
-                🚨 Report an Animal
+              <Link href="/donate" className="btn btn-terracotta btn-lg" style={{ boxShadow: "0 10px 26px rgba(224, 122, 95, 0.42)" }}>
+                ❤️ Donate to Save a Life
               </Link>
             </motion.div>
 
             <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}>
-              <Link href="/donate" className="btn btn-white btn-lg">
-                ❤️ Donate Now
-              </Link>
-            </motion.div>
-
-            <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}>
-              <Link href="/adoption" className="btn btn-outline btn-lg" style={{ borderColor: "rgba(255,255,255,0.6)", color: "white" }}>
-                Adopt a Pet
+              <Link href="/rescue" className="btn btn-emergency btn-lg" style={{ boxShadow: "0 8px 22px rgba(214, 69, 69, 0.42)" }}>
+                🚨 Found an Injured Animal? (Ayuda)
               </Link>
             </motion.div>
           </motion.div>
 
-          {/* Trust indicators */}
+          {/* Trust & 80G Strip */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.7 }}
             style={{
-              display: "flex", flexWrap: "wrap", gap: "1.5rem",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "1.75rem",
               marginTop: "3rem",
-              paddingTop: "2rem",
-              borderTop: "1px solid hsla(0,0%,100%,0.15)",
+              paddingTop: "1.75rem",
+              borderTop: "1px solid rgba(255,255,255,0.16)",
             }}
           >
             {[
               { n: "1,250+", label: "Animals Rescued" },
-              { n: "420+", label: "Adopted" },
-              { n: "₹4.2L+", label: "Medical Aid" },
-              { n: "24/7", label: "Emergency Response" },
+              { n: "420+", label: "Happy Adoptions" },
+              { n: "80G Exempt", label: `URN: ${AYUDAR_LEGAL.urn80G}` },
+              { n: "24/7 Ayuda", label: "Emergency Dispatch" },
             ].map((stat, idx) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.75 + idx * 0.1 }}
+                transition={{ duration: 0.5, delay: 0.75 + idx * 0.08 }}
               >
-                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--saffron-400)", fontFamily: "var(--font-display)", lineHeight: 1 }}>
+                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#E07A5F", fontFamily: "var(--font-display)", lineHeight: 1.1 }}>
                   {stat.n}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "hsla(0,0%,100%,0.6)", marginTop: "0.25rem" }}>{stat.label}</div>
+                <div style={{ fontSize: "0.75rem", color: "rgba(250, 247, 242, 0.68)", marginTop: "0.25rem" }}>{stat.label}</div>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </div>
-
-      {/* Scroll cue with smooth bounce */}
-      <motion.div
-        animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        style={{
-          position: "absolute", bottom: "2rem", left: "50%", transform: "translateX(-50%)",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "0.4rem",
-          color: "hsla(0,0%,100%,0.5)", fontSize: "0.7rem", letterSpacing: "0.1em",
-          textTransform: "uppercase",
-        }}
-      >
-        <span>Scroll</span>
-        <div style={{ width: 1, height: 32, background: "hsla(0,0%,100%,0.3)" }} />
-      </motion.div>
     </section>
   );
 }

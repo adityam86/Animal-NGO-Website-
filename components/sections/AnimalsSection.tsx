@@ -23,7 +23,7 @@ export default async function AnimalsSection() {
     adoptable = await prisma.animal.findMany({
       where: { status: "Available for Adoption" },
       orderBy: { createdAt: "desc" },
-      take: 8,
+      take: 4,
       select: {
         id: true,
         name: true,
@@ -43,7 +43,7 @@ export default async function AnimalsSection() {
   }
 
   if (adoptable.length === 0) {
-    adoptable = ANIMALS.filter((a) => a.status === "Available for Adoption");
+    adoptable = ANIMALS.filter((a) => a.status === "Available for Adoption").slice(0, 4);
   }
 
   return (
@@ -57,18 +57,20 @@ export default async function AnimalsSection() {
               gap: "1rem",
               alignItems: "flex-end",
               justifyContent: "space-between",
-              marginBottom: "3rem",
+              marginBottom: "2.75rem",
             }}
           >
             <div>
-              <div className="section-tag">Adoption</div>
-              <h2>Animals Looking for a Home</h2>
-              <p style={{ marginTop: "0.5rem", maxWidth: 460, color: "var(--stone-600)" }}>
-                These animals are vaccinated, sterilized, and ready to become your forever companion.
+              <div className="section-tag" style={{ background: "var(--sage-tint, var(--green-50))", color: "var(--green-700)" }}>
+                Ready for a Home
+              </div>
+              <h2>Adopt a Rescued Companion</h2>
+              <p style={{ marginTop: "0.5rem", maxWidth: 480, color: "var(--stone-600)" }}>
+                Vaccinated, dewormed, sterilized, and waiting to become your forever family member.
               </p>
             </div>
-            <Link href="/animals" className="btn btn-outline" style={{ transition: "all 0.2s ease" }}>
-              View All Animals →
+            <Link href="/adoption" className="btn btn-outline">
+              View All Adoptables →
             </Link>
           </div>
         </FadeIn>

@@ -20,19 +20,19 @@ const inter = Inter({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#15803d",
+  themeColor: "#1E3A2F",
   width: "device-width",
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ayudar.org"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.ayudarindia.com"),
   title: {
-    default: "Ayudar Animal Welfare Foundation | Raniganj",
+    default: "Ayudar — The voice of Animals | Animal Welfare Foundation",
     template: "%s | Ayudar Animal Welfare Foundation",
   },
   description:
-    "Ayudar Animal Welfare Foundation — rescuing, treating, sheltering, and rehoming animals across Raniganj, Asansol & Durgapur. Report an injured animal, adopt a pet, or donate today.",
+    "The mission of Ayudar is to bring relief to suffering animals. Rescue, veterinary treatment, shelter, cow care & adoptions across Raniganj, Asansol & Durgapur (Reg. IV-2304-00031/2022 • 80G Tax Exempt).",
   keywords: [
     "animal rescue Raniganj",
     "animal NGO West Bengal",
@@ -90,10 +90,12 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "NGO",
               name: "Ayudar Animal Welfare Foundation",
-              url: process.env.NEXT_PUBLIC_SITE_URL || "https://ayudar.org",
+              alternateName: "Ayudar — The voice of Animals",
+              description: "The mission of Ayudar is to bring relief to suffering animals.",
+              url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.ayudarindia.com",
               areaServed: ["Raniganj", "Asansol", "Durgapur", "West Bengal"],
               telephone: "+91-98000-00000",
-              sameAs: [],
+              sameAs: ["https://maps.app.goo.gl/Aug8yQi2FmTVeegx7"],
             }),
           }}
         />
