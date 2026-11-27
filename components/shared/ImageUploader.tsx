@@ -51,8 +51,24 @@ export default function ImageUploader({
       const formData = new FormData();
       formData.append("file", file);
 
+      const headers: Record<string, string> = {};
+      if (uploadEndpoint?.includes("/api/rescue/upload")) {
+        try {
+          const tokenRes = await fetch("/api/rescue/upload-token", { method: "POST" });
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            if (tokenData.token) {
+              headers["x-upload-token"] = tokenData.token;
+            }
+          }
+        } catch {
+          // Fall through, server will report token requirement
+        }
+      }
+
       const res = await fetch(uploadEndpoint || "/api/upload", {
         method: "POST",
+        headers,
         body: formData,
       });
 

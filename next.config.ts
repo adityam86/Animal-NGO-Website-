@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingIncludes: {
-    "/**": ["./prisma/**/*"],
+    "/**": ["./prisma/schema.prisma", "./prisma/migrations/**/*"],
   },
   async headers() {
     return [

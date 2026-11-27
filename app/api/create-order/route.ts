@@ -81,16 +81,18 @@ export async function POST(request: Request) {
       const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
       const receipt = `${recordType.slice(0, 3)}_${recordId.slice(0, 28)}`;
 
+      // Explicitly configure automatic payment capture upon successful authorization
       const order = await razorpay.orders.create({
         amount: Math.round(numericAmount * 100),
         currency: "INR",
         receipt,
+        payment_capture: 1,
         notes: {
           recordType,
           recordId,
           purpose: purposeNote,
         },
-      });
+      } as Parameters<typeof razorpay.orders.create>[0]);
 
       if (recordType === "donation") {
         await prisma.donation.update({

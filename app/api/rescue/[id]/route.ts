@@ -25,8 +25,8 @@ export async function GET(
       return NextResponse.json({ error: "Invalid rescue case ID" }, { status: 400 });
     }
 
-    // Explicitly exclude reporterName, reporterPhone, reporterEmail, and free-text notes
-    // so public status tracking never leaks caller personally identifiable information.
+    // Explicitly exclude reporterName, reporterPhone, reporterEmail, photoUrl, and free-text notes
+    // so public status tracking never leaks caller personally identifiable information or raw incident photos.
     const rescueCase = await prisma.rescueCase.findUnique({
       where: { id: cleanId },
       select: {
@@ -53,7 +53,20 @@ export async function GET(
       return NextResponse.json({ error: "Rescue case not found" }, { status: 404 });
     }
 
-    return NextResponse.json(rescueCase, { headers: { "Cache-Control": "no-store" } });
+    // Redact exact GPS coordinates from public tracking responses
+    const redactedLocation = rescueCase.location
+      ? rescueCase.location
+          .replace(/\(GPS:\s*-?\d+\.?\d*,\s*-?\d+\.?\d*\)/gi, "(Location logged with dispatch)")
+          .replace(/GPS:\s*-?\d+\.?\d*,\s*-?\d+\.?\d*/gi, "Location logged with dispatch")
+      : rescueCase.location;
+
+    return NextResponse.json(
+      {
+        ...rescueCase,
+        location: redactedLocation,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     console.error("Failed to fetch rescue case:", error);
     return NextResponse.json({ error: "Failed to fetch rescue case" }, { status: 500 });

@@ -154,6 +154,7 @@ export async function POST(request: Request) {
             alreadyCompleted: true,
             paymentId: razorpay_payment_id,
             orderId: razorpay_order_id,
+            amount: Number(donation.amount),
           });
         }
         return NextResponse.json(
@@ -192,6 +193,7 @@ export async function POST(request: Request) {
             alreadyCompleted: true,
             paymentId: razorpay_payment_id,
             orderId: razorpay_order_id,
+            amount: Number(sponsorship.amount),
           });
         }
         return NextResponse.json(
@@ -253,6 +255,8 @@ export async function POST(request: Request) {
         tx.sponsorship.findUnique({ where: { razorpayPaymentId: razorpay_payment_id } }),
       ]);
 
+      let recordAmount = expectedAmountInr;
+
       if (donationId) {
         const donation = await tx.donation.findUnique({ where: { id: donationId } });
         if (!donation) {
@@ -261,9 +265,10 @@ export async function POST(request: Request) {
         if (!donation.razorpayOrderId || donation.razorpayOrderId !== razorpay_order_id) {
           return { status: 400 as const, error: "Order ID does not match donation record" };
         }
+        recordAmount = Number(donation.amount);
         if (donation.paymentStatus === "Completed") {
           if (donation.razorpayPaymentId === razorpay_payment_id) {
-            return { status: 200 as const, alreadyCompleted: true };
+            return { status: 200 as const, alreadyCompleted: true, amount: recordAmount };
           }
           return {
             status: 409 as const,
@@ -294,9 +299,10 @@ export async function POST(request: Request) {
         if (!sponsorship.razorpayOrderId || sponsorship.razorpayOrderId !== razorpay_order_id) {
           return { status: 400 as const, error: "Order ID does not match sponsorship record" };
         }
+        recordAmount = SPONSORSHIP_TIERS_INR[sponsorship.tier] ?? Number(sponsorship.amount);
         if (sponsorship.paymentStatus === "Completed") {
           if (sponsorship.razorpayPaymentId === razorpay_payment_id) {
-            return { status: 200 as const, alreadyCompleted: true };
+            return { status: 200 as const, alreadyCompleted: true, amount: recordAmount };
           }
           return {
             status: 409 as const,
@@ -321,7 +327,7 @@ export async function POST(request: Request) {
         });
       }
 
-      return { status: 200 as const, alreadyCompleted: false };
+      return { status: 200 as const, alreadyCompleted: false, amount: recordAmount };
     });
 
     if (txResult.status !== 200) {
@@ -337,6 +343,7 @@ export async function POST(request: Request) {
       alreadyCompleted: Boolean(txResult.alreadyCompleted),
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
+      amount: "amount" in txResult ? txResult.amount : undefined,
     });
   } catch (error) {
     console.error("Verification error:", error);

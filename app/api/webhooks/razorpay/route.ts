@@ -27,6 +27,23 @@ interface RazorpayWebhookPayload {
         status?: string;
       };
     };
+    refund?: {
+      entity?: {
+        id?: string;
+        payment_id?: string;
+        amount?: number;
+        status?: string;
+      };
+    };
+    dispute?: {
+      entity?: {
+        id?: string;
+        payment_id?: string;
+        amount?: number;
+        status?: string;
+        reason_code?: string;
+      };
+    };
   };
 }
 
@@ -59,23 +76,25 @@ export async function POST(request: Request) {
     const event = parsed.event || "";
     const paymentEntity = parsed.payload?.payment?.entity;
     const orderEntity = parsed.payload?.order?.entity;
+    const refundEntity = parsed.payload?.refund?.entity;
+    const disputeEntity = parsed.payload?.dispute?.entity;
 
     const orderId = paymentEntity?.order_id || orderEntity?.id;
-    const paymentId = paymentEntity?.id || null;
-
-    if (!orderId) {
-      return NextResponse.json({ received: true, ignored: true });
-    }
-
-    // For payment.captured event, payment entity and ID are mandatory
-    if (event === "payment.captured" && !paymentId) {
-      return NextResponse.json({ error: "Missing payment entity for payment.captured" }, { status: 400 });
-    }
+    const paymentId = paymentEntity?.id || refundEntity?.payment_id || disputeEntity?.payment_id || null;
 
     const ip = getClientIp(request);
 
+    // 1. Captured payments and Paid orders
     if (event === "payment.captured" || event === "order.paid") {
-      // 1. Currency validation: require currency to equal INR
+      if (!orderId) {
+        return NextResponse.json({ received: true, ignored: true });
+      }
+
+      if (event === "payment.captured" && !paymentId) {
+        return NextResponse.json({ error: "Missing payment entity for payment.captured" }, { status: 400 });
+      }
+
+      // Currency validation: require currency to equal INR
       const currency = (paymentEntity?.currency || orderEntity?.currency || "").toUpperCase();
       if (!currency || currency !== "INR") {
         return NextResponse.json(
@@ -84,8 +103,7 @@ export async function POST(request: Request) {
         );
       }
 
-      // 2. Status validation:
-      // For payment.captured: status must be captured
+      // Status validation
       if (event === "payment.captured") {
         if (!paymentEntity?.status || paymentEntity.status !== "captured") {
           return NextResponse.json(
@@ -94,7 +112,6 @@ export async function POST(request: Request) {
           );
         }
       }
-      // For order.paid: if order status present, must be paid
       if (event === "order.paid") {
         if (orderEntity?.status && orderEntity.status !== "paid") {
           return NextResponse.json(
@@ -110,7 +127,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // 3. Amount validation from webhook payload (in paise)
+      // Amount validation from webhook payload (in paise)
       const webhookPaise = typeof paymentEntity?.amount === "number"
         ? paymentEntity.amount
         : (typeof orderEntity?.amount_paid === "number"
@@ -125,7 +142,6 @@ export async function POST(request: Request) {
       }
 
       const outcome = await prisma.$transaction(async (tx) => {
-        // Cross-table razorpayPaymentId replay check (if paymentId is present)
         let existingDonPay = null;
         let existingSponPay = null;
         if (paymentId) {
@@ -223,7 +239,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, ...outcome });
     }
 
+    // 2. Failed payments
     if (event === "payment.failed") {
+      if (!orderId) {
+        return NextResponse.json({ received: true, ignored: true });
+      }
       await prisma.$transaction(async (tx) => {
         await tx.donation.updateMany({
           where: { razorpayOrderId: orderId, paymentStatus: { not: "Completed" } },
@@ -235,6 +255,82 @@ export async function POST(request: Request) {
         });
       });
       return NextResponse.json({ received: true, status: "marked_failed" });
+    }
+
+    // 3. Refund webhooks (payment.refunded, refund.processed, refund.created)
+    if (
+      event === "payment.refunded" ||
+      event === "refund.processed" ||
+      event === "refund.created"
+    ) {
+      if (!paymentId && !orderId) {
+        return NextResponse.json({ received: true, ignored: true });
+      }
+
+      const refundResult = await prisma.$transaction(async (tx) => {
+        // Locate matching donation or sponsorship by payment ID or order ID
+        let donation = paymentId
+          ? await tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } })
+          : null;
+        if (!donation && orderId) {
+          donation = await tx.donation.findUnique({ where: { razorpayOrderId: orderId } });
+        }
+
+        if (donation) {
+          if (donation.paymentStatus === "Refunded") {
+            return { updated: false, kind: "donation", id: donation.id, alreadyRefunded: true };
+          }
+          await tx.donation.update({
+            where: { id: donation.id },
+            data: { paymentStatus: "Refunded" },
+          });
+          return { updated: true, kind: "donation", id: donation.id };
+        }
+
+        let sponsorship = paymentId
+          ? await tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } })
+          : null;
+        if (!sponsorship && orderId) {
+          sponsorship = await tx.sponsorship.findUnique({ where: { razorpayOrderId: orderId } });
+        }
+
+        if (sponsorship) {
+          if (sponsorship.paymentStatus === "Refunded") {
+            return { updated: false, kind: "sponsorship", id: sponsorship.id, alreadyRefunded: true };
+          }
+          await tx.sponsorship.update({
+            where: { id: sponsorship.id },
+            data: { paymentStatus: "Refunded" },
+          });
+          return { updated: true, kind: "sponsorship", id: sponsorship.id };
+        }
+
+        return { notFound: true };
+      });
+
+      if ("updated" in refundResult && refundResult.updated) {
+        await recordAuditLog({
+          action: "RAZORPAY_WEBHOOK_REFUNDED",
+          resource: `${refundResult.kind}:${refundResult.id}`,
+          details: `Payment refunded via webhook event ${event}`,
+          ipAddress: ip,
+        });
+      }
+
+      return NextResponse.json({ received: true, status: "marked_refunded", ...refundResult });
+    }
+
+    // 4. Dispute webhooks (payment.dispute.created, payment.dispute.won, payment.dispute.lost)
+    if (event.startsWith("payment.dispute.")) {
+      if (paymentId) {
+        await recordAuditLog({
+          action: "RAZORPAY_WEBHOOK_DISPUTE",
+          resource: `payment:${paymentId}`,
+          details: `Dispute event ${event} received for payment ${paymentId}`,
+          ipAddress: ip,
+        });
+      }
+      return NextResponse.json({ received: true, status: "dispute_logged" });
     }
 
     return NextResponse.json({ received: true, ignored: true });

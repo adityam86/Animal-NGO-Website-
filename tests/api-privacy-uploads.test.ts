@@ -189,16 +189,25 @@ describe("Data Privacy, CSV Security, Uploads & Public Endpoints", () => {
     );
     expect(rescueSvgRes.status).toBe(400);
 
-    // Valid PNG magic bytes succeed cleanly on rescue upload
-    const pngBytes = new Uint8Array([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
-    ]);
-    const validPng = new File([pngBytes], "injured.png", { type: "image/png" });
+    // Valid PNG succeeds cleanly on rescue upload when signed token is provided
+    const validPngBuffer = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64"
+    );
+    const validPng = new File([validPngBuffer], "injured.png", { type: "image/png" });
+    const { generateUploadToken } = await import("@/lib/upload-token");
+    const validToken = generateUploadToken("127.0.0.1");
+
     const pngForm = new FormData();
     pngForm.append("file", validPng);
+    pngForm.append("uploadToken", validToken);
 
     const rescuePngRes = await rescueUploadPost(
-      new Request("http://localhost:3000/api/rescue/upload", { method: "POST", body: pngForm })
+      new Request("http://localhost:3000/api/rescue/upload", {
+        method: "POST",
+        headers: { "x-forwarded-for": "127.0.0.1" },
+        body: pngForm,
+      })
     );
     expect(rescuePngRes.status).toBe(200);
     const pngJson = await rescuePngRes.json();

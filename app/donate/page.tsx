@@ -56,6 +56,7 @@ function DonateContent() {
   const [donationId, setDonationId] = useState("");
   const [paymentId, setPaymentId] = useState("");
   const [donorSummary, setDonorSummary] = useState<{ name: string; email: string } | null>(null);
+  const [serverReceiptAmount, setServerReceiptAmount] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -125,6 +126,9 @@ function DonateContent() {
         }
         setDonationId(data.id);
         setPaymentId(verifyData.paymentId || payload.razorpay_payment_id);
+        if (typeof verifyData.amount === "number" && verifyData.amount > 0) {
+          setServerReceiptAmount(verifyData.amount);
+        }
         setDonorSummary({ name, email });
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -233,7 +237,7 @@ function DonateContent() {
 
               <div style={{ padding: "1.25rem", background: "var(--saffron-50)", borderRadius: "var(--radius-lg)", marginBottom: "1.25rem", border: "1px solid var(--saffron-200)" }}>
                 <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--stone-800)", fontFamily: "var(--font-display)" }}>
-                  ₹{finalAmount.toLocaleString("en-IN")}
+                  ₹{(serverReceiptAmount ?? finalAmount).toLocaleString("en-IN")}
                 </div>
                 <div style={{ fontSize: "0.88rem", color: "var(--stone-600)", marginTop: "0.25rem" }}>
                   {purpose} • {frequency === "monthly" ? "Monthly Commitment" : "One-time Gift"}

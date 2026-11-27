@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { AuthError, recordAuditLog, requireAdminSession } from "@/lib/auth-server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
-import { getClientIp, isSameOriginRequest, validateImageSignature } from "@/lib/security";
+import { getClientIp, isSameOriginRequest } from "@/lib/security";
 import { storeValidatedImage } from "@/lib/storage";
+import { processAndSanitizeImage, ImageProcessingError } from "@/lib/image-processing";
 
 export const dynamic = "force-dynamic";
 
@@ -38,22 +39,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const validated = validateImageSignature(buffer, file.type, file.name);
-    if (!validated) {
-      return NextResponse.json(
-        { error: "Invalid or unsafe image file. Only verified JPG, PNG, WEBP, and GIF images are allowed." },
-        { status: 400 }
-      );
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+
+    // Server-side image decoding, metadata stripping (EXIF/GPS), and raster re-encoding
+    let processed;
+    try {
+      processed = await processAndSanitizeImage(rawBuffer, file.name, file.type, {
+        maxBytes: MAX_UPLOAD_BYTES,
+        maxDimension: 4096,
+        outputFormat: "webp",
+      });
+    } catch (err) {
+      const msg = err instanceof ImageProcessingError ? err.message : "Invalid or corrupted image file.";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const stored = await storeValidatedImage(buffer, validated, file.name, "admin");
+    const stored = await storeValidatedImage(
+      processed.buffer,
+      processed,
+      file.name,
+      "admin",
+      { isPrivate: false }
+    );
 
     await recordAuditLog({
       userId: session.userId,
       action: "ADMIN_UPLOAD_IMAGE",
       resource: "/api/upload",
-      details: `Uploaded ${validated.mimeType} (${file.size} bytes) via ${stored.storage}`,
+      details: `Uploaded ${processed.mimeType} (${processed.width}x${processed.height}, ${processed.buffer.length} bytes) via ${stored.storage}`,
       ipAddress: ip,
     });
 
@@ -61,8 +74,10 @@ export async function POST(request: Request) {
       success: true,
       url: stored.url,
       fileName: file.name,
-      size: file.size,
+      size: processed.buffer.length,
       storage: stored.storage,
+      width: processed.width,
+      height: processed.height,
     });
   } catch (error) {
     if (error instanceof AuthError) {

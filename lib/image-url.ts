@@ -1,7 +1,11 @@
 export function isSafeImageUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return true;
-  if (trimmed.startsWith("/images/") || trimmed.startsWith("/uploads/")) {
+  if (
+    trimmed.startsWith("/images/") ||
+    trimmed.startsWith("/uploads/") ||
+    trimmed.startsWith("/api/admin/rescues/photo/")
+  ) {
     // Strip query and fragment before checking extension
     const pathOnly = trimmed.split("?")[0].split("#")[0];
     return !pathOnly.includes("..") && !pathOnly.toLowerCase().endsWith(".svg");
