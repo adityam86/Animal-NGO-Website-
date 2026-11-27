@@ -6,8 +6,10 @@
 
 ## Phase 1 — External Service Provisioning
 
-- [ ] **PostgreSQL Database** — Provision a staging PostgreSQL instance (Neon, Supabase, Railway, or AWS RDS). Record the connection string as `DATABASE_URL`.
-  - If using connection pooling (PgBouncer/Neon), ensure `prisma migrate deploy` uses a direct (session-mode) connection.
+- [ ] **PostgreSQL Database** — Provision a staging PostgreSQL instance (Neon, Supabase, Railway, or AWS RDS).
+  - Record the connection string as `DATABASE_URL` (runtime pooled connection for serverless queries).
+  - Record `DIRECT_URL` (direct non-pooled session connection on port 5432 for `prisma migrate deploy`).
+  - `prisma/schema.prisma` natively supports `directUrl = env("DIRECT_URL")` for migration execution.
 - [ ] **Razorpay Test Mode** — Create or use an existing Razorpay Test Mode account. Record `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`, and `RAZORPAY_WEBHOOK_SECRET`.
   - Ensure Razorpay dashboard has **auto-capture enabled** (or pass `payment_capture: 1` in `orders.create`).
   - Configure a webhook URL pointing to `https://<staging-domain>/api/webhooks/razorpay` with events: `payment.captured`, `payment.failed`, `order.paid`.

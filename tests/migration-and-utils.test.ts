@@ -9,7 +9,11 @@ import {
   validateImageSignature,
 } from "@/lib/security";
 import { checkRateLimit, resetRateLimitStore } from "@/lib/rate-limit";
-import { runSqliteToPostgresMigration } from "@/scripts/migrate-sqlite-to-postgres";
+import {
+  runSqliteToPostgresMigration,
+  toDate,
+  toNullableDate,
+} from "@/scripts/migrate-sqlite-to-postgres";
 
 describe("Security Utilities & SQLite-to-PostgreSQL Migration Verification", () => {
   it("sanitizes plain text, neutralizes CSV formulas, and enforces sliding rate limits", () => {
@@ -63,5 +67,47 @@ describe("Security Utilities & SQLite-to-PostgreSQL Migration Verification", () 
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+
+  it("strictly converts dates without silent replacement, preserves nullable dates, and aborts on corrupt records", () => {
+    // 1. Valid conversions
+    const isoDate = toDate("2026-06-15T12:00:00.000Z", "Animal 1");
+    expect(isoDate).toBeInstanceOf(Date);
+    expect(isoDate.toISOString()).toBe("2026-06-15T12:00:00.000Z");
+
+    const epochNum = 1718452800000;
+    const fromEpoch = toDate(epochNum, "Rescue 1");
+    expect(fromEpoch.getTime()).toBe(epochNum);
+
+    const existingDate = new Date("2026-01-01T00:00:00Z");
+    expect(toDate(existingDate)).toBe(existingDate);
+
+    // 2. Invalid dates MUST throw and report the record context (NEVER silently replace with new Date())
+    expect(() => toDate("corrupted-date-xyz", "Animal record ani_99")).toThrow(
+      /Invalid or missing date 'corrupted-date-xyz' encountered in Animal record ani_99/
+    );
+    expect(() => toDate(null, "Donation record don_42")).toThrow(
+      /Invalid or missing date 'null' encountered in Donation record don_42/
+    );
+    expect(() => toDate(undefined, "Story story_1")).toThrow(
+      /Invalid or missing date 'undefined'/
+    );
+    expect(() => toDate("", "User u1")).toThrow(/Invalid or missing date ''/);
+
+    // 3. Nullable dates: empty/null/undefined return null cleanly
+    expect(toNullableDate(null, "Donation verifiedAt")).toBeNull();
+    expect(toNullableDate(undefined, "Donation verifiedAt")).toBeNull();
+    expect(toNullableDate("", "Donation verifiedAt")).toBeNull();
+    expect(toNullableDate("   ", "Donation verifiedAt")).toBeNull();
+
+    // 4. Nullable dates: valid dates convert accurately
+    const validNullDate = toNullableDate("2026-07-20T18:30:00Z", "Vaccination dateDue");
+    expect(validNullDate).toBeInstanceOf(Date);
+    expect(validNullDate?.toISOString()).toBe("2026-07-20T18:30:00.000Z");
+
+    // 5. Nullable dates: invalid non-null value MUST throw and abort
+    expect(() => toNullableDate("garbage-date-value", "Vaccination vax_1")).toThrow(
+      /Invalid non-null date 'garbage-date-value' encountered in nullable field of Vaccination vax_1/
+    );
   });
 });

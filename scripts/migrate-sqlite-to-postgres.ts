@@ -9,21 +9,39 @@ const MIGRATION_BATCH_SIZE = 50;
 const TRANSACTION_TIMEOUT_MS = 120_000;
 const TRANSACTION_MAX_WAIT_MS = 20_000;
 
-function toDate(val: unknown): Date {
-  if (val instanceof Date) return val;
-  if (typeof val === "number") return new Date(val);
+export function toDate(val: unknown, recordDesc?: string): Date {
+  if (val instanceof Date && !Number.isNaN(val.getTime())) return val;
+  if (typeof val === "number" && Number.isFinite(val)) {
+    const d = new Date(val);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
   if (typeof val === "string" && val.trim()) {
-    const parsed = new Date(val);
+    const parsed = new Date(val.trim());
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
-  return new Date();
+  throw new Error(
+    `Invalid or missing date '${String(val)}' encountered in ${recordDesc || "record"}. Migration aborted to preserve data integrity.`
+  );
 }
 
-function toNullableDate(val: unknown): Date | null {
-  if (val === null || val === undefined || val === "") return null;
-  if (typeof val === "number") return new Date(val);
-  const parsed = new Date(String(val));
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+export function toNullableDate(val: unknown, recordDesc?: string): Date | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "string" && !val.trim()) return null;
+  if (val instanceof Date && !Number.isNaN(val.getTime())) return val;
+  if (typeof val === "number" && Number.isFinite(val)) {
+    const d = new Date(val);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  if (typeof val === "string") {
+    const parsed = new Date(val.trim());
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+    throw new Error(
+      `Invalid non-null date '${val}' encountered in nullable field of ${recordDesc || "record"}. Migration aborted to preserve data integrity.`
+    );
+  }
+  throw new Error(
+    `Unexpected date type '${typeof val}' encountered in ${recordDesc || "record"}. Migration aborted.`
+  );
 }
 
 function toBool(val: unknown, fallback = false): boolean {

@@ -18,6 +18,15 @@ interface RazorpayWebhookPayload {
         status?: string;
       };
     };
+    order?: {
+      entity?: {
+        id?: string;
+        amount?: number;
+        amount_paid?: number;
+        currency?: string;
+        status?: string;
+      };
+    };
   };
 }
 
@@ -48,32 +57,83 @@ export async function POST(request: Request) {
 
     const parsed = JSON.parse(rawBody) as RazorpayWebhookPayload;
     const event = parsed.event || "";
-    const entity = parsed.payload?.payment?.entity;
-    const orderId = entity?.order_id;
-    const paymentId = entity?.id;
+    const paymentEntity = parsed.payload?.payment?.entity;
+    const orderEntity = parsed.payload?.order?.entity;
 
-    if (!orderId || !paymentId) {
+    const orderId = paymentEntity?.order_id || orderEntity?.id;
+    const paymentId = paymentEntity?.id || null;
+
+    if (!orderId) {
       return NextResponse.json({ received: true, ignored: true });
+    }
+
+    // For payment.captured event, payment entity and ID are mandatory
+    if (event === "payment.captured" && !paymentId) {
+      return NextResponse.json({ error: "Missing payment entity for payment.captured" }, { status: 400 });
     }
 
     const ip = getClientIp(request);
 
     if (event === "payment.captured" || event === "order.paid") {
-      // Validate webhook entity fields
-      const entityCurrency = typeof entity?.currency === "string" ? entity.currency.toUpperCase() : null;
-      if (entityCurrency && entityCurrency !== "INR") {
+      // 1. Currency validation: require currency to equal INR
+      const currency = (paymentEntity?.currency || orderEntity?.currency || "").toUpperCase();
+      if (!currency || currency !== "INR") {
         return NextResponse.json(
-          { error: "Webhook currency is not INR" },
+          { error: "Payment entity currency must be INR" },
+          { status: 400 }
+        );
+      }
+
+      // 2. Status validation:
+      // For payment.captured: status must be captured
+      if (event === "payment.captured") {
+        if (!paymentEntity?.status || paymentEntity.status !== "captured") {
+          return NextResponse.json(
+            { error: "Payment status must be captured" },
+            { status: 400 }
+          );
+        }
+      }
+      // For order.paid: if order status present, must be paid
+      if (event === "order.paid") {
+        if (orderEntity?.status && orderEntity.status !== "paid") {
+          return NextResponse.json(
+            { error: "Order status must be paid" },
+            { status: 400 }
+          );
+        }
+        if (paymentEntity?.status && paymentEntity.status !== "captured") {
+          return NextResponse.json(
+            { error: "Payment status must be captured" },
+            { status: 400 }
+          );
+        }
+      }
+
+      // 3. Amount validation from webhook payload (in paise)
+      const webhookPaise = typeof paymentEntity?.amount === "number"
+        ? paymentEntity.amount
+        : (typeof orderEntity?.amount_paid === "number"
+            ? orderEntity.amount_paid
+            : (typeof orderEntity?.amount === "number" ? orderEntity.amount : null));
+
+      if (webhookPaise === null) {
+        return NextResponse.json(
+          { error: "Missing or invalid payment amount in webhook payload" },
           { status: 400 }
         );
       }
 
       const outcome = await prisma.$transaction(async (tx) => {
-        // Cross-table razorpayPaymentId replay check
-        const [existingDonPay, existingSponPay] = await Promise.all([
-          tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } }),
-          tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } }),
-        ]);
+        // Cross-table razorpayPaymentId replay check (if paymentId is present)
+        let existingDonPay = null;
+        let existingSponPay = null;
+        if (paymentId) {
+          [existingDonPay, existingSponPay] = await Promise.all([
+            tx.donation.findUnique({ where: { razorpayPaymentId: paymentId } }),
+            tx.sponsorship.findUnique({ where: { razorpayPaymentId: paymentId } }),
+          ]);
+        }
 
         const donation = await tx.donation.findUnique({
           where: { razorpayOrderId: orderId },
@@ -83,15 +143,13 @@ export async function POST(request: Request) {
           if (donation.paymentStatus === "Completed") {
             return { updated: false, kind: "donation", id: donation.id };
           }
-          if (
-            typeof entity?.amount === "number" &&
-            Math.round(donation.amount * 100) !== entity.amount
-          ) {
+          const expectedPaise = Math.round(Number(donation.amount) * 100);
+          if (webhookPaise !== expectedPaise) {
             return { mismatch: true, kind: "donation", id: donation.id };
           }
           if (
-            (existingDonPay && existingDonPay.id !== donation.id) ||
-            existingSponPay
+            paymentId &&
+            ((existingDonPay && existingDonPay.id !== donation.id) || existingSponPay)
           ) {
             return { replay: true, kind: "donation", id: donation.id };
           }
@@ -99,7 +157,7 @@ export async function POST(request: Request) {
             where: { id: donation.id, paymentStatus: { not: "Completed" } },
             data: {
               paymentStatus: "Completed",
-              razorpayPaymentId: paymentId,
+              ...(paymentId ? { razorpayPaymentId: paymentId } : {}),
               verifiedAt: new Date(),
             },
           });
@@ -115,15 +173,13 @@ export async function POST(request: Request) {
           }
           const { SPONSORSHIP_TIERS_INR } = await import("@/lib/payment");
           const expectedAmount = SPONSORSHIP_TIERS_INR[sponsorship.tier] ?? Number(sponsorship.amount);
-          if (
-            typeof entity?.amount === "number" &&
-            Math.round(expectedAmount * 100) !== entity.amount
-          ) {
+          const expectedPaise = Math.round(expectedAmount * 100);
+          if (webhookPaise !== expectedPaise) {
             return { mismatch: true, kind: "sponsorship", id: sponsorship.id };
           }
           if (
-            (existingSponPay && existingSponPay.id !== sponsorship.id) ||
-            existingDonPay
+            paymentId &&
+            ((existingSponPay && existingSponPay.id !== sponsorship.id) || existingDonPay)
           ) {
             return { replay: true, kind: "sponsorship", id: sponsorship.id };
           }
@@ -131,7 +187,7 @@ export async function POST(request: Request) {
             where: { id: sponsorship.id, paymentStatus: { not: "Completed" } },
             data: {
               paymentStatus: "Completed",
-              razorpayPaymentId: paymentId,
+              ...(paymentId ? { razorpayPaymentId: paymentId } : {}),
               verifiedAt: new Date(),
             },
           });

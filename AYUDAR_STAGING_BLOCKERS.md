@@ -26,7 +26,7 @@ These are known risks identified during the five-track audit. They do not block 
 |:--|:---------|:------|:--------|:----------------|
 | 1 | **HIGH** | Rescue photos stored with `access: "public"` (EXIF GPS, bystander images on public CDN) | `lib/storage.ts:27` | Use `access: "private"` for `"rescue"` prefix + authenticated admin proxy route |
 | 2 | **HIGH** | No EXIF/GPS metadata stripping on any uploaded image | `lib/storage.ts`, `app/api/upload/route.ts`, `app/api/rescue/upload/route.ts` | Install `sharp` and re-encode uploads server-side |
-| 3 | **HIGH** | `/api/login` rate limit fail-open allows distributed brute-force when Redis unavailable | `lib/rate-limit.ts`, `app/api/login/route.ts` | DB-backed failed-attempt counter or fail-closed for login |
+| 3 | ~~HIGH~~ **RESOLVED** | `/api/login` & `/api/rescue/upload` fail-closed in production when Redis has an outage | `lib/rate-limit.ts`, `app/api/login/route.ts` | Implemented fail-closed option `{ sensitive: true }` in production |
 | 4 | **HIGH** | Targeted admin lockout DoS via `login-acct:${email}` (8/15min, email-only key) | `app/api/login/route.ts:48` | Composite `ip+email` key with higher global email threshold + alerting |
 | 5 | **MEDIUM** | Unauthenticated `POST /api/rescue/upload` can orphan files in Blob storage | `app/api/rescue/upload/route.ts` | Require CAPTCHA or link upload to pending rescue case token |
 | 6 | **MEDIUM** | No refund/dispute/chargeback webhook handling | `app/api/webhooks/razorpay/route.ts` | Handle `refund.created`, `payment.refunded`, dispute events |

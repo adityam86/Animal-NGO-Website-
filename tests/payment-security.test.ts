@@ -287,6 +287,57 @@ describe("Razorpay Order, Replay, Amount & Webhook Regression Security", () => {
     expect(mockDonationUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ paymentStatus: "Failed" }) })
     );
+
+    // Case 4: Razorpay reports payment status === "authorized" (not yet captured)
+    // Must return HTTP 400 and NOT mark Completed (database record stays Pending)
+    mockDonationUpdate.mockClear();
+    mockDonationUpdateMany.mockClear();
+    mockRazorpayPaymentFetch.mockResolvedValueOnce({
+      id: paymentId,
+      order_id: orderId,
+      amount: 500000,
+      currency: "INR",
+      status: "authorized",
+    });
+    const authorizedRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signPayment(orderId, paymentId),
+          donationId: "don_5000",
+        }),
+      })
+    );
+    expect(authorizedRes.status).toBe(400);
+    expect((await authorizedRes.json()).error).toMatch(/authorized/i);
+    expect(mockDonationUpdate).not.toHaveBeenCalled();
+    expect(mockDonationUpdateMany).not.toHaveBeenCalled();
+
+    // Case 5: Razorpay reports payment status === "created" (unpaid)
+    mockRazorpayPaymentFetch.mockResolvedValueOnce({
+      id: paymentId,
+      order_id: orderId,
+      amount: 500000,
+      currency: "INR",
+      status: "created",
+    });
+    const createdRes = await verifyPaymentPost(
+      new Request("http://localhost:3000/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signPayment(orderId, paymentId),
+          donationId: "don_5000",
+        }),
+      })
+    );
+    expect(createdRes.status).toBe(400);
+    expect(mockDonationUpdate).not.toHaveBeenCalled();
   });
 
   it("verifies valid Razorpay payments, handles repeated verification idempotently, and blocks reused paymentId", async () => {
@@ -425,6 +476,7 @@ describe("Razorpay Order, Replay, Amount & Webhook Regression Security", () => {
             order_id: "order_wh_1",
             amount: 50000,
             currency: "INR",
+            status: "captured",
           },
         },
       },
@@ -487,5 +539,144 @@ describe("Razorpay Order, Replay, Amount & Webhook Regression Security", () => {
     );
     expect(secondOk.status).toBe(200);
     expect((await secondOk.json()).updated).toBe(false);
+
+    // Test: Missing currency rejected (HTTP 400)
+    const noCurrencyPayload = JSON.stringify({
+      event: "payment.captured",
+      payload: {
+        payment: { entity: { id: "pay_bad_cur", order_id: "order_wh_1", amount: 50000, status: "captured" } },
+      },
+    });
+    const noCurSig = createHmac("sha256", WEBHOOK_SECRET).update(noCurrencyPayload, "utf8").digest("hex");
+    const noCurRes = await webhookPost(
+      new Request("http://localhost:3000/api/webhooks/razorpay", {
+        method: "POST",
+        headers: { "x-razorpay-signature": noCurSig },
+        body: noCurrencyPayload,
+      })
+    );
+    expect(noCurRes.status).toBe(400);
+    expect((await noCurRes.json()).error).toMatch(/currency/i);
+
+    // Test: Non-INR currency rejected (HTTP 400)
+    const usdPayload = JSON.stringify({
+      event: "payment.captured",
+      payload: {
+        payment: { entity: { id: "pay_usd", order_id: "order_wh_1", amount: 50000, currency: "USD", status: "captured" } },
+      },
+    });
+    const usdSig = createHmac("sha256", WEBHOOK_SECRET).update(usdPayload, "utf8").digest("hex");
+    const usdRes = await webhookPost(
+      new Request("http://localhost:3000/api/webhooks/razorpay", {
+        method: "POST",
+        headers: { "x-razorpay-signature": usdSig },
+        body: usdPayload,
+      })
+    );
+    expect(usdRes.status).toBe(400);
+    expect((await usdRes.json()).error).toMatch(/currency/i);
+
+    // Test: Non-captured status (e.g. authorized) for payment.captured rejected (HTTP 400)
+    const authPayload = JSON.stringify({
+      event: "payment.captured",
+      payload: {
+        payment: { entity: { id: "pay_auth", order_id: "order_wh_1", amount: 50000, currency: "INR", status: "authorized" } },
+      },
+    });
+    const authSig = createHmac("sha256", WEBHOOK_SECRET).update(authPayload, "utf8").digest("hex");
+    const authRes = await webhookPost(
+      new Request("http://localhost:3000/api/webhooks/razorpay", {
+        method: "POST",
+        headers: { "x-razorpay-signature": authSig },
+        body: authPayload,
+      })
+    );
+    expect(authRes.status).toBe(400);
+    expect((await authRes.json()).error).toMatch(/captured/i);
+
+    // Test: Incorrect amount rejected (HTTP 400)
+    const wrongAmtPayload = JSON.stringify({
+      event: "payment.captured",
+      payload: {
+        payment: { entity: { id: "pay_wrong", order_id: "order_wh_1", amount: 1000, currency: "INR", status: "captured" } },
+      },
+    });
+    const wrongAmtSig = createHmac("sha256", WEBHOOK_SECRET).update(wrongAmtPayload, "utf8").digest("hex");
+    mockDonationFindUnique.mockResolvedValueOnce(null);
+    mockSponsorshipFindUnique.mockResolvedValueOnce(null);
+    mockDonationFindUnique.mockResolvedValueOnce({
+      id: "don_wh_1",
+      amount: 500, // ₹500 = 50000 paise != 1000 paise
+      paymentStatus: "Pending",
+      razorpayOrderId: "order_wh_1",
+    });
+    const wrongAmtRes = await webhookPost(
+      new Request("http://localhost:3000/api/webhooks/razorpay", {
+        method: "POST",
+        headers: { "x-razorpay-signature": wrongAmtSig },
+        body: wrongAmtPayload,
+      })
+    );
+    expect(wrongAmtRes.status).toBe(400);
+    expect((await wrongAmtRes.json()).error).toMatch(/amount/i);
+
+    // Test: Duplicate payment ID cross-table assigned to donation and sponsorship rejected (HTTP 409)
+    const dupPayPayload = JSON.stringify({
+      event: "payment.captured",
+      payload: {
+        payment: { entity: { id: "pay_reused", order_id: "order_wh_2", amount: 50000, currency: "INR", status: "captured" } },
+      },
+    });
+    const dupPaySig = createHmac("sha256", WEBHOOK_SECRET).update(dupPayPayload, "utf8").digest("hex");
+    mockDonationFindUnique.mockResolvedValueOnce(null);
+    // Already used in sponsorship!
+    mockSponsorshipFindUnique.mockResolvedValueOnce({ id: "spon_existing", razorpayPaymentId: "pay_reused" });
+    mockDonationFindUnique.mockResolvedValueOnce({
+      id: "don_wh_2",
+      amount: 500,
+      paymentStatus: "Pending",
+      razorpayOrderId: "order_wh_2",
+    });
+    const dupPayRes = await webhookPost(
+      new Request("http://localhost:3000/api/webhooks/razorpay", {
+        method: "POST",
+        headers: { "x-razorpay-signature": dupPaySig },
+        body: dupPayPayload,
+      })
+    );
+    expect(dupPayRes.status).toBe(409);
+    expect((await dupPayRes.json()).error).toMatch(/duplicate payment id/i);
+
+    // Test: order.paid without payment entity handled properly
+    const orderPaidPayload = JSON.stringify({
+      event: "order.paid",
+      payload: {
+        order: {
+          entity: {
+            id: "order_only_1",
+            amount: 50000,
+            amount_paid: 50000,
+            currency: "INR",
+            status: "paid",
+          },
+        },
+      },
+    });
+    const orderPaidSig = createHmac("sha256", WEBHOOK_SECRET).update(orderPaidPayload, "utf8").digest("hex");
+    mockDonationFindUnique.mockResolvedValueOnce({
+      id: "don_order_only",
+      amount: 500,
+      paymentStatus: "Pending",
+      razorpayOrderId: "order_only_1",
+    });
+    const orderPaidRes = await webhookPost(
+      new Request("http://localhost:3000/api/webhooks/razorpay", {
+        method: "POST",
+        headers: { "x-razorpay-signature": orderPaidSig },
+        body: orderPaidPayload,
+      })
+    );
+    expect(orderPaidRes.status).toBe(200);
+    expect((await orderPaidRes.json()).updated).toBe(true);
   });
 });

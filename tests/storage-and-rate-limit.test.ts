@@ -18,6 +18,7 @@ vi.mock("node:fs/promises", () => ({
 import { storeValidatedImage } from "@/lib/storage";
 import { isSafeImageUrl, shouldBypassImageOptimization } from "@/lib/image-url";
 import { checkDistributedRateLimit, resetRateLimitStore } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/security";
 
 describe("Vercel Blob Storage, Image URL Validation & Distributed Rate Limiting", () => {
   beforeEach(() => {
@@ -110,7 +111,7 @@ describe("Vercel Blob Storage, Image URL Validation & Distributed Rate Limiting"
 
     const fetchMock = vi.fn().mockResolvedValueOnce({
       ok: true,
-      json: async () => [{ result: 3 }, { result: 25000 }],
+      json: async () => [{ result: 3 }, { result: 1 }, { result: 25000 }],
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -122,5 +123,133 @@ describe("Vercel Blob Storage, Image URL Validation & Distributed Rate Limiting"
       "https://us1-test.upstash.io/pipeline",
       expect.objectContaining({ method: "POST" })
     );
+  });
+
+  it("documents and enforces Redis outage behavior: fails closed for sensitive routes in prod and fails open for non-sensitive", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://us1-test.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "upstash_test_token");
+
+    // Outage: Upstash returns network error
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network connection refused to Upstash"))
+    );
+
+    // 1. Sensitive route (login) fails closed in production — no silent fallback to per-instance memory!
+    const sensitiveRes = await checkDistributedRateLimit("login-ip:1.1.1.1", 5, 60_000, {
+      sensitive: true,
+    });
+    expect(sensitiveRes.allowed).toBe(false);
+    expect(sensitiveRes.backend).toBe("outage-blocked");
+
+    // 2. Non-sensitive route (e.g. general tracking) fails open to per-instance memory to preserve availability
+    const nonSensitiveRes = await checkDistributedRateLimit("search:1.1.1.1", 5, 60_000);
+    expect(nonSensitiveRes.allowed).toBe(true);
+    expect(nonSensitiveRes.backend).toBe("memory-fallback");
+
+    // 3. Unconfigured Redis in production for sensitive route also fails closed
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+    const unconfSensitive = await checkDistributedRateLimit("login-ip:2.2.2.2", 5, 60_000, {
+      sensitive: true,
+    });
+    expect(unconfSensitive.allowed).toBe(false);
+    expect(unconfSensitive.backend).toBe("unconfigured-blocked");
+  });
+
+  it("prevents permanent keys by deleting key when PEXPIRE fails", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://us1-test.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "upstash_test_token");
+
+    const fetchMock = vi
+      .fn()
+      // 1. Pipeline returns count: 1 and ttl: -1 (key created without expiry)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ result: 1 }, { result: 0 }, { result: -1 }],
+      })
+      // 2. Fallback PEXPIRE fails (e.g. 500 error)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      })
+      // 3. Emergency DEL succeeds
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ result: 1 }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await checkDistributedRateLimit("temp-key", 5, 60_000);
+
+    // Verify DEL was triggered for this bucket to prevent it from persisting permanently
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://us1-test.upstash.io/del/ayudar%3Arl%3Atemp-key",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("handles concurrent requests and synchronizes rate limiting across simulated serverless instances", async () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://us1-test.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "upstash_test_token");
+
+    // Shared stateful mock simulating central Redis server
+    let redisCounter = 0;
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      redisCounter++;
+      return {
+        ok: true,
+        json: async () => [{ result: redisCounter }, { result: 1 }, { result: 55000 }],
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Simulated Instance 1 makes call 1
+    const inst1_call1 = await checkDistributedRateLimit("shared-ip:8.8.8.8", 2, 60_000);
+    expect(inst1_call1.allowed).toBe(true);
+    expect(inst1_call1.remaining).toBe(1);
+
+    // Simulated Instance 2 makes call 1 (shares central Redis counter)
+    const inst2_call1 = await checkDistributedRateLimit("shared-ip:8.8.8.8", 2, 60_000);
+    expect(inst2_call1.allowed).toBe(true);
+    expect(inst2_call1.remaining).toBe(0);
+
+    // Simulated Instance 1 makes call 2 (exceeds limit of 2)
+    const inst1_call2 = await checkDistributedRateLimit("shared-ip:8.8.8.8", 2, 60_000);
+    expect(inst1_call2.allowed).toBe(false);
+    expect(inst1_call2.remaining).toBe(0);
+  });
+
+  it("validates trusted proxy IP handling and rejects header spoofing outside Vercel", () => {
+    // 1. On Vercel: x-vercel-forwarded-for is trusted
+    vi.stubEnv("VERCEL", "1");
+    const vercelReq = new Request("https://ayudar.org/api/login", {
+      headers: {
+        "x-vercel-forwarded-for": "203.0.113.195, 10.0.0.1",
+        "cf-connecting-ip": "1.1.1.1",
+        "x-forwarded-for": "9.9.9.9",
+      },
+    });
+    expect(getClientIp(vercelReq)).toBe("203.0.113.195");
+
+    // 2. Outside Vercel: x-vercel-forwarded-for is NOT trusted (spoof attempt ignored)
+    vi.stubEnv("VERCEL", "");
+    const spoofReq = new Request("https://ayudar.org/api/login", {
+      headers: {
+        "x-vercel-forwarded-for": "203.0.113.195", // attacker spoofing header
+        "x-real-ip": "198.51.100.2",               // real reverse proxy IP
+      },
+    });
+    expect(getClientIp(spoofReq)).toBe("198.51.100.2");
+
+    // 3. Malformed non-IP syntax is rejected by regex and falls back to "unknown"
+    const malformedReq = new Request("https://ayudar.org/api/login", {
+      headers: {
+        "x-forwarded-for": "<script>alert(1)</script>",
+      },
+    });
+    expect(getClientIp(malformedReq)).toBe("unknown");
   });
 });

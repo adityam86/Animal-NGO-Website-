@@ -23,8 +23,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Forbidden origin" }, { status: 403 });
     }
 
-    const ipRate = await checkDistributedRateLimit(`login-ip:${ip}`, 15, 15 * 60 * 1000);
+    const ipRate = await checkDistributedRateLimit(`login-ip:${ip}`, 15, 15 * 60 * 1000, { sensitive: true });
     if (!ipRate.allowed) {
+      if (ipRate.backend === "outage-blocked" || ipRate.backend === "unconfigured-blocked") {
+        return NextResponse.json(
+          { success: false, error: "Authentication service temporarily unavailable. Please try again shortly." },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: "Too many login attempts. Please try again later." },
         { status: 429, headers: { "Retry-After": String(ipRate.retryAfterSeconds) } }
@@ -45,8 +51,14 @@ export async function POST(request: Request) {
     }
 
     const { email, password } = parsed.data;
-    const acctRate = await checkDistributedRateLimit(`login-acct:${email}`, 8, 15 * 60 * 1000);
+    const acctRate = await checkDistributedRateLimit(`login-acct:${email}`, 8, 15 * 60 * 1000, { sensitive: true });
     if (!acctRate.allowed) {
+      if (acctRate.backend === "outage-blocked" || acctRate.backend === "unconfigured-blocked") {
+        return NextResponse.json(
+          { success: false, error: "Authentication service temporarily unavailable. Please try again shortly." },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: "Too many login attempts for this account. Try again later." },
         { status: 429, headers: { "Retry-After": String(acctRate.retryAfterSeconds) } }

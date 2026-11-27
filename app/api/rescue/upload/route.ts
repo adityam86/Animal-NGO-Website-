@@ -14,8 +14,14 @@ export async function POST(request: Request) {
     }
 
     const ip = getClientIp(request);
-    const rate = await checkDistributedRateLimit(`rescue-upload:${ip}`, 8, 15 * 60 * 1000);
+    const rate = await checkDistributedRateLimit(`rescue-upload:${ip}`, 8, 15 * 60 * 1000, { sensitive: true });
     if (!rate.allowed) {
+      if (rate.backend === "outage-blocked" || rate.backend === "unconfigured-blocked") {
+        return NextResponse.json(
+          { error: "Upload service temporarily unavailable. Please submit your rescue report directly." },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { error: "Too many photo uploads from this address. Please try again shortly." },
         { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }

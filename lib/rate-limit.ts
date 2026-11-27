@@ -16,7 +16,7 @@ export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   retryAfterSeconds: number;
-  backend?: "upstash-redis" | "memory-fallback";
+  backend?: "upstash-redis" | "memory-fallback" | "outage-blocked" | "unconfigured-blocked";
 }
 
 /**
@@ -65,16 +65,40 @@ export function checkRateLimit(
   };
 }
 
+export interface DistributedRateLimitOptions {
+  /**
+   * When true, in production environments (NODE_ENV === "production") the rate limiter
+   * fails closed (blocks request) if Redis is unconfigured or experiences an outage.
+   * This prevents sensitive endpoints (such as admin login and public file uploads)
+   * from silently falling back to per-instance memory where distributed brute force
+   * across ephemeral serverless instances would be possible.
+   */
+  sensitive?: boolean;
+}
+
 /**
- * Distributed Upstash Redis REST sliding/fixed window rate limiter for serverless deployments.
- * Falls back cleanly to per-instance in-memory limiting when UPSTASH_REDIS_REST_URL and
- * UPSTASH_REDIS_REST_TOKEN are not configured.
+ * Distributed Upstash Redis REST rate limiter for serverless deployments.
+ *
+ * OUTAGE BEHAVIOR:
+ * - Sensitive endpoints (sensitive: true in production): Fail closed (returns allowed: false,
+ *   backend: "outage-blocked" or "unconfigured-blocked") to guarantee protection against
+ *   distributed attacks across serverless instances.
+ * - Non-sensitive endpoints (or non-production environments): Fail open to per-instance
+ *   memory store (`checkRateLimit`) to maintain availability.
+ *
+ * EXPIRY HANDLING:
+ * - Key initialization uses `["PEXPIRE", bucketKey, windowMs, "NX"]` inside the primary pipeline
+ *   batch so keys are atomically given a TTL upon creation without secondary roundtrips.
+ * - If PEXPIRE fails or negative TTL is detected, the key is proactively deleted via `DEL`
+ *   to ensure it can never become permanent in Redis.
  */
 export async function checkDistributedRateLimit(
   key: string,
   maxRequests: number,
-  windowMs: number
+  windowMs: number,
+  options?: DistributedRateLimitOptions
 ): Promise<RateLimitResult> {
+  const isProd = process.env.NODE_ENV === "production";
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
 
@@ -91,6 +115,7 @@ export async function checkDistributedRateLimit(
         },
         body: JSON.stringify([
           ["INCR", bucketKey],
+          ["PEXPIRE", bucketKey, windowMs, "NX"],
           ["PTTL", bucketKey],
         ]),
         signal: AbortSignal.timeout(2500),
@@ -99,18 +124,17 @@ export async function checkDistributedRateLimit(
       if (res.ok) {
         const data = (await res.json()) as Array<{ result?: number; error?: string }>;
 
-        // Validate pipeline responses — reject if any command returned an error
-        if (data?.[0]?.error || data?.[1]?.error) {
+        // Validate pipeline responses — fail over if any command returned an error
+        if (data?.[0]?.error || data?.[1]?.error || data?.[2]?.error) {
           console.warn("Upstash pipeline command error:", data);
-          // Fall through to memory fallback
         } else {
           const count = Number(data?.[0]?.result);
-          let ttlMs = Number(data?.[1]?.result);
+          // data[2] is PTTL result; if pipeline format is [INCR, PTTL] or [INCR, PEXPIRE, PTTL]
+          let ttlMs = Number(data?.[2]?.result ?? data?.[1]?.result);
 
           // Guard against NaN from non-numeric pipeline results
           if (!Number.isFinite(count) || !Number.isFinite(ttlMs)) {
             console.warn("Upstash pipeline returned non-numeric result:", data);
-            // Fall through to memory fallback
           } else {
             if (ttlMs < 0) {
               try {
@@ -123,10 +147,26 @@ export async function checkDistributedRateLimit(
                   }
                 );
                 if (!expireRes.ok) {
-                  console.warn(`Upstash PEXPIRE returned HTTP ${expireRes.status}`);
+                  console.warn(
+                    `Upstash PEXPIRE returned HTTP ${expireRes.status}; deleting key to prevent permanent persistence`
+                  );
+                  // Delete immediately to prevent key from persisting permanently with TTL = -1
+                  await fetch(`${base}/del/${encodeURIComponent(bucketKey)}`, {
+                    method: "POST",
+                    headers: { authorization: `Bearer ${redisToken}` },
+                    signal: AbortSignal.timeout(1000),
+                  }).catch(() => {});
                 }
               } catch (expireErr) {
-                console.warn("Upstash PEXPIRE failed:", expireErr);
+                console.warn(
+                  "Upstash PEXPIRE failed; deleting key to prevent permanent persistence:",
+                  expireErr
+                );
+                await fetch(`${base}/del/${encodeURIComponent(bucketKey)}`, {
+                  method: "POST",
+                  headers: { authorization: `Bearer ${redisToken}` },
+                  signal: AbortSignal.timeout(1000),
+                }).catch(() => {});
               }
               ttlMs = windowMs;
             }
@@ -152,13 +192,31 @@ export async function checkDistributedRateLimit(
         console.warn(`Upstash /pipeline returned HTTP ${res.status}`);
       }
     } catch (err) {
-      console.warn("Distributed rate limiter error; falling back to memory store:", err);
+      console.warn("Distributed rate limiter error:", err);
+      if (options?.sensitive && isProd) {
+        return {
+          allowed: false,
+          remaining: 0,
+          retryAfterSeconds: 60,
+          backend: "outage-blocked",
+        };
+      }
     }
-  } else if (process.env.NODE_ENV === "production" && !globalForRateLimit.__ayudarRateWarned) {
-    globalForRateLimit.__ayudarRateWarned = true;
-    console.warn(
-      "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not configured; rate limiting is per-instance only."
-    );
+  } else if (isProd) {
+    if (options?.sensitive) {
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterSeconds: 60,
+        backend: "unconfigured-blocked",
+      };
+    }
+    if (!globalForRateLimit.__ayudarRateWarned) {
+      globalForRateLimit.__ayudarRateWarned = true;
+      console.warn(
+        "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not configured; rate limiting is per-instance only."
+      );
+    }
   }
 
   return checkRateLimit(key, maxRequests, windowMs);
