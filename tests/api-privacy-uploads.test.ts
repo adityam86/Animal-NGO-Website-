@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const {
   mockCookieGet,
@@ -105,6 +105,13 @@ describe("Data Privacy, CSV Security, Uploads & Public Endpoints", () => {
     vi.stubEnv("PRIVATE_STORAGE_SECRET_KEY", "");
     vi.stubEnv("PRIVATE_STORAGE_ENDPOINT", "");
     vi.stubEnv("PUBLIC_STORAGE_BUCKET", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "");
+    vi.stubEnv("GOOGLE_API_KEY", "");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("blocks unauthenticated and lower-privilege CSV exports and neutralizes CSV formula injection", async () => {
@@ -277,6 +284,74 @@ describe("Data Privacy, CSV Security, Uploads & Public Endpoints", () => {
     expect(triageRes.status).toBe(200);
     const triageJson = await triageRes.json();
     expect(triageJson.isEmergency).toBe(true);
+    expect(triageJson.provider).toBe("rules");
+    expect(triageJson.hotline).toBe("+91 73840 20901");
     expect(triageJson.disclaimer).toContain("not a substitute");
+  });
+
+  it("uses configured OpenAI or Gemini LLM with conversation history and falls back safely on upstream error", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test-key");
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  reply: "Keep the injured cat warm inside a towel-lined carrier.",
+                  isEmergency: true,
+                  title: "🚨 Trauma Stabilization",
+                  steps: ["Place a clean towel gently under the cat.", "Keep away from loud traffic."],
+                  warnings: ["Never administer human painkillers."],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const openaiRes = await aiChatPost(
+      new Request("http://localhost:3000/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "She cannot walk properly now, what next?",
+          history: [
+            { sender: "user", text: "Found an injured cat near Kumarpur" },
+            { sender: "bot", text: "Check if she is breathing steadily." },
+          ],
+        }),
+      })
+    );
+    expect(openaiRes.status).toBe(200);
+    const openaiJson = await openaiRes.json();
+    expect(openaiJson.provider).toBe("openai");
+    expect(openaiJson.isEmergency).toBe(true);
+    expect(openaiJson.dispatchUrl).toBe("/rescue");
+    expect(openaiJson.hotline).toBe("+91 73840 20901");
+    expect(openaiJson.steps).toHaveLength(2);
+    expect(openaiJson.reply).toContain("veterinary diagnosis");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Verify Gemini support and automatic rules fallback if Gemini fails
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "gm-test-key");
+    const geminiFallbackFetch = vi.fn().mockResolvedValueOnce(new Response("upstream error", { status: 500 }));
+    vi.stubGlobal("fetch", geminiFallbackFetch);
+
+    const fallbackRes = await aiChatPost(
+      new Request("http://localhost:3000/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Where is the Ayudar shelter?" }),
+      })
+    );
+    expect(fallbackRes.status).toBe(200);
+    const fallbackJson = await fallbackRes.json();
+    expect(fallbackJson.provider).toBe("rules");
+    expect(fallbackJson.reply).toContain("Tilabad, Kumarpur, Asansol");
   });
 });

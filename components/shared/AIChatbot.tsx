@@ -54,7 +54,13 @@ export default function AIChatbot() {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userText })
+        body: JSON.stringify({
+          message: userText,
+          history: messages.slice(-6).map((m) => ({
+            sender: m.sender,
+            text: m.text,
+          })),
+        }),
       });
       const data = await res.json();
       setMessages(prev => [
@@ -146,9 +152,9 @@ export default function AIChatbot() {
           style={{
             width: "min(380px, calc(100vw - 2rem))",
             height: "560px",
-            background: "white",
-            borderRadius: "var(--radius-2xl)",
-            boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
+            background: "var(--color-surface)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "0 16px 40px rgba(0,0,0,0.22)",
             border: "1px solid var(--cream-200)",
             display: "flex",
             flexDirection: "column",
@@ -279,7 +285,7 @@ export default function AIChatbot() {
               >
                 <div
                   style={{
-                    background: msg.sender === "user" ? "var(--saffron-600)" : "white",
+                    background: msg.sender === "user" ? "var(--saffron-600)" : "var(--color-surface)",
                     color: msg.sender === "user" ? "white" : "var(--stone-800)",
                     padding: "0.75rem 1rem",
                     borderRadius: "var(--radius-lg)",
@@ -409,16 +415,16 @@ export default function AIChatbot() {
               <div
                 style={{
                   alignSelf: "flex-start",
-                  background: "white",
-                  color: "var(--stone-400)",
+                  background: "var(--color-surface)",
+                  color: "var(--stone-500)",
                   padding: "0.6rem 0.9rem",
-                  borderRadius: "var(--radius-lg)",
+                  borderRadius: "var(--radius-md)",
                   fontSize: "0.8rem",
                   fontStyle: "italic",
                   border: "1px solid var(--cream-200)",
                 }}
               >
-                Preparing clinical triage instructions...
+                Preparing veterinary guidance...
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -432,7 +438,7 @@ export default function AIChatbot() {
               borderTop: "1px solid var(--cream-200)",
               display: "flex",
               gap: "0.5rem",
-              background: "white",
+              background: "var(--color-surface)",
             }}
           >
             <input
@@ -443,7 +449,9 @@ export default function AIChatbot() {
               style={{
                 flex: 1,
                 border: "1px solid var(--cream-300)",
-                borderRadius: "var(--radius-md)",
+                background: "var(--cream-50)",
+                color: "var(--stone-800)",
+                borderRadius: "var(--radius-sm)",
                 padding: "0.55rem 0.85rem",
                 fontSize: "0.84rem",
                 outline: "none",

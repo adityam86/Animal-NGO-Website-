@@ -131,6 +131,15 @@ export const contactCreateSchema = z.object({
 
 export const chatMessageSchema = z.object({
   message: z.string().transform((v) => sanitizePlainText(v, 1000)).optional(),
+  history: z
+    .array(
+      z.object({
+        sender: z.enum(["user", "bot"]),
+        text: z.string().transform((v) => sanitizePlainText(v, 800)),
+      })
+    )
+    .max(8)
+    .optional(),
 });
 
 export const animalFormSchema = z.object({

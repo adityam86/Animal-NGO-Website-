@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { chatMessageSchema } from "@/lib/validation";
+import { AYUDAR_LEGAL, CONTACT_INFO } from "@/lib/data";
 
 const FIRST_AID_DISCLAIMER =
   "Note: This information is supportive first-aid guidance only and is not a substitute for qualified veterinary diagnosis or emergency clinic treatment.";
@@ -15,6 +16,18 @@ interface TriageTopic {
   response: string;
 }
 
+interface StructuredChatPayload {
+  reply: string;
+  isEmergency: boolean;
+  title?: string;
+  steps?: string[];
+  warnings?: string[];
+  disclaimer?: string;
+  dispatchUrl?: string;
+  hotline?: string;
+  provider?: "openai" | "gemini" | "rules";
+}
+
 const EMERGENCY_TRIAGE: TriageTopic[] = [
   {
     keywords: ["bleeding", "blood", "wound", "cut", "hit by car", "accident", "run over", "injured dog", "injured cat"],
@@ -24,29 +37,31 @@ const EMERGENCY_TRIAGE: TriageTopic[] = [
       "Apply firm, continuous direct pressure to the wound using a clean cotton cloth, towel, or sterile gauze.",
       "Keep the animal lying down, still, and calm. Cover them with a dry blanket to prevent traumatic shock.",
       "If transport is needed, slide a flat wooden board, cardboard, or blanket underneath to act as an emergency stretcher.",
-      "Keep your hands safe: Injured animals in acute pain may snap instinctively. Approach gently from the side."
+      "Keep your hands safe: Injured animals in acute pain may snap instinctively. Approach gently from the side.",
     ],
     safetyWarnings: [
       "⚠️ NEVER administer human painkillers (Paracetamol, Crocin, Ibuprofen, Disprin) — they are highly lethal to dogs & cats.",
-      "⚠️ DO NOT apply a tight tourniquet around the neck or joints."
+      "⚠️ DO NOT apply a tight tourniquet around the neck or joints.",
     ],
-    response: "🚨 EMERGENCY FIRST-AID FOR BLEEDING / INJURY:\n\n1. Press a clean cloth firmly against the wound.\n2. Keep the animal warm and quiet to prevent shock.\n3. Slide cardboard or blanket underneath as a stretcher.\n\n⚠️ NEVER give human medicines like Paracetamol/Crocin (lethal to animals).\n\nDispatching our rescue ambulance is critical:"
+    response:
+      "🚨 EMERGENCY FIRST-AID FOR BLEEDING / INJURY:\n\n1. Press a clean cloth firmly against the wound.\n2. Keep the animal warm and quiet to prevent shock.\n3. Slide cardboard or blanket underneath as a stretcher.\n\n⚠️ NEVER give human medicines like Paracetamol/Crocin (lethal to animals).\n\nDispatching our rescue team is critical:",
   },
   {
-    keywords: ["heat stroke", "heatstroke", "hot", "panting", "fainted", "sun stroke", "cow heat", "dehydration"],
+    keywords: ["heat stroke", "heatstroke", "panting heavily", "fainted", "sun stroke", "cow heat", "dehydration"],
     title: "☀️ Emergency Triage: Heat Stroke & Dehydration",
     isEmergency: true,
     firstAidSteps: [
       "Immediately move the animal into shade or a cool, ventilated area.",
       "Gently pour room-temperature or tap water over their body, paws, ears, and groin (DO NOT use ice water, which causes vascular shock).",
       "Offer cool fresh water in small sips if conscious. Never force water into an unconscious animal's mouth.",
-      "For cattle/cows: splash water generously over the forehead, horns, and back, and fan them continuously."
+      "For cattle/cows: splash water generously over the forehead, horns, and back, and fan them continuously.",
     ],
     safetyWarnings: [
       "⚠️ DO NOT submerge animal in ice water or apply ice packs directly.",
-      "⚠️ If the animal is unresponsive or convulsing, seek urgent veterinary intervention."
+      "⚠️ If the animal is unresponsive or convulsing, seek urgent veterinary intervention.",
     ],
-    response: "☀️ EMERGENCY FIRST-AID FOR HEAT STROKE:\n\n1. Move immediately into deep shade / cool area.\n2. Wet paws, ears, and body with tap water (NOT ice water).\n3. Fan gently to speed up evaporative cooling.\n4. Offer small sips of water if conscious.\n\nOur mobile vet unit can administer IV fluids:"
+    response:
+      "☀️ EMERGENCY FIRST-AID FOR HEAT STROKE:\n\n1. Move immediately into deep shade / cool area.\n2. Wet paws, ears, and body with tap water (NOT ice water).\n3. Fan gently to speed up evaporative cooling.\n4. Offer small sips of water if conscious.\n\nOur mobile rescue team can coordinate urgent stabilization:",
   },
   {
     keywords: ["puppy", "puppies", "kitten", "kittens", "abandoned", "newborn", "neonatal", "stranded puppy"],
@@ -56,13 +71,14 @@ const EMERGENCY_TRIAGE: TriageTopic[] = [
       "Step back and observe for 30-45 minutes: The mother dog/cat often goes searching for food and will return.",
       "If mother does not return or area is hazardous (rain/traffic), move them into a dry, warm cardboard box lined with clean towels.",
       "Keep them warm: Neonatal pups/kittens cannot regulate body temperature. Place a warm water bottle wrapped in a thick towel next to them.",
-      "If feeding is urgent before rescue arrives, use lukewarm goat's milk or boiled water with a pinch of glucose using a clean syringe or dropper."
+      "If feeding is urgent before rescue arrives, consult a vet first and keep them warm before offering lukewarm kitten/puppy formula with a clean syringe or dropper.",
     ],
     safetyWarnings: [
-      "⚠️ NEVER feed cold undiluted cow's milk — it causes fatal digestive distress and dehydration in puppies/kittens.",
-      "⚠️ NEVER feed a cold puppy; warm their body first before offering fluids."
+      "⚠️ NEVER feed cold or undiluted cow's milk — it causes fatal digestive distress and dehydration in puppies/kittens.",
+      "⚠️ NEVER feed a cold puppy or kitten; warm their body gently first.",
     ],
-    response: "🐾 FIRST-AID FOR ABANDONED PUPPIES / KITTENS:\n\n1. Keep them WARM immediately using a towel-lined box with a warm bottle.\n2. Check if the mother is foraging nearby before removing them.\n3. DO NOT feed regular cow's milk (causes deadly diarrhea).\n4. Keep safe from stray traffic and rain.\n\nOur foster team can take them into intensive care:"
+    response:
+      "🐾 FIRST-AID FOR ABANDONED PUPPIES / KITTENS:\n\n1. Keep them WARM immediately using a towel-lined box with a wrapped warm bottle.\n2. Check if the mother is foraging nearby before moving them.\n3. DO NOT feed regular cow's milk.\n4. Keep safe from traffic and rain.\n\nReach out to our rescue team if they need shelter intake:",
   },
   {
     keywords: ["poison", "poisoning", "toxic", "vomit", "vomiting", "frothing", "rat poison", "chemical"],
@@ -71,74 +87,287 @@ const EMERGENCY_TRIAGE: TriageTopic[] = [
     firstAidSteps: [
       "Safely identify or photograph the substance/packaging if possible for the attending veterinarian.",
       "Prevent any other animals from accessing the area.",
-      "Keep the animal in a calm, dark, well-ventilated room with minimal stimuli.",
-      "If caustic chemical is on the skin/fur, rinse with copious lukewarm water."
+      "Keep the animal in a calm, well-ventilated space with minimal stimuli.",
+      "If a chemical is on skin/fur, rinse gently with clean lukewarm water while wearing gloves.",
     ],
     safetyWarnings: [
       "⚠️ DO NOT induce vomiting unless directly instructed by a qualified veterinarian (corrosives burn the esophagus twice).",
-      "⚠️ DO NOT feed oil or raw eggs."
+      "⚠️ DO NOT force-feed oil or home remedies.",
     ],
-    response: "☣️ EMERGENCY FIRST-AID FOR POISONING:\n\n1. Photograph or identify the suspected substance.\n2. Keep animal calm and ventilated; prevent seizures.\n3. DO NOT induce vomiting without veterinarian guidance.\n\nImmediate medical antidotes and gastric lavage are required:"
+    response:
+      "☣️ EMERGENCY FIRST-AID FOR POISONING:\n\n1. Photograph or identify the suspected substance.\n2. Keep the animal calm and away from toxins.\n3. DO NOT induce vomiting without veterinarian instruction.\n\nUrgent clinical intervention is required:",
   },
   {
-    keywords: ["fracture", "limp", "limping", "broken leg", "bone", "cannot walk", "spine"],
+    keywords: ["fracture", "limp", "limping", "broken leg", "broken bone", "cannot walk", "spine injury"],
     title: "🦴 Emergency Triage: Suspected Fracture / Broken Bone",
     isEmergency: true,
     firstAidSteps: [
-      "Do NOT try to push, pull, or set the broken bone.",
-      "Immobilize the animal gently. Slide a firm cardboard base or blanket beneath them to transport without flexing the spine or limb.",
-      "Speak in a gentle, reassuring tone. Apply a soft muzzle if handling is painful, as even friendly animals may bite defensively."
+      "Do NOT try to push, pull, or set a broken bone.",
+      "Immobilize the animal gently. Slide a firm cardboard sheet or folded blanket beneath them to lift without flexing the spine.",
+      "Speak softly and avoid sudden grabs around painful limbs; startled animals can bite defensively.",
     ],
     safetyWarnings: [
-      "⚠️ DO NOT wrap splints tightly without veterinary training as it cuts off blood circulation.",
-      "⚠️ Keep spine aligned if struck by a vehicle."
+      "⚠️ DO NOT wrap tight splints without veterinary supervision — it restricts blood flow.",
+      "⚠️ Keep head and spine level if struck by a vehicle.",
     ],
-    response: "🦴 FIRST-AID FOR SUSPECTED FRACTURE:\n\n1. Minimize all movement; do NOT attempt to straighten the limb.\n2. Support the body with a rigid cardboard sheet or blanket stretcher.\n3. Keep calm and avoid sudden touches to the injured area.\n\nOur rescue ambulance has splints and pain medication ready:"
+    response:
+      "🦴 FIRST-AID FOR SUSPECTED FRACTURE:\n\n1. Minimize all movement; never attempt to straighten the limb.\n2. Slide a flat cardboard base or blanket gently underneath.\n3. Keep calm and reduce street traffic noise nearby.\n\nSubmit a pin so our team can assist:",
   },
   {
-    keywords: ["cow bloat", "bloated cow", "choking cow", "downed cow", "cow accident"],
-    title: "🐄 Emergency Triage: Cattle Distress & Bloat",
+    keywords: ["cow bloat", "bloated cow", "choking cow", "downed cow", "cow accident", "injured cow"],
+    title: "🐄 Emergency Triage: Cattle Distress & Trauma",
     isEmergency: true,
     firstAidSteps: [
-      "Position the cow in sternal recumbency (upright sitting on chest), NOT flat on its side, so rumen gas can escape.",
-      "Keep onlookers and stray dogs away to prevent acute cardiac stress.",
-      "Offer shade and cool clean water.",
-      "If foreign object/plastic is lodged in mouth and visible, gently remove only if safe to do so."
+      "Keep the cow upright sitting on its chest (sternal recumbency), not flat on its side, so breathing and rumen gas aren't restricted.",
+      "Move onlookers and stray dogs away to prevent panic and cardiac stress.",
+      "Provide shade and offer fresh water only if the animal is alert and able to swallow.",
     ],
     safetyWarnings: [
-      "⚠️ Do NOT puncture the rumen yourself without veterinary equipment.",
-      "⚠️ Stay clear of kicking legs when a distressed cow is down."
+      "⚠️ Never attempt any invasive puncture or homemade drenches without a veterinarian.",
+      "⚠️ Stay clear of hooves and horns when a distressed cow tries to stand.",
     ],
-    response: "🐄 EMERGENCY FIRST-AID FOR CATTLE / COWS:\n\n1. Prop cow sitting upright on its chest (prevents asphyxiation from rumen gas).\n2. Provide shade and clear the crowd to reduce stress.\n3. Keep head elevated and clear of dirt/water.\n\nOur dedicated Gaushala ambulance and large-animal vet are on standby:"
-  }
+    response:
+      "🐄 EMERGENCY FIRST-AID FOR CATTLE / COWS:\n\n1. Keep the cow propped upright on its chest if safely possible.\n2. Provide shade and clear away crowds/dogs.\n3. Keep the head clear and calm.\n\nAlert our Gaushala & rescue team immediately:",
+  },
 ];
 
 const GENERAL_KNOWLEDGE = [
   {
-    keywords: ["adopt", "adoption", "how to adopt", "home", "process"],
-    response: "🐾 ADOPTION PROCESS AT AYUDAR:\n\n1. Browse our verified rescues at `/animals`.\n2. Fill out our online adoption form.\n3. Our adoption counselor will schedule an informal visit to meet the companion.\n4. Complete the home check and take your new family member home vaccinated & sterilized! ❤️"
+    keywords: ["adopt", "adoption", "how to adopt", "adoptable"],
+    response:
+      "🐾 ADOPTION AT AYUDAR:\n\n1. Browse animals ready for adoption at `/animals`.\n2. Submit the adoption inquiry form at `/adoption`.\n3. Our adoption coordinator schedules a meet-and-greet and home readiness check.\n4. Take your vaccinated & sterilized companion home.",
   },
   {
     keywords: ["donate", "donation", "money", "funds", "tax", "80g", "exempt"],
-    response: "❤️ DONATING TO AYUDAR:\n\nAll donations directly fund emergency surgeries, daily feed for 100+ shelter animals, and rescue fuel.\n\n✅ 80G Tax Exemption Certificate provided instantly.\n💳 UPI, Net Banking, and Cards accepted via our secure portal at `/donate`."
+    response: `❤️ DONATING TO AYUDAR:\n\nYour contribution supports street rescue operations, veterinary medicines, daily nutrition, and sanctuary care.\n\n✅ Eligible under Section 80G (URN ${AYUDAR_LEGAL.urn80G}).\n💳 UPI, Net Banking, and Cards accepted securely via /donate.`,
   },
   {
-    keywords: ["sponsor", "sponsorship", "monthly care", "cow care", "feed"],
-    response: "🌾 ANIMAL SPONSORSHIP:\n\nYou can sponsor an individual cow, dog, or cat! Options range from ₹500/month (Food Care) to ₹3,000/month (Full Medical & Sanctuary Care). Visit `/sponsor` to view animals waiting for a guardian angel."
+    keywords: ["sponsor", "sponsorship", "monthly care"],
+    response:
+      "🌾 ANIMAL SPONSORSHIP:\n\nYou can sponsor a sanctuary resident dog, cat, or cow with Food (₹500/mo), Medical (₹1,000/mo), Care (₹1,500/mo), or Full Care (₹3,000/mo) plans at `/sponsor`.",
   },
   {
-    keywords: ["volunteer", "help", "work", "join", "intern"],
-    response: "🤝 BECOME A VOLUNTEER:\n\nWe welcome volunteers for rescue dispatches, shelter care, feeding drives, photography, and community awareness. Fill out our quick form at `/volunteer` to join our Raniganj rescue network!"
+    keywords: ["volunteer", "join team", "intern", "feeding drive"],
+    response:
+      "🤝 BECOME A VOLUNTEER:\n\nJoin weekend feeding drives, transport support, foster care, or shelter outreach in Tilabad/Asansol, Raniganj, and Durgapur by applying at `/volunteer`.",
   },
   {
-    keywords: ["gaushala", "cow sanctuary", "cows", "cattle"],
-    response: "🐄 AYUDAR GAUSHALA:\n\nOur sanctuary provides lifetime care, nutritious green fodder, and medical treatments for over 45 rescued cows, calves, and retired working cattle. Learn more at `/cow-care`!"
+    keywords: ["gaushala", "cow care", "cattle"],
+    response:
+      "🐄 AYUDAR GAUSHALA:\n\nOur Gaushala provides protective shelter, fodder, and hoof/wound treatment for abandoned and roadside-injured cows and calves. Explore details at `/cow-care`.",
   },
   {
-    keywords: ["location", "address", "asansol", "kumarpur", "tilabad", "raniganj", "contact", "timing", "shelter"],
-    response: "📍 AYUDAR SHELTER (ANIMAL HOSPITAL):\n\nAddress: PW3Q+5F, Tilabad, Kumarpur, Asansol, West Bengal 713304.\nAmbulance: 24/7 Emergency Response across Asansol, Raniganj & Durgapur.\nVisiting Hours: Mon–Sat 9 AM – 7 PM (Emergency 24/7).\nMain Helpline & WhatsApp (Tarasankar Nag): +91 73840 20901\nMembers: Rohan Mishra (+91 76026 66102), Sourav (+91 91345 81378)"
-  }
+    keywords: ["location", "address", "asansol", "kumarpur", "tilabad", "raniganj", "contact", "timing", "shelter", "phone", "whatsapp", "email", "facebook", "instagram"],
+    response:
+      `📍 ${AYUDAR_LEGAL.name.toUpperCase()}:\n\n` +
+      `Address: ${CONTACT_INFO.address}\n` +
+      `Hours: ${CONTACT_INFO.hours}\n` +
+      `Main Helpline & WhatsApp (${CONTACT_INFO.primaryContact.name}): ${CONTACT_INFO.emergencyPhone}\n` +
+      `Members: Rohan Mishra (+91 76026 66102), Sourav (+91 91345 81378)\n` +
+      `Email: ${CONTACT_INFO.email}`,
+  },
 ];
+
+function buildSystemPrompt(): string {
+  return [
+    `You are the Ayudar Emergency First-Aid & Animal Welfare Assistant for "${AYUDAR_LEGAL.name}" ("${AYUDAR_LEGAL.tagline}").`,
+    `Mission: "${AYUDAR_LEGAL.mission}"`,
+    `Verified Organization Details:`,
+    `- Address: ${CONTACT_INFO.address}`,
+    `- Service Area: Asansol, Tilabad, Kumarpur, Raniganj, Durgapur & nearby Paschim Bardhaman corridors`,
+    `- Hours: ${CONTACT_INFO.hours}`,
+    `- Main Helpline & WhatsApp (${CONTACT_INFO.primaryContact.name}): ${CONTACT_INFO.emergencyPhone} (${CONTACT_INFO.whatsappUrl})`,
+    `- Members on Call: Rohan Mishra (+91 76026 66102), Sourav (+91 91345 81378)`,
+    `- Official Email: ${CONTACT_INFO.email}`,
+    `- Statutory Credentials: Reg. ${AYUDAR_LEGAL.regNo}, NITI Aayog ${AYUDAR_LEGAL.nitiAayogId}, CSR-1 ${AYUDAR_LEGAL.csrRegNo}, 80G URN ${AYUDAR_LEGAL.urn80G} (${AYUDAR_LEGAL.urn80GDate})`,
+    `- Website Pages: /rescue (report injured animal with GPS & photo), /rescue/track (track report ID), /animals & /adoption (adoptable residents), /donate (80G Razorpay donations), /sponsor (monthly care), /cow-care (Gaushala), /shelter, /volunteer, /contact, /about.`,
+    `Strict Clinical & Honesty Rules:`,
+    `1. NEVER invent rescue counts, shelter headcounts, staff doctor names, or unverified statistics.`,
+    `2. NEVER recommend human painkillers (Paracetamol, Crocin, Ibuprofen, Aspirin, Diclofenac) or specific prescription drug dosages.`,
+    `3. If the user describes ANY injured, sick, bleeding, poisoned, orphaned newborn, heat-stroked, trapped, or distressed animal, set "isEmergency": true, give calm numbered immediate safety steps in "steps", clear lethal/unsafe warnings in "warnings", and urge them to call ${CONTACT_INFO.emergencyPhone} or submit /rescue.`,
+    `4. Keep "reply" warm, concise, practical, and easy to read on a phone during stress.`,
+    `5. Return ONLY a valid JSON object matching this exact structure:`,
+    `{"reply":"string","isEmergency":boolean,"title":"string or null","steps":["string"],"warnings":["string"]}`,
+  ].join("\n");
+}
+
+function normalizeLlmJson(rawText: string, provider: "openai" | "gemini"): StructuredChatPayload | null {
+  try {
+    const cleaned = rawText
+      .trim()
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "");
+    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    const reply = typeof parsed.reply === "string" ? parsed.reply.trim() : "";
+    if (!reply) return null;
+
+    const isEmergency = Boolean(parsed.isEmergency);
+    const title = typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : undefined;
+    const steps = Array.isArray(parsed.steps)
+      ? parsed.steps.filter((s): s is string => typeof s === "string" && s.trim().length > 0).slice(0, 6)
+      : undefined;
+    const warnings = Array.isArray(parsed.warnings)
+      ? parsed.warnings.filter((w): w is string => typeof w === "string" && w.trim().length > 0).slice(0, 4)
+      : undefined;
+
+    return {
+      reply: isEmergency ? `${reply}\n\n${FIRST_AID_DISCLAIMER}` : reply,
+      isEmergency,
+      ...(isEmergency ? { title: title || "🚨 Emergency First-Aid & Rescue Guidance" } : {}),
+      ...(steps && steps.length > 0 ? { steps } : {}),
+      ...(warnings && warnings.length > 0 ? { warnings } : {}),
+      disclaimer: FIRST_AID_DISCLAIMER,
+      ...(isEmergency
+        ? {
+            dispatchUrl: "/rescue",
+            hotline: CONTACT_INFO.emergencyPhone,
+          }
+        : {}),
+      provider,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function queryOpenAI(
+  message: string,
+  history: Array<{ sender: "user" | "bot"; text: string }>
+): Promise<StructuredChatPayload | null> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const messages = [
+    { role: "system", content: buildSystemPrompt() },
+    ...history.slice(-6).map((h) => ({
+      role: h.sender === "user" ? "user" : "assistant",
+      content: h.text,
+    })),
+    { role: "user", content: message },
+  ];
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.3,
+      max_tokens: 550,
+      response_format: { type: "json_object" },
+      messages,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`OpenAI API HTTP ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) return null;
+  return normalizeLlmJson(content, "openai");
+}
+
+async function queryGemini(
+  message: string,
+  history: Array<{ sender: "user" | "bot"; text: string }>
+): Promise<StructuredChatPayload | null> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const contents = [
+    ...history.slice(-6).map((h) => ({
+      role: h.sender === "user" ? "user" : "model",
+      parts: [{ text: h.text }],
+    })),
+    { role: "user", parts: [{ text: message }] },
+  ];
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+        contents,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 600,
+          responseMimeType: "application/json",
+        },
+      }),
+      signal: AbortSignal.timeout(10_000),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Gemini API HTTP ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) return null;
+  return normalizeLlmJson(text, "gemini");
+}
+
+function getRuleBasedResponse(message: string): StructuredChatPayload {
+  const cleanMsg = message.toLowerCase().trim();
+
+  for (const triage of EMERGENCY_TRIAGE) {
+    if (triage.keywords.some((k) => cleanMsg.includes(k))) {
+      return {
+        reply: `${triage.response}\n\n${FIRST_AID_DISCLAIMER}`,
+        isEmergency: true,
+        title: triage.title,
+        steps: triage.firstAidSteps,
+        warnings: triage.safetyWarnings,
+        disclaimer: FIRST_AID_DISCLAIMER,
+        dispatchUrl: "/rescue",
+        hotline: CONTACT_INFO.emergencyPhone,
+        provider: "rules",
+      };
+    }
+  }
+
+  for (const item of GENERAL_KNOWLEDGE) {
+    if (item.keywords.some((k) => cleanMsg.includes(k))) {
+      return {
+        reply: item.response,
+        isEmergency: false,
+        disclaimer: FIRST_AID_DISCLAIMER,
+        provider: "rules",
+      };
+    }
+  }
+
+  return {
+    reply:
+      "I'm the Ayudar Animal Care Assistant! I can help you with:\n\n" +
+      "🚨 Emergency First-Aid Triage (bleeding, fractures, heat stroke, abandoned pups)\n" +
+      "🐕 Animal Adoption & Shelter Visits (Tilabad, Kumarpur, Asansol)\n" +
+      "🐄 Gaushala & Sponsorship Plans (/cow-care, /sponsor)\n" +
+      "❤️ 80G Tax-Exempt Donations (/donate) & Volunteering (/volunteer)\n\n" +
+      `For immediate street animal emergencies, call or WhatsApp Tarasankar Nag at ${CONTACT_INFO.emergencyPhone}.`,
+    isEmergency: false,
+    disclaimer: FIRST_AID_DISCLAIMER,
+    provider: "rules",
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -151,14 +380,14 @@ export async function POST(request: Request) {
     if (!rate.allowed) {
       return NextResponse.json(
         {
-          reply: "Please slow down slightly — for immediate animal emergencies call +91 73840 20901.",
+          reply: `Please slow down slightly — for immediate animal emergencies call ${CONTACT_INFO.emergencyPhone}.`,
           isEmergency: false,
         },
         { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
       );
     }
 
-    const bodyResult = await readBoundedJson(request, 16 * 1024);
+    const bodyResult = await readBoundedJson(request, 24 * 1024);
     if (!bodyResult.ok) {
       return NextResponse.json({ error: bodyResult.error }, { status: bodyResult.status });
     }
@@ -169,60 +398,41 @@ export async function POST(request: Request) {
     }
 
     const message = parsed.data.message || "";
+    const history = parsed.data.history || [];
+
     if (!message) {
       return NextResponse.json({
         reply: "Hello! I am the Ayudar Emergency & Animal Care Assistant. How can I assist you today?",
         isEmergency: false,
         disclaimer: FIRST_AID_DISCLAIMER,
+        provider: "rules",
       });
     }
 
-    const cleanMsg = message.toLowerCase().trim();
-
-    // 1. Check for Emergency Triage Match
-    for (const triage of EMERGENCY_TRIAGE) {
-      if (triage.keywords.some((k) => cleanMsg.includes(k))) {
-        return NextResponse.json({
-          reply: `${triage.response}\n\n${FIRST_AID_DISCLAIMER}`,
-          isEmergency: true,
-          title: triage.title,
-          steps: triage.firstAidSteps,
-          warnings: triage.safetyWarnings,
-          disclaimer: FIRST_AID_DISCLAIMER,
-          dispatchUrl: "/rescue",
-          hotline: "+91 73840 20901",
-        });
+    // Attempt live generative LLM response (OpenAI -> Gemini) when configured; always fail-safe to rules
+    try {
+      const openaiReply = await queryOpenAI(message, history);
+      if (openaiReply) {
+        return NextResponse.json(openaiReply);
       }
+
+      const geminiReply = await queryGemini(message, history);
+      if (geminiReply) {
+        return NextResponse.json(geminiReply);
+      }
+    } catch (llmError) {
+      console.warn("LLM provider fallback to built-in triage rules:", llmError);
     }
 
-    // 2. Check for General Knowledge Match
-    for (const item of GENERAL_KNOWLEDGE) {
-      if (item.keywords.some(k => cleanMsg.includes(k))) {
-        return NextResponse.json({
-          reply: item.response,
-          isEmergency: false
-        });
-      }
-    }
-
-    // 3. Fallback Response
-    return NextResponse.json({
-      reply: "I'm the Ayudar Animal Care Assistant! I can help you with:\n\n" +
-             "🚨 Emergency First-Aid Triage (Bleeding, Fractures, Heat stroke, Abandoned pups)\n" +
-             "🐕 Animal Adoption & Shelter visits\n" +
-             "🐄 Gaushala & Cow Sponsorship\n" +
-             "❤️ 80G Tax-exempt Donations & Volunteering\n\n" +
-             "How can we support an animal in need today?",
-      isEmergency: false
-    });
+    return NextResponse.json(getRuleBasedResponse(message));
   } catch (error) {
     console.error("AI Chat error:", error);
     return NextResponse.json(
       {
-        reply: "Sorry, I'm having trouble connecting to my knowledge base right now. If this is an emergency, call our 24/7 hotline at +91 73840 20901 or click '🚨 Report an Animal'!",
+        reply: `Sorry, I'm having trouble connecting right now. If this is an emergency, call ${CONTACT_INFO.emergencyPhone} or open /rescue to report immediately.`,
         isEmergency: true,
         dispatchUrl: "/rescue",
-        hotline: "+91 73840 20901"
+        hotline: CONTACT_INFO.emergencyPhone,
       },
       { status: 500 }
     );
