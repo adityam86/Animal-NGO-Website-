@@ -168,6 +168,24 @@ function ContactPageContent() {
                   >
                     <MessageCircle size={14} /> WhatsApp ({CONTACT_INFO.primaryContact.name})
                   </a>
+                  <a
+                    href={CONTACT_INFO.facebookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm"
+                    style={{ gap: "0.35rem" }}
+                  >
+                    Facebook <ExternalLink size={13} />
+                  </a>
+                  <a
+                    href={CONTACT_INFO.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm"
+                    style={{ gap: "0.35rem" }}
+                  >
+                    Instagram <ExternalLink size={13} />
+                  </a>
                 </div>
 
                 <div style={{ marginTop: "1.1rem", paddingTop: "0.9rem", borderTop: "1px solid var(--cream-200)", fontSize: "0.76rem", color: "var(--stone-500)", display: "flex", alignItems: "center", gap: "0.45rem" }}>

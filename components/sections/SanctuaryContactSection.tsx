@@ -203,24 +203,21 @@ export default function SanctuaryContactSection() {
               </div>
 
               <div>
-                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)" }}>General &amp; Adoptions Email</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)" }}>Official Sanctuary Email</div>
                 <a
                   href={`mailto:${CONTACT_INFO.email}`}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "0.35rem",
-                    fontWeight: 500,
-                    color: "var(--stone-700)",
+                    fontWeight: 600,
+                    color: "var(--stone-800)",
                     textDecoration: "none",
                   }}
                 >
                   <Mail size={13} aria-hidden="true" />
                   <span>{CONTACT_INFO.email}</span>
                 </a>
-              </div>
-              <div style={{ fontSize: "0.74rem", color: "var(--stone-500)", marginTop: "0.1rem" }}>
-                [Admin Placeholder: Confirm @ayudarindia.com mail forward]
               </div>
             </div>
           </div>
@@ -264,9 +261,43 @@ export default function SanctuaryContactSection() {
               <dt style={{ color: "var(--stone-500)" }}>NITI Aayog</dt>
               <dd style={{ margin: 0, fontWeight: 600, color: "var(--stone-800)" }}>{AYUDAR_LEGAL.nitiAayogId}</dd>
             </dl>
-            <p style={{ fontSize: "0.75rem", color: "var(--stone-500)", marginTop: "0.85rem", marginBottom: 0 }}>
-              [Admin Placeholder: Official social channel handles awaiting administrator configuration]
-            </p>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.75rem 1.25rem",
+                marginTop: "1rem",
+                paddingTop: "0.85rem",
+                borderTop: "1px solid var(--cream-200)",
+                fontSize: "0.84rem",
+                fontWeight: 600,
+              }}
+            >
+              <a
+                href={CONTACT_INFO.facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "var(--green-600)", textDecoration: "none" }}
+              >
+                Facebook <ExternalLink size={12} aria-hidden="true" />
+              </a>
+              <a
+                href={CONTACT_INFO.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "var(--saffron-600)", textDecoration: "none" }}
+              >
+                Instagram <ExternalLink size={12} aria-hidden="true" />
+              </a>
+              <a
+                href={CONTACT_INFO.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "var(--stone-700)", textDecoration: "none" }}
+              >
+                WhatsApp <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            </div>
           </div>
         </div>
       </div>

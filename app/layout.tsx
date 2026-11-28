@@ -102,7 +102,11 @@ export default function RootLayout({
                 addressCountry: "IN",
               },
               telephone: "+91-73840-20901",
-              sameAs: ["https://maps.app.goo.gl/Aug8yQi2FmTVeegx7"],
+              sameAs: [
+                "https://maps.app.goo.gl/Aug8yQi2FmTVeegx7",
+                "https://www.facebook.com/share/1KQf4N7Dar/",
+                "https://www.instagram.com/ayudar.india20?dmpr=N3Q0ZTNubzViNno0",
+              ],
             }),
           }}
         />

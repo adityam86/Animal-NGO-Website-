@@ -106,6 +106,47 @@ export default function Footer() {
               <ShieldCheck size={14} style={{ color: "#E07A5F" }} />
               <span>80G Exempt · URN {AYUDAR_LEGAL.urn80G}</span>
             </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem", marginTop: "1.15rem" }}>
+              <a
+                href={CONTACT_INFO.facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  padding: "0.38rem 0.75rem",
+                  borderRadius: "var(--radius-sm)",
+                  background: "rgba(255, 255, 255, 0.06)",
+                  border: "1px solid rgba(255, 255, 255, 0.16)",
+                  color: "#FAF7F2",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                }}
+              >
+                Facebook <ExternalLink size={11} />
+              </a>
+              <a
+                href={CONTACT_INFO.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  padding: "0.38rem 0.75rem",
+                  borderRadius: "var(--radius-sm)",
+                  background: "rgba(255, 255, 255, 0.06)",
+                  border: "1px solid rgba(255, 255, 255, 0.16)",
+                  color: "#FAF7F2",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                }}
+              >
+                Instagram <ExternalLink size={11} />
+              </a>
+            </div>
           </div>
 
           {/* Column 2: Rescue & Sanctuary Navigation */}

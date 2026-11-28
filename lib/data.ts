@@ -372,8 +372,10 @@ export const CONTACT_INFO = {
     { name: "Rohan Mishra", role: "Member", phone: "+91 76026 66102" },
     { name: "Sourav", role: "Member", phone: "+91 91345 81378" },
   ],
-  email: "help@jeevseva.org",
-  rescueEmail: "rescue@jeevseva.org",
+  email: "ayudar.india20@gmail.com",
+  rescueEmail: "ayudar.india20@gmail.com",
+  facebookUrl: "https://www.facebook.com/share/1KQf4N7Dar/",
+  instagramUrl: "https://www.instagram.com/ayudar.india20?dmpr=N3Q0ZTNubzViNno0",
   hours: "Mon–Sat: 9 AM – 7 PM | Emergency: 24/7",
   mapsUrl: "https://maps.app.goo.gl/Aug8yQi2FmTVeegx7",
 };
