@@ -138,6 +138,88 @@ export function validateImageSignature(
   return null;
 }
 
+export interface ValidatedAudio {
+  mimeType: string;
+  extension: "webm" | "ogg" | "mp3" | "m4a" | "wav";
+}
+
+export function validateAudioSignature(
+  buffer: Buffer,
+  declaredMime?: string
+): ValidatedAudio | null {
+  if (!buffer || buffer.length < 12) return null;
+
+  const normalizedMime = declaredMime ? declaredMime.split(";")[0].trim().toLowerCase() : "";
+
+  // Reject HTML / SVG / XML polyglot payloads explicitly
+  const headText = buffer.subarray(0, 256).toString("utf8").trimStart().toLowerCase();
+  if (
+    headText.startsWith("<svg") ||
+    headText.startsWith("<?xml") ||
+    headText.startsWith("<html") ||
+    headText.startsWith("<!doctype") ||
+    headText.includes("<script")
+  ) {
+    return null;
+  }
+
+  // WebM / EBML: 1A 45 DF A3
+  if (
+    buffer[0] === 0x1a &&
+    buffer[1] === 0x45 &&
+    buffer[2] === 0xdf &&
+    buffer[3] === 0xa3
+  ) {
+    if (normalizedMime && normalizedMime !== "audio/webm" && normalizedMime !== "video/webm") {
+      return null;
+    }
+    return { mimeType: "audio/webm", extension: "webm" };
+  }
+
+  // Ogg / Opus: "OggS"
+  if (buffer.subarray(0, 4).toString("ascii") === "OggS") {
+    if (normalizedMime && normalizedMime !== "audio/ogg" && normalizedMime !== "application/ogg") {
+      return null;
+    }
+    return { mimeType: "audio/ogg", extension: "ogg" };
+  }
+
+  // MP3: "ID3" tag or MPEG frame sync FF FB / FF F3 / FF F2
+  if (
+    buffer.subarray(0, 3).toString("ascii") === "ID3" ||
+    (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0)
+  ) {
+    if (normalizedMime && normalizedMime !== "audio/mpeg" && normalizedMime !== "audio/mp3") {
+      return null;
+    }
+    return { mimeType: "audio/mpeg", extension: "mp3" };
+  }
+
+  // MP4 / M4A: "ftyp" at offset 4
+  if (buffer.subarray(4, 8).toString("ascii") === "ftyp") {
+    if (
+      normalizedMime &&
+      !["audio/mp4", "audio/x-m4a", "audio/m4a", "audio/aac"].includes(normalizedMime)
+    ) {
+      return null;
+    }
+    return { mimeType: "audio/mp4", extension: "m4a" };
+  }
+
+  // WAV: RIFF....WAVE
+  if (
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WAVE"
+  ) {
+    if (normalizedMime && normalizedMime !== "audio/wav" && normalizedMime !== "audio/x-wav") {
+      return null;
+    }
+    return { mimeType: "audio/wav", extension: "wav" };
+  }
+
+  return null;
+}
+
 export async function readBoundedJson(
   request: Request,
   maxBytes = 64 * 1024

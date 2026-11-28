@@ -175,9 +175,17 @@ const GENERAL_KNOWLEDGE = [
   },
 ];
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(language: "en" | "bn" | "hi" = "en"): string {
+  const languageDirective =
+    language === "bn"
+      ? "Respond naturally and clearly in Bengali script (বাংলা), keeping website routes (/rescue, /donate) and phone numbers readable."
+      : language === "hi"
+      ? "Respond naturally and clearly in Hindi Devanagari script (हिन्दी), keeping website routes (/rescue, /donate) and phone numbers readable."
+      : "Respond in clear, calm English.";
+
   return [
     `You are the Ayudar Emergency First-Aid & Animal Welfare Assistant for "${AYUDAR_LEGAL.name}" ("${AYUDAR_LEGAL.tagline}").`,
+    `Language Instruction: ${languageDirective}`,
     `Mission: "${AYUDAR_LEGAL.mission}"`,
     `Verified Organization Details:`,
     `- Address: ${CONTACT_INFO.address}`,
@@ -241,14 +249,15 @@ function normalizeLlmJson(rawText: string, provider: "openai" | "gemini"): Struc
 
 async function queryOpenAI(
   message: string,
-  history: Array<{ sender: "user" | "bot"; text: string }>
+  history: Array<{ sender: "user" | "bot"; text: string }>,
+  language: "en" | "bn" | "hi" = "en"
 ): Promise<StructuredChatPayload | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
 
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
   const messages = [
-    { role: "system", content: buildSystemPrompt() },
+    { role: "system", content: buildSystemPrompt(language) },
     ...history.slice(-6).map((h) => ({
       role: h.sender === "user" ? "user" : "assistant",
       content: h.text,
@@ -286,7 +295,8 @@ async function queryOpenAI(
 
 async function queryGemini(
   message: string,
-  history: Array<{ sender: "user" | "bot"; text: string }>
+  history: Array<{ sender: "user" | "bot"; text: string }>,
+  language: "en" | "bn" | "hi" = "en"
 ): Promise<StructuredChatPayload | null> {
   const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
   if (!apiKey) return null;
@@ -322,7 +332,7 @@ async function queryGemini(
             "x-goog-api-key": apiKey,
           },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+            systemInstruction: { parts: [{ text: buildSystemPrompt(language) }] },
             contents,
             generationConfig: {
               temperature: 0.3,
@@ -361,34 +371,96 @@ async function queryGemini(
   return null;
 }
 
-function getRuleBasedResponse(message: string): StructuredChatPayload {
+function localizeRuleFallback(
+  payload: StructuredChatPayload,
+  language: "en" | "bn" | "hi"
+): StructuredChatPayload {
+  if (language === "en") return payload;
+  if (language === "bn") {
+    return {
+      ...payload,
+      title: payload.isEmergency ? "🚨 জরুরি প্রাথমিক চিকিৎসা ও উদ্ধার সহায়তা" : payload.title,
+      reply: payload.isEmergency
+        ? `${payload.reply}\n\n📞 জরুরি উদ্ধারের জন্য এখনই তারাশঙ্কর নাগ-কে কল বা হোয়াটসঅ্যাপ করুন: ${CONTACT_INFO.emergencyPhone} অথবা /rescue পেজে লোকেশন ও ছবি পাঠান।`
+        : `${payload.reply}\n\n🐾 বাংলায় জরুরি সহায়তার জন্য কল করুন ${CONTACT_INFO.emergencyPhone} অথবা /rescue দেখুন।`,
+    };
+  }
+  return {
+    ...payload,
+    title: payload.isEmergency ? "🚨 आपातकालीन प्राथमिक चिकित्सा व रेस्क्यू सहायता" : payload.title,
+    reply: payload.isEmergency
+      ? `${payload.reply}\n\n📞 तुरंत रेस्क्यू के लिए ताराशंकर नाग को कॉल या WhatsApp करें: ${CONTACT_INFO.emergencyPhone} या /rescue पर लोकेशन भेजें।`
+      : `${payload.reply}\n\n🐾 तुरंत सहायता के लिए ${CONTACT_INFO.emergencyPhone} पर कॉल करें या /rescue खोलें।`,
+  };
+}
+
+function getRuleBasedResponse(
+  message: string,
+  language: "en" | "bn" | "hi" = "en"
+): StructuredChatPayload {
   const cleanMsg = message.toLowerCase().trim();
 
   for (const triage of EMERGENCY_TRIAGE) {
     if (triage.keywords.some((k) => cleanMsg.includes(k))) {
-      return {
-        reply: `${triage.response}\n\n${FIRST_AID_DISCLAIMER}`,
-        isEmergency: true,
-        title: triage.title,
-        steps: triage.firstAidSteps,
-        warnings: triage.safetyWarnings,
-        disclaimer: FIRST_AID_DISCLAIMER,
-        dispatchUrl: "/rescue",
-        hotline: CONTACT_INFO.emergencyPhone,
-        provider: "rules",
-      };
+      return localizeRuleFallback(
+        {
+          reply: `${triage.response}\n\n${FIRST_AID_DISCLAIMER}`,
+          isEmergency: true,
+          title: triage.title,
+          steps: triage.firstAidSteps,
+          warnings: triage.safetyWarnings,
+          disclaimer: FIRST_AID_DISCLAIMER,
+          dispatchUrl: "/rescue",
+          hotline: CONTACT_INFO.emergencyPhone,
+          provider: "rules",
+        },
+        language
+      );
     }
   }
 
   for (const item of GENERAL_KNOWLEDGE) {
     if (item.keywords.some((k) => cleanMsg.includes(k))) {
-      return {
-        reply: item.response,
-        isEmergency: false,
-        disclaimer: FIRST_AID_DISCLAIMER,
-        provider: "rules",
-      };
+      return localizeRuleFallback(
+        {
+          reply: item.response,
+          isEmergency: false,
+          disclaimer: FIRST_AID_DISCLAIMER,
+          provider: "rules",
+        },
+        language
+      );
     }
+  }
+
+  if (language === "bn") {
+    return {
+      reply:
+        "নমস্কার! আমি আয়ুদার প্রাণী সুরক্ষা সহায়ক। আমি আপনাকে সাহায্য করতে পারি:\n\n" +
+        "🚨 রাস্তায় আহত প্রাণীর জরুরি প্রাথমিক চিকিৎসা ও উদ্ধার (/rescue)\n" +
+        "🐕 প্রাণী দত্তক নেওয়া ও আশ্রয়কেন্দ্র পরিদর্শন (/adoption)\n" +
+        "🐄 গোশালা ও মাসিক স্পনসরশিপ (/cow-care, /sponsor)\n" +
+        "❤️ ৮০জি (80G) করছাড় যুক্ত অনুদান (/donate)\n\n" +
+        `জরুরি উদ্ধারের জন্য এখনই কল বা হোয়াটসঅ্যাপ করুন: ${CONTACT_INFO.emergencyPhone} (তারাশঙ্কর নাগ)।`,
+      isEmergency: false,
+      disclaimer: FIRST_AID_DISCLAIMER,
+      provider: "rules",
+    };
+  }
+
+  if (language === "hi") {
+    return {
+      reply:
+        "नमस्ते! मैं आयुदर पशु सहायता सहायक हूँ। मैं आपकी मदद कर सकता हूँ:\n\n" +
+        "🚨 घायल सड़क पशुओं के लिए तुरंत प्राथमिक उपचार व रेस्क्यू (/rescue)\n" +
+        "🐕 पशु गोद लेना व आश्रय स्थल भेंट (/adoption)\n" +
+        "🐄 गौशाला सेवा व मासिक देखभाल योजना (/cow-care, /sponsor)\n" +
+        "❤️ 80G कर-मुक्त दान (/donate)\n\n" +
+        `तुरंत मदद के लिए ताराशंकर नाग को कॉल या WhatsApp करें: ${CONTACT_INFO.emergencyPhone}।`,
+      isEmergency: false,
+      disclaimer: FIRST_AID_DISCLAIMER,
+      provider: "rules",
+    };
   }
 
   return {
@@ -434,11 +506,18 @@ export async function POST(request: Request) {
     }
 
     const message = parsed.data.message || "";
+    const language = parsed.data.language || "en";
     const history = parsed.data.history || [];
 
     if (!message) {
+      const greeting =
+        language === "bn"
+          ? "নমস্কার! আমি আয়ুদার প্রাণী সুরক্ষা ও জরুরি সহায়ক। কীভাবে সাহায্য করতে পারি?"
+          : language === "hi"
+          ? "नमस्ते! मैं आयुदर आपातकालीन एवं पशु सहायता सहायक हूँ। आज मैं आपकी कैसे मदद कर सकता हूँ?"
+          : "Hello! I am the Ayudar Emergency & Animal Care Assistant. How can I assist you today?";
       return NextResponse.json({
-        reply: "Hello! I am the Ayudar Emergency & Animal Care Assistant. How can I assist you today?",
+        reply: greeting,
         isEmergency: false,
         disclaimer: FIRST_AID_DISCLAIMER,
         provider: "rules",
@@ -447,12 +526,12 @@ export async function POST(request: Request) {
 
     // Attempt live generative LLM response (OpenAI -> Gemini) when configured; always fail-safe to rules
     try {
-      const openaiReply = await queryOpenAI(message, history);
+      const openaiReply = await queryOpenAI(message, history, language);
       if (openaiReply) {
         return NextResponse.json(openaiReply);
       }
 
-      const geminiReply = await queryGemini(message, history);
+      const geminiReply = await queryGemini(message, history, language);
       if (geminiReply) {
         return NextResponse.json(geminiReply);
       }
@@ -460,7 +539,7 @@ export async function POST(request: Request) {
       console.warn("LLM provider fallback to built-in triage rules:", llmError);
     }
 
-    return NextResponse.json(getRuleBasedResponse(message));
+    return NextResponse.json(getRuleBasedResponse(message, language));
   } catch (error) {
     console.error("AI Chat error:", error);
     return NextResponse.json(

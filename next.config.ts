@@ -7,6 +7,7 @@ const cspDirectives = [
   "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com https://*.arcgisonline.com https://*.public.blob.vercel-storage.com https://*.aws.neon.tech",
+  "media-src 'self' data: blob:",
   "font-src 'self' https://fonts.gstatic.com data:",
   "connect-src 'self' https://nominatim.openstreetmap.org https://api.razorpay.com https://lumberjack.razorpay.com https://blob.vercel-storage.com",
   "frame-src https://api.razorpay.com https://checkout.razorpay.com",
@@ -21,7 +22,7 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(self)" },
   ...(isProd
     ? [
         {

@@ -19,6 +19,9 @@ import {
   HeartHandshake,
   Inbox,
   ShieldCheck,
+  HeartPulse,
+  CalendarDays,
+  Camera,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -27,10 +30,13 @@ const NAV_ITEMS = [
   { href: "/admin/adoption", icon: ClipboardList, label: "Adoptions" },
   { href: "/admin/animals", icon: Heart, label: "Animals" },
   { href: "/admin/medical", icon: Stethoscope, label: "Medical Portal" },
+  { href: "/admin/fundraisers", icon: HeartPulse, label: "Fundraisers" },
+  { href: "/admin/drives", icon: CalendarDays, label: "ABC & ARV Drives" },
   { href: "/admin/donations", icon: IndianRupee, label: "Donations" },
   { href: "/admin/sponsorships", icon: HeartHandshake, label: "Sponsorships" },
   { href: "/admin/volunteers", icon: Users, label: "Volunteers" },
   { href: "/admin/inquiries", icon: Inbox, label: "Inquiries" },
+  { href: "/admin/gallery", icon: Camera, label: "Photo Gallery" },
   { href: "/admin/shelters", icon: Building, label: "Shelters" },
   { href: "/admin/reports", icon: BarChart2, label: "Reports & Analytics" },
   { href: "/admin/stories", icon: BookOpen, label: "Rescue Stories" },

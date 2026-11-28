@@ -97,6 +97,7 @@ model Animal {
   sponsorships      Sponsorship[]
   medicalRecords    MedicalRecord[]
   vaccinations      Vaccination[]
+  fundraisers       MedicalFundraiser[]
   shelterLocationId String?
   shelterLocation   ShelterLocation?      @relation(fields: [shelterLocationId], references: [id], onDelete: SetNull)
 
@@ -115,6 +116,9 @@ model RescueCase {
   reporterPhone  String
   reporterEmail  String?
   photoUrl       String?
+  audioUrl       String?
+  latitude       Float?
+  longitude      Float?
   assignedTeam   String?
   status         String
   reportedAt     DateTime           @default(now())
@@ -224,11 +228,14 @@ model Donation {
   razorpayPaymentId String?   @unique
   verifiedAt        DateTime?
   failureReason     String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  fundraiserId      String?
+  fundraiser        MedicalFundraiser? @relation(fields: [fundraiserId], references: [id], onDelete: SetNull)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([paymentStatus])
   @@index([purpose])
+  @@index([fundraiserId])
   @@index([createdAt])
 }
 
@@ -323,4 +330,55 @@ model ShelterLocation {
   updatedAt DateTime @updatedAt
 
   @@index([type])
+}
+
+model MedicalFundraiser {
+  id         String     @id @default(cuid())
+  title      String
+  animalName String
+  species    String
+  summary    String
+  image      String
+  goalInr    Float
+  purpose    String     @default("Medical Treatment")
+  isActive   Boolean    @default(true)
+  animalId   String?
+  animal     Animal?    @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  donations  Donation[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model CommunityDrive {
+  id          String   @id @default(cuid())
+  title       String
+  driveType   String   // Anti-Rabies Vaccination, ABC Sterilization, Feeding Camp, Awareness
+  areaWard    String
+  date        DateTime
+  timeSlot    String
+  coordinator String
+  notes       String?
+  status      String   @default("Scheduled") // Scheduled, Ongoing, Completed, Cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([status])
+}
+
+model GalleryPhoto {
+  id           String   @id @default(cuid())
+  title        String
+  category     String   // Rescue, Gaushala, Shelter, Community Drive
+  caption      String?
+  imageUrl     String
+  capturedDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([capturedDate])
 }

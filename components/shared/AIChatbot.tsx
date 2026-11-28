@@ -25,6 +25,7 @@ const QUICK_PROMPTS = [
 
 export default function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [lang, setLang] = useState<"en" | "bn" | "hi">("en");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       sender: "bot",
@@ -56,6 +57,7 @@ export default function AIChatbot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userText,
+          language: lang,
           history: messages.slice(-6).map((m) => ({
             sender: m.sender,
             text: m.text,
@@ -165,7 +167,7 @@ export default function AIChatbot() {
           {/* Header */}
           <div
             style={{
-              background: "linear-gradient(135deg, var(--stone-900) 0%, var(--stone-800) 100%)",
+              background: "linear-gradient(135deg, #182921 0%, #233D31 100%)",
               color: "white",
               padding: "1rem 1.25rem",
               display: "flex",
@@ -195,12 +197,40 @@ export default function AIChatbot() {
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "var(--green-400)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green-400)", display: "inline-block" }} />
-                  24/7 Triage & Guidance
+                  24/7 Triage &amp; Guidance
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <div style={{ display: "flex", gap: "2px", background: "rgba(255,255,255,0.12)", borderRadius: "var(--radius-full)", padding: "2px" }}>
+                {(
+                  [
+                    { code: "en", label: "EN" },
+                    { code: "bn", label: "বাংলা" },
+                    { code: "hi", label: "हि" },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => setLang(item.code)}
+                    style={{
+                      border: "none",
+                      borderRadius: "var(--radius-full)",
+                      padding: "0.18rem 0.45rem",
+                      fontSize: "0.66rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: lang === item.code ? "#E07A5F" : "transparent",
+                      color: "white",
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
               style={{
                 background: "rgba(255,255,255,0.1)",
                 border: "none",
@@ -216,6 +246,7 @@ export default function AIChatbot() {
             >
               <X size={18} />
             </button>
+            </div>
           </div>
 
           {/* Quick prompt chips */}

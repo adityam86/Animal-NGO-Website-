@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { AuthError, requireAdminSession } from "@/lib/auth-server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
+import { sendRescueAlertEmail } from "@/lib/email";
 import { rescueCreateSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -130,15 +131,19 @@ export async function POST(request: Request) {
       minute: "2-digit",
     });
 
+    const emergencyLevel = data.emergencyLevel || aiResult.emergencyLevel;
     const newCase = await prisma.rescueCase.create({
       data: {
         animalType: data.animalType,
-        emergencyLevel: data.emergencyLevel || aiResult.emergencyLevel,
+        emergencyLevel,
         location: data.location,
         reporterName: data.reporterName,
         reporterPhone: data.reporterPhone,
         reporterEmail: data.reporterEmail || null,
         photoUrl: data.photoUrl || null,
+        audioUrl: data.audioUrl || null,
+        latitude: typeof data.latitude === "number" ? data.latitude : null,
+        longitude: typeof data.longitude === "number" ? data.longitude : null,
         description: data.condition ? `[${data.condition}] ${data.description}` : data.description,
         assignedTeam: aiResult.assignedTeam,
         status: "Reported",
@@ -162,6 +167,19 @@ export async function POST(request: Request) {
         reportedAt: true,
       },
     });
+
+    void sendRescueAlertEmail({
+      caseId: newCase.id,
+      animalType: newCase.animalType,
+      emergencyLevel: newCase.emergencyLevel,
+      location: data.location,
+      reporterName: data.reporterName,
+      reporterPhone: data.reporterPhone,
+      reporterEmail: data.reporterEmail || null,
+      description: data.condition ? `[${data.condition}] ${data.description}` : data.description,
+      hasPhoto: Boolean(data.photoUrl),
+      hasAudio: Boolean(data.audioUrl),
+    }).catch(() => {});
 
     return NextResponse.json(newCase, { status: 201 });
   } catch (error) {

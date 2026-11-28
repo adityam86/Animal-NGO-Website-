@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { CheckCircle, XCircle, MapPin, Calendar, ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import FadeIn from "@/components/motion/FadeIn";
+import AnimalQrTag from "@/components/shared/AnimalQrTag";
 
 export const dynamic = "force-dynamic";
 
@@ -193,12 +194,26 @@ export default async function AnimalProfilePage({ params }: { params: Promise<{ 
                 )}
 
                 {/* Shelter */}
-                <div style={{ background: "var(--green-50)", borderRadius: "var(--radius-md)", padding: "1rem 1.25rem", marginBottom: "2rem", display: "flex", alignItems: "center", gap: "0.75rem", border: "1px solid var(--green-100)" }}>
+                <div style={{ background: "var(--green-50)", borderRadius: "var(--radius-md)", padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", border: "1px solid var(--green-100)" }}>
                   <MapPin size={20} style={{ color: "var(--green-600)", flexShrink: 0 }} aria-hidden="true" />
                   <div>
                     <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--green-700)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Current Shelter</div>
                     <div style={{ fontWeight: 600, color: "var(--stone-800)", fontSize: "0.95rem" }}>{animal.shelter}</div>
                   </div>
+                </div>
+
+                {/* Printable QR Collar & Kennel Tag */}
+                <div style={{ marginBottom: "1.75rem" }}>
+                  <AnimalQrTag
+                    id={animal.id}
+                    name={animal.name}
+                    type={animal.type}
+                    gender={animal.gender}
+                    status={animal.status}
+                    vaccinated={animal.vaccinated}
+                    sterilized={animal.sterilized}
+                    dewormed={animal.dewormed}
+                  />
                 </div>
 
                 {/* Actions */}

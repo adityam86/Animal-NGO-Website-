@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ayudar.org";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.ayudarindia.com";
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -12,15 +12,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/about",
     "/rescue",
     "/rescue/track",
+    "/rescue/map",
     "/animals",
     "/adoption",
     "/cow-care",
     "/shelter",
     "/stories",
+    "/gallery",
+    "/drives",
     "/sponsor",
     "/donate",
+    "/verify-receipt",
     "/volunteer",
     "/contact",
+    "/privacy-policy",
+    "/terms",
+    "/refund-policy",
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: now,

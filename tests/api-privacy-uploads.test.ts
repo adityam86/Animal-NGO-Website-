@@ -5,23 +5,29 @@ const {
   mockSessionFindUnique,
   mockAuditCreate,
   mockDonationFindMany,
+  mockDonationFindFirst,
   mockSponsorshipFindMany,
+  mockSponsorshipFindFirst,
   mockRescueFindMany,
   mockRescueFindUnique,
   mockRescueCreate,
   mockAdoptionFindMany,
   mockContactCreate,
+  mockFundraiserFindMany,
 } = vi.hoisted(() => ({
   mockCookieGet: vi.fn(),
   mockSessionFindUnique: vi.fn(),
   mockAuditCreate: vi.fn(),
   mockDonationFindMany: vi.fn(),
+  mockDonationFindFirst: vi.fn(),
   mockSponsorshipFindMany: vi.fn(),
+  mockSponsorshipFindFirst: vi.fn(),
   mockRescueFindMany: vi.fn(),
   mockRescueFindUnique: vi.fn(),
   mockRescueCreate: vi.fn(),
   mockAdoptionFindMany: vi.fn(),
   mockContactCreate: vi.fn(),
+  mockFundraiserFindMany: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -40,8 +46,8 @@ vi.mock("@/lib/prisma", () => {
   const client = {
     adminSession: { findUnique: mockSessionFindUnique },
     auditLog: { create: mockAuditCreate },
-    donation: { findMany: mockDonationFindMany },
-    sponsorship: { findMany: mockSponsorshipFindMany },
+    donation: { findMany: mockDonationFindMany, findFirst: mockDonationFindFirst },
+    sponsorship: { findMany: mockSponsorshipFindMany, findFirst: mockSponsorshipFindFirst },
     rescueCase: {
       findMany: mockRescueFindMany,
       findUnique: mockRescueFindUnique,
@@ -49,15 +55,23 @@ vi.mock("@/lib/prisma", () => {
     },
     adoptionApplication: { findMany: mockAdoptionFindMany },
     contactInquiry: { create: mockContactCreate },
+    medicalFundraiser: { findMany: mockFundraiserFindMany },
   };
   return { default: client, prisma: client };
 });
 
 import { createSessionToken } from "@/lib/session-token";
 import { resetRateLimitStore } from "@/lib/rate-limit";
+import { generateUploadToken } from "@/lib/upload-token";
+import { sendDonationReceiptEmail, sendTransactionalEmail } from "@/lib/email";
 import { GET as reportsGet } from "@/app/api/reports/[type]/route";
 import { GET as rescuesListGet, POST as rescueCreatePost } from "@/app/api/rescue/route";
 import { GET as rescueDetailGet } from "@/app/api/rescue/[id]/route";
+import { GET as rescueMapGet } from "@/app/api/rescue/map/route";
+import { GET as rescueAudioFetchGet } from "@/app/api/admin/rescues/photo/[filename]/route";
+import { POST as rescueAudioPost } from "@/app/api/rescue/audio/route";
+import { GET as receiptVerifyGet } from "@/app/api/receipts/verify/route";
+import { POST as driveRequestPost } from "@/app/api/drives/request/route";
 import { POST as uploadPost } from "@/app/api/upload/route";
 import { POST as rescueUploadPost } from "@/app/api/rescue/upload/route";
 import { POST as contactPost } from "@/app/api/contact/route";
@@ -353,5 +367,156 @@ describe("Data Privacy, CSV Security, Uploads & Public Endpoints", () => {
     const fallbackJson = await fallbackRes.json();
     expect(fallbackJson.provider).toBe("rules");
     expect(fallbackJson.reply).toContain("Tilabad, Kumarpur, Asansol");
+  });
+
+  it("verifies 80G receipts with masked PII, aggregates heatmap without PII, validates witness voice uploads, supports Bengali/Hindi chat & drive requests", async () => {
+    // 1. Email dispatcher skips safely without throwing when RESEND_API_KEY is unset
+    vi.stubEnv("RESEND_API_KEY", "");
+    const emailRes = await sendTransactionalEmail({
+      to: "donor@example.com",
+      subject: "Test Receipt",
+      html: "<p>Hello</p>",
+    });
+    expect(emailRes.sent).toBe(false);
+    await expect(
+      sendDonationReceiptEmail({
+        recordType: "donation",
+        recordId: "don_test",
+        paymentId: "pay_test",
+        donorName: "Subhamoy Banerjee",
+        donorEmail: "donor@example.com",
+        amount: 2500,
+        purpose: "Medical Care",
+        frequency: "One-time",
+        pan: "ABCDE1234F",
+      })
+    ).resolves.toBeUndefined();
+
+    // 2. Public 80G Verifier masks name & PAN cleanly
+    mockDonationFindFirst.mockResolvedValue({
+      id: "don_999",
+      donorName: "Subhamoy Banerjee",
+      amount: 2500,
+      purpose: "Medical Treatment",
+      frequency: "One-time",
+      paymentStatus: "Completed",
+      donorPan: "ABCDE1234F",
+      razorpayPaymentId: "pay_live_999",
+      createdAt: new Date("2026-06-01T12:00:00Z"),
+    });
+
+    const verifyRes = await receiptVerifyGet(
+      new Request("http://localhost:3000/api/receipts/verify?ref=don_999")
+    );
+    expect(verifyRes.status).toBe(200);
+    const verifyJson = await verifyRes.json();
+    expect(verifyJson.verified).toBe(true);
+    expect(verifyJson.maskedDonorName).not.toContain("Subhamoy");
+    expect(verifyJson.maskedPan).toBe("AB*****4F");
+
+    // 3. Rescue heatmap rounds coords (~0.003 grid) and never leaks PII
+    mockRescueFindMany.mockResolvedValue([
+      {
+        animalType: "Dog",
+        emergencyLevel: "Critical",
+        reportedAt: new Date("2026-06-02T10:00:00Z"),
+        latitude: 23.703819,
+        longitude: 86.938713,
+      },
+      {
+        animalType: "Dog",
+        emergencyLevel: "Normal",
+        reportedAt: new Date("2026-06-02T11:00:00Z"),
+        latitude: 23.7039,
+        longitude: 86.9388,
+      },
+    ]);
+    const mapRes = await rescueMapGet();
+    expect(mapRes.status).toBe(200);
+    const mapJson = await mapRes.json();
+    expect(mapJson.hotspots).toHaveLength(1);
+    expect(mapJson.hotspots[0].count).toBe(2);
+    expect(mapJson.hotspots[0].criticalCount).toBe(1);
+
+    // 4. Witness audio upload requires upload token & rejects SVG payloads, accepts WebM magic bytes
+    const badAudioForm = new FormData();
+    badAudioForm.append("uploadToken", generateUploadToken("unknown"));
+    badAudioForm.append(
+      "audio",
+      new File([new TextEncoder().encode("<svg><script>alert(1)</script></svg>")], "evil.webm", {
+        type: "audio/webm",
+      })
+    );
+    const badAudioRes = await rescueAudioPost(
+      new Request("http://localhost:3000/api/rescue/audio", {
+        method: "POST",
+        body: badAudioForm,
+      })
+    );
+    expect(badAudioRes.status).toBe(400);
+
+    const webmBytes = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01, 0x00, 0x00, 0x00, 0x00]);
+    const okAudioForm = new FormData();
+    okAudioForm.append("uploadToken", generateUploadToken("unknown"));
+    okAudioForm.append("audio", new File([webmBytes], "witness.webm", { type: "audio/webm" }));
+    const okAudioRes = await rescueAudioPost(
+      new Request("http://localhost:3000/api/rescue/audio", {
+        method: "POST",
+        body: okAudioForm,
+      })
+    );
+    expect(okAudioRes.status).toBe(201);
+    const okAudioJson = await okAudioRes.json();
+    expect(okAudioJson.url).toMatch(
+      /^(?:\/api\/admin\/rescues\/photo\/rescue-audio-.*\.webm|data:audio\/webm;base64,.+)$/
+    );
+
+    mockCookieGet.mockReturnValue(undefined);
+    const unauthAudioGet = await rescueAudioFetchGet(
+      new Request("http://localhost:3000/api/admin/rescues/photo/rescue-audio-1.webm"),
+      { params: Promise.resolve({ filename: "rescue-audio-1.webm" }) }
+    );
+    expect(unauthAudioGet.status).toBe(401);
+
+    // 5. Bilingual Bengali/Hindi chat fallback & locality drive request validation
+    const bnChat = await aiChatPost(
+      new Request("http://localhost:3000/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "hello", language: "bn" }),
+      })
+    );
+    expect(bnChat.status).toBe(200);
+    expect((await bnChat.json()).reply).toContain("আয়ুদার");
+
+    const hiChat = await aiChatPost(
+      new Request("http://localhost:3000/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "dog bleeding on road", language: "hi" }),
+      })
+    );
+    expect(hiChat.status).toBe(200);
+    const hiJson = await hiChat.json();
+    expect(hiJson.isEmergency).toBe(true);
+    expect(hiJson.reply).toContain("ताराशंकर नाग");
+
+    mockContactCreate.mockResolvedValue({ id: "inq_drive_1" });
+    const driveRes = await driveRequestPost(
+      new Request("http://localhost:3000/api/drives/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coordinatorName: "Riya Chatterjee",
+          phone: "+919876543210",
+          email: "riya@example.com",
+          wardOrLocality: "Burnpur Ward 14",
+          driveType: "Anti-Rabies Camp",
+          estimatedAnimals: 18,
+          notes: "Evening feeding spot near market gate",
+        }),
+      })
+    );
+    expect(driveRes.status).toBe(201);
   });
 });

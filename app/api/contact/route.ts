@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
+import { sendSubmissionAlertEmail } from "@/lib/email";
 import { contactCreateSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,18 @@ export async function POST(request: Request) {
         createdAt: true,
       },
     });
+
+    void sendSubmissionAlertEmail({
+      category: "Contact Inquiry",
+      subjectLine: d.subject,
+      senderName: d.name,
+      senderEmail: d.email,
+      summaryLines: [
+        `Enquiry ID: ${inquiry.id}`,
+        d.phone ? `Phone: ${d.phone}` : "",
+        `Message: ${d.message.slice(0, 300)}`,
+      ].filter(Boolean),
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, inquiry }, { status: 201 });
   } catch (error) {

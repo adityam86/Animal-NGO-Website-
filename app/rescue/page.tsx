@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import FadeIn from "@/components/motion/FadeIn";
 import ImageUploader from "@/components/shared/ImageUploader";
+import VoiceNoteRecorder from "@/components/shared/VoiceNoteRecorder";
 import { CONTACT_INFO, AYUDAR_LEGAL } from "@/lib/data";
+import { RESCUE_COPY, RESCUE_LANG_LABELS, type RescueLang } from "@/lib/i18n-rescue";
 
 const InteractiveMap = dynamic(() => import("@/components/shared/InteractiveMap"), {
   ssr: false,
@@ -100,6 +102,8 @@ function buildWhatsAppHref(text: string) {
 }
 
 function RescuePageContent() {
+  const [lang, setLang] = useState<RescueLang>("en");
+  const t = RESCUE_COPY[lang];
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsStatus, setGpsStatus] = useState("");
@@ -110,6 +114,7 @@ function RescuePageContent() {
   const [condition, setCondition] = useState("Road Accident");
   const [urgency, setUrgency] = useState<"Critical" | "High" | "Normal">("Critical");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
   const [description, setDescription] = useState("");
   const [reporterName, setReporterName] = useState("");
   const [reporterPhone, setReporterPhone] = useState("");
@@ -206,6 +211,9 @@ function RescuePageContent() {
           condition,
           description: compiledDescription,
           photoUrl: photoUrl || null,
+          audioUrl: audioUrl || null,
+          latitude: selectedLat,
+          longitude: selectedLng,
         }),
       });
 
@@ -237,32 +245,73 @@ function RescuePageContent() {
         <div className="container">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "2rem", alignItems: "center" }}>
             <FadeIn direction="up" distance={16}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.45rem",
-                  background: "rgba(214, 69, 69, 0.24)",
-                  border: "1px solid rgba(255, 255, 255, 0.25)",
-                  color: "#FFE3E3",
-                  padding: "0.35rem 0.9rem",
-                  borderRadius: "var(--radius-full)",
-                  fontSize: "0.78rem",
-                  fontWeight: 700,
-                  marginBottom: "1rem",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF6B6B" }} />
-                Ayudar • 24/7 Emergency Rescue Dispatch
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", marginBottom: "1rem" }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.45rem",
+                    background: "rgba(214, 69, 69, 0.24)",
+                    border: "1px solid rgba(255, 255, 255, 0.25)",
+                    color: "#FFE3E3",
+                    padding: "0.35rem 0.9rem",
+                    borderRadius: "var(--radius-full)",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF6B6B" }} />
+                  {t.eyebrow}
+                </div>
+
+                {/* Bilingual Language Switcher */}
+                <div
+                  role="group"
+                  aria-label="Language switcher"
+                  style={{
+                    display: "inline-flex",
+                    gap: "0.25rem",
+                    background: "rgba(255,255,255,0.12)",
+                    padding: "0.25rem",
+                    borderRadius: "var(--radius-full)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                  }}
+                >
+                  {(["en", "bn", "hi"] as RescueLang[]).map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setLang(code)}
+                      style={{
+                        border: "none",
+                        borderRadius: "var(--radius-full)",
+                        padding: "0.3rem 0.72rem",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: lang === code ? "#E07A5F" : "transparent",
+                        color: "#FFFFFF",
+                      }}
+                    >
+                      {RESCUE_LANG_LABELS[code]}
+                    </button>
+                  ))}
+                </div>
               </div>
+
               <h1 style={{ color: "white", fontSize: "clamp(2rem, 4.4vw, 3rem)", lineHeight: 1.12, marginBottom: "0.9rem" }}>
-                Found an injured or distress animal? Report in under 30 seconds.
+                {t.headline}
               </h1>
               <p style={{ color: "rgba(250, 247, 242, 0.86)", fontSize: "1.02rem", lineHeight: 1.7, maxWidth: "58ch", margin: 0 }}>
-                Stay calm. Share a GPS pin, photo, and phone number below — or use one-tap emergency calling when every minute counts.
+                {t.subtext}
               </p>
+              <div style={{ marginTop: "0.95rem" }}>
+                <Link href="/rescue/map" style={{ color: "#FFD6CC", fontSize: "0.86rem", fontWeight: 600, textDecoration: "underline" }}>
+                  {t.mapLinkLabel}
+                </Link>
+              </div>
             </FadeIn>
 
             <FadeIn direction="up" delay={0.08} distance={16}>
@@ -284,7 +333,7 @@ function RescuePageContent() {
                 <a
                   href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`}
                   className="btn btn-emergency btn-lg"
-                  style={{ width: "100%", justifyContent: "center", gap: "0.55rem" }}
+                  style={{ width: "100%", justifyContent: "center", gap: "0.55rem", flexWrap: "wrap", whiteSpace: "normal", textAlign: "center", lineHeight: 1.3 }}
                 >
                   <Phone size={18} /> Call Rescue Helpline ({CONTACT_INFO.emergencyPhone})
                 </a>
@@ -604,6 +653,13 @@ function RescuePageContent() {
                             helperText="Helps vet triage injuries before the ambulance arrives (JPG/PNG/WebP)"
                           />
 
+                          <VoiceNoteRecorder
+                            value={audioUrl}
+                            onChange={setAudioUrl}
+                            title={t.voiceSectionTitle}
+                            hint={t.voiceSectionHint}
+                          />
+
                           <div className="form-group">
                             <label className="form-label" htmlFor="rescue-desc">Quick Notes (optional)</label>
                             <textarea
@@ -777,7 +833,28 @@ function RescuePageContent() {
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem", color: "var(--terracotta-hover)", fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                     <HeartHandshake size={16} /> While You Wait
                   </div>
-                  <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem" }}>First-Aid Micro-Guides</h3>
+                  <h3 style={{ fontSize: "1.25rem", marginBottom: "0.75rem" }}>{t.firstAidTitle}</h3>
+                  {lang !== "en" && (
+                    <div
+                      style={{
+                        background: "var(--green-50)",
+                        border: "1px solid var(--green-200)",
+                        borderRadius: "var(--radius-md)",
+                        padding: "0.9rem 1rem",
+                        marginBottom: "1rem",
+                        fontSize: "0.84rem",
+                        lineHeight: 1.65,
+                        color: "var(--stone-800)",
+                      }}
+                    >
+                      <ul style={{ margin: "0 0 0.5rem", paddingLeft: "1.15rem" }}>
+                        {t.firstAidTips.map((tip) => (
+                          <li key={tip} style={{ marginBottom: "0.25rem" }}>{tip}</li>
+                        ))}
+                      </ul>
+                      <div style={{ fontWeight: 700, color: "#991b1b" }}>⚠️ {t.firstAidWarning}</div>
+                    </div>
+                  )}
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                     {FIRST_AID_GUIDES.map((guide, idx) => {

@@ -8,6 +8,7 @@ import {
   verifyRazorpaySignature,
 } from "@/lib/payment";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
+import { sendDonationReceiptEmail } from "@/lib/email";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { verifyPaymentSchema } from "@/lib/validation";
 
@@ -256,6 +257,7 @@ export async function POST(request: Request) {
       ]);
 
       let recordAmount = expectedAmountInr;
+      let receiptEmailPayload: Parameters<typeof sendDonationReceiptEmail>[0] | null = null;
 
       if (donationId) {
         const donation = await tx.donation.findUnique({ where: { id: donationId } });
@@ -291,6 +293,20 @@ export async function POST(request: Request) {
             verifiedAt: new Date(),
           },
         });
+
+        if (donation.donorEmail) {
+          receiptEmailPayload = {
+            recordType: "donation",
+            recordId: donation.id,
+            paymentId: razorpay_payment_id,
+            donorName: donation.donorName || "Supporter",
+            donorEmail: donation.donorEmail,
+            amount: recordAmount,
+            purpose: donation.purpose || "Animal Rescue & Shelter Care",
+            frequency: donation.frequency || "One-time",
+            pan: donation.donorPan || null,
+          };
+        }
       } else if (sponsorshipId) {
         const sponsorship = await tx.sponsorship.findUnique({ where: { id: sponsorshipId } });
         if (!sponsorship) {
@@ -325,9 +341,28 @@ export async function POST(request: Request) {
             verifiedAt: new Date(),
           },
         });
+
+        if (sponsorship.sponsorEmail) {
+          receiptEmailPayload = {
+            recordType: "sponsorship",
+            recordId: sponsorship.id,
+            paymentId: razorpay_payment_id,
+            donorName: sponsorship.sponsorName || "Sponsor",
+            donorEmail: sponsorship.sponsorEmail,
+            amount: recordAmount,
+            purpose: `${sponsorship.tier || "Care"} Sponsorship`,
+            frequency: sponsorship.frequency || "Monthly",
+            pan: null,
+          };
+        }
       }
 
-      return { status: 200 as const, alreadyCompleted: false, amount: recordAmount };
+      return {
+        status: 200 as const,
+        alreadyCompleted: false,
+        amount: recordAmount,
+        receiptEmailPayload,
+      };
     });
 
     if (txResult.status !== 200) {
@@ -335,6 +370,10 @@ export async function POST(request: Request) {
         { success: false, verified: false, error: txResult.error },
         { status: txResult.status }
       );
+    }
+
+    if (!txResult.alreadyCompleted && "receiptEmailPayload" in txResult && txResult.receiptEmailPayload) {
+      void sendDonationReceiptEmail(txResult.receiptEmailPayload).catch(() => {});
     }
 
     return NextResponse.json({

@@ -288,3 +288,84 @@ export async function storeValidatedImage(
   const dataUrl = `data:${validated.mimeType};base64,${buffer.toString("base64")}`;
   return { url: dataUrl, storage: "inline-data-url", isPrivate: false };
 }
+
+/**
+ * Stores a validated witness voice note in strict private storage
+ * (Vercel Blob private, Neon S3 private bucket, or local storage/private/rescues).
+ */
+export async function storePrivateAudio(
+  buffer: Buffer,
+  validated: { mimeType: string; extension: string },
+  originalFilename = "voice-note"
+): Promise<StoredUploadResult> {
+  const safeBase =
+    originalFilename
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .slice(0, 32) || "voice";
+  const uniqueName = `rescue-audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}.${validated.extension}`;
+
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const s3Config = getS3StorageConfig();
+
+  if (blobToken) {
+    const blobKey = `ayudar/private/rescues/${uniqueName}`;
+    await put(blobKey, buffer, {
+      access: "private",
+      contentType: validated.mimeType,
+      token: blobToken,
+    });
+    return {
+      url: `/api/admin/rescues/photo/${uniqueName}`,
+      storage: "vercel-blob",
+      isPrivate: true,
+    };
+  }
+
+  if (s3Config?.privateBucket) {
+    const s3 = createS3Client(s3Config);
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: s3Config.privateBucket,
+        Key: `rescues/${uniqueName}`,
+        Body: buffer,
+        ContentType: validated.mimeType,
+        CacheControl: "private, no-store",
+      })
+    );
+    return {
+      url: `/api/admin/rescues/photo/${uniqueName}`,
+      storage: "s3-private",
+      isPrivate: true,
+    };
+  }
+
+  if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
+    try {
+      const privateDir = path.join(process.cwd(), "storage", "private", "rescues");
+      await fs.mkdir(privateDir, { recursive: true });
+      const filePath = path.join(privateDir, uniqueName);
+      await fs.writeFile(filePath, buffer);
+      return {
+        url: `/api/admin/rescues/photo/${uniqueName}`,
+        storage: "private-fs",
+        isPrivate: true,
+      };
+    } catch {
+      // Fall through cleanly if disk is read-only
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Persistent private object storage is not configured. Rescue witness voice notes cannot be stored in production."
+    );
+  }
+
+  if (buffer.byteLength > 2 * 1024 * 1024) {
+    throw new Error("Audio exceeds 2 MB test fallback limit.");
+  }
+
+  const dataUrl = `data:${validated.mimeType};base64,${buffer.toString("base64")}`;
+  return { url: dataUrl, storage: "inline-data-url", isPrivate: true };
+}

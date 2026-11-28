@@ -7,7 +7,7 @@ import { getPrivateObjectFromS3 } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
-const SAFE_FILENAME_RE = /^[a-zA-Z0-9_-]+\.(webp|jpg|jpeg|png)$/i;
+const SAFE_FILENAME_RE = /^[a-zA-Z0-9_-]+\.(webp|jpg|jpeg|png|webm|ogg|mp3|m4a|mp4|wav)$/i;
 
 function buildPrivateImageHeaders(cleanFilename: string, contentType: string, contentLength?: number) {
   const headers: Record<string, string> = {
@@ -44,6 +44,16 @@ export async function GET(
         ? "image/webp"
         : ext === "png"
         ? "image/png"
+        : ext === "webm"
+        ? "audio/webm"
+        : ext === "ogg"
+        ? "audio/ogg"
+        : ext === "mp3"
+        ? "audio/mpeg"
+        : ext === "m4a" || ext === "mp4"
+        ? "audio/mp4"
+        : ext === "wav"
+        ? "audio/wav"
         : "image/jpeg";
 
     // 3. Check local private storage directory first (if dev or local node)

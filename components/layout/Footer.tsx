@@ -326,9 +326,16 @@ export default function Footer() {
           <p style={{ color: "rgba(250, 247, 242, 0.65)", fontSize: "0.8rem", margin: 0 }}>
             © {currentYear} {AYUDAR_LEGAL.name} · Reg. {AYUDAR_LEGAL.regNo} · 80G URN {AYUDAR_LEGAL.urn80G}
           </p>
-          <div style={{ display: "flex", gap: "1.25rem", fontSize: "0.8rem", color: "rgba(250, 247, 242, 0.65)" }}>
-            <Link href="/about" style={{ color: "inherit" }}>Statutory Records</Link>
-            <Link href="/contact" style={{ color: "inherit" }}>Contact &amp; Visits</Link>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem 1.25rem", fontSize: "0.8rem", color: "rgba(250, 247, 242, 0.72)" }}>
+            <Link href="/drives" style={{ color: "inherit" }}>ABC &amp; ARV Drives</Link>
+            <Link href="/gallery" style={{ color: "inherit" }}>Sanctuary Gallery</Link>
+            <Link href="/rescue/map" style={{ color: "inherit" }}>Rescue Heatmap</Link>
+            <Link href="/verify-receipt" style={{ color: "inherit" }}>Verify 80G Receipt</Link>
+            <Link href="/privacy-policy" style={{ color: "inherit" }}>Privacy Policy</Link>
+            <Link href="/terms" style={{ color: "inherit" }}>Terms of Use</Link>
+            <Link href="/refund-policy" style={{ color: "inherit" }}>Refund Policy</Link>
+            <Link href="/about#csr-kit" style={{ color: "inherit" }}>Statutory &amp; CSR Kit</Link>
+            <Link href="/contact" style={{ color: "inherit" }}>Contact</Link>
             <Link href="/login" style={{ color: "inherit" }}>Staff Portal</Link>
           </div>
         </div>

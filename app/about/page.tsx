@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { ShieldCheck, MapPin, Phone, ExternalLink, Clock } from "lucide-react";
+import CsrKitCard from "@/components/shared/CsrKitCard";
 import FadeIn from "@/components/motion/FadeIn";
 import HoverCard from "@/components/motion/HoverCard";
 import { AYUDAR_LEGAL, CONTACT_INFO, STORIES } from "@/lib/data";
@@ -304,6 +305,10 @@ export default function AboutPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div style={{ marginTop: "3rem" }}>
+            <CsrKitCard />
           </div>
         </div>
       </section>

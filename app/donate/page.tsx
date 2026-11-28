@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -90,7 +90,33 @@ function DonatePageContent() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [pan, setPan] = useState("");
+  const [selectedFundraiserId, setSelectedFundraiserId] = useState<string | null>(null);
+  const [liveFundraisers, setLiveFundraisers] = useState<
+    Array<{
+      id: string;
+      title: string;
+      animalName: string;
+      species: string;
+      summary: string;
+      purpose: string;
+      goalInr: number;
+      raisedAmount: number;
+      donorCount: number;
+      image: string;
+    }>
+  >([]);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
+
+  useEffect(() => {
+    fetch("/api/fundraisers")
+      .then((r) => (r.ok ? r.json() : { fundraisers: [] }))
+      .then((d: { fundraisers?: typeof liveFundraisers }) => {
+        if (Array.isArray(d.fundraisers)) {
+          setLiveFundraisers(d.fundraisers);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -117,9 +143,20 @@ function DonatePageContent() {
         : "Contributes directly to daily street dog & cow feeding");
 
   const handleSelectUrgentCase = (item: (typeof URGENT_MEDICAL_CASES)[number]) => {
+    setSelectedFundraiserId(null);
     setSelectedAmount(item.suggestedAmount);
     setCustomAmount(DONATION_AMOUNTS.includes(item.suggestedAmount) ? "" : String(item.suggestedAmount));
     setPurpose(DONATION_PURPOSES.includes(item.purpose) ? item.purpose : "Medical Treatment");
+    const el = document.getElementById("donation-widget");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const handleSelectLiveFundraiser = (f: (typeof liveFundraisers)[number]) => {
+    const suggested = Math.min(5000, Math.max(500, Math.round(f.goalInr - f.raisedAmount) || 1500));
+    setSelectedFundraiserId(f.id);
+    setSelectedAmount(DONATION_AMOUNTS.includes(suggested) ? suggested : 1500);
+    setCustomAmount(DONATION_AMOUNTS.includes(suggested) ? "" : String(suggested));
+    setPurpose(DONATION_PURPOSES.includes(f.purpose) ? f.purpose : "Medical Treatment");
     const el = document.getElementById("donation-widget");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -146,6 +183,7 @@ function DonatePageContent() {
           phone: phone.trim(),
           email: email.trim(),
           pan: pan.trim().toUpperCase(),
+          fundraiserId: selectedFundraiserId,
         }),
       });
       const donData = await donRes.json();
@@ -434,6 +472,13 @@ function DonatePageContent() {
                         <button type="button" onClick={() => window.print()} className="btn btn-outline btn-sm" style={{ gap: "0.35rem" }}>
                           <Printer size={14} /> Print Receipt
                         </button>
+                        <Link
+                          href={`/verify-receipt?ref=${encodeURIComponent(receipt.donationId)}`}
+                          className="btn btn-outline btn-sm"
+                          style={{ gap: "0.35rem" }}
+                        >
+                          <ShieldCheck size={14} /> Official 80G Verification →
+                        </Link>
                       </div>
                     </div>
 
@@ -638,57 +683,110 @@ function DonatePageContent() {
               <span className="editorial-eyebrow" style={{ marginBottom: "0.75rem" }}>
                 Active Treatment Funds
               </span>
-              <h2 style={{ marginBottom: "0.4rem" }}>Priority Medical Care Areas</h2>
+              <h2 style={{ marginBottom: "0.4rem" }}>
+                {liveFundraisers.length > 0 ? "Active Medical Case Fundraisers" : "Priority Medical Care Areas"}
+              </h2>
               <p style={{ color: "var(--stone-600)", maxWidth: "60ch" }}>
-                Select any urgent treatment focus below to pre-fill the contribution form with a suggested medical care amount.{" "}
-                <span style={{ fontSize: "0.85rem", color: "var(--stone-500)" }}>
-                  [Admin Placeholder: Live per-case billing totals await verified clinical ledger sync.]
-                </span>
+                {liveFundraisers.length > 0
+                  ? "Contribute directly toward verified patient treatments; totals reflect live completed Razorpay donations."
+                  : "Select any urgent treatment focus below to pre-fill the contribution form with a suggested medical care amount."}
               </p>
             </div>
           </FadeIn>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: "1.5rem" }}>
-            {URGENT_MEDICAL_CASES.map((item) => {
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    background: "var(--color-surface)",
-                    borderRadius: "var(--radius-md)",
-                    overflow: "hidden",
-                    border: "1px solid var(--cream-200)",
-                    boxShadow: "var(--shadow-sm)",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <div style={{ position: "relative", aspectRatio: "16 / 10", background: "var(--cream-100)" }}>
-                    <Image src={item.image} alt={item.name} fill unoptimized sizes="(max-width: 768px) 100vw, 400px" style={{ objectFit: "cover", objectPosition: "center 35%" }} />
-                    <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(184, 50, 50, 0.92)", color: "white", padding: "0.25rem 0.6rem", borderRadius: "3px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                      {item.species} · {item.purpose}
-                    </span>
-                  </div>
-                  <div style={{ padding: "1.35rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "1.1rem" }}>
-                    <div>
-                      <h3 style={{ marginBottom: "0.4rem", fontFamily: "var(--font-display)" }}>{item.name}</h3>
-                      <p style={{ fontSize: "0.9rem", color: "var(--stone-600)", lineHeight: 1.65, margin: 0 }}>
-                        {item.summary}
-                      </p>
+          {liveFundraisers.length > 0 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: "1.5rem" }}>
+              {liveFundraisers.map((f) => {
+                const pct = Math.min(100, Math.round((f.raisedAmount / Math.max(1, f.goalInr)) * 100));
+                return (
+                  <div
+                    key={f.id}
+                    style={{
+                      background: "var(--color-surface)",
+                      borderRadius: "var(--radius-md)",
+                      overflow: "hidden",
+                      border: selectedFundraiserId === f.id ? "2px solid var(--green-600)" : "1px solid var(--cream-200)",
+                      boxShadow: "var(--shadow-sm)",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div style={{ position: "relative", aspectRatio: "16 / 10", background: "var(--cream-100)" }}>
+                      <Image src={f.image} alt={f.title} fill unoptimized sizes="(max-width: 768px) 100vw, 400px" style={{ objectFit: "cover", objectPosition: "center 35%" }} />
+                      <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(184, 50, 50, 0.92)", color: "white", padding: "0.25rem 0.6rem", borderRadius: "3px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        {f.species} · {f.purpose}
+                      </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectUrgentCase(item)}
-                      className="btn btn-primary btn-sm"
-                      style={{ width: "100%", justifyContent: "center", borderRadius: "var(--radius-sm)" }}
-                    >
-                      Allocate ₹{item.suggestedAmount.toLocaleString("en-IN")} to {item.purpose}
-                    </button>
+                    <div style={{ padding: "1.35rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "1rem" }}>
+                      <div>
+                        <h3 style={{ marginBottom: "0.35rem", fontFamily: "var(--font-display)" }}>{f.animalName}: {f.title}</h3>
+                        <p style={{ fontSize: "0.86rem", color: "var(--stone-600)", lineHeight: 1.6, margin: "0 0 0.85rem" }}>
+                          {f.summary}
+                        </p>
+                        <div style={{ background: "var(--cream-100)", height: 8, borderRadius: "var(--radius-full)", overflow: "hidden", marginBottom: "0.45rem" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: "var(--green-600)" }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 700, color: "var(--stone-700)" }}>
+                          <span>₹{f.raisedAmount.toLocaleString("en-IN")} raised</span>
+                          <span>Goal: ₹{f.goalInr.toLocaleString("en-IN")} ({f.donorCount} donors)</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLiveFundraiser(f)}
+                        className="btn btn-primary btn-sm"
+                        style={{ width: "100%", justifyContent: "center", borderRadius: "var(--radius-sm)" }}
+                      >
+                        Donate Towards {f.animalName}&apos;s Care
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: "1.5rem" }}>
+              {URGENT_MEDICAL_CASES.map((item) => {
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: "var(--color-surface)",
+                      borderRadius: "var(--radius-md)",
+                      overflow: "hidden",
+                      border: "1px solid var(--cream-200)",
+                      boxShadow: "var(--shadow-sm)",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div style={{ position: "relative", aspectRatio: "16 / 10", background: "var(--cream-100)" }}>
+                      <Image src={item.image} alt={item.name} fill unoptimized sizes="(max-width: 768px) 100vw, 400px" style={{ objectFit: "cover", objectPosition: "center 35%" }} />
+                      <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(184, 50, 50, 0.92)", color: "white", padding: "0.25rem 0.6rem", borderRadius: "3px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        {item.species} · {item.purpose}
+                      </span>
+                    </div>
+                    <div style={{ padding: "1.35rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "1.1rem" }}>
+                      <div>
+                        <h3 style={{ marginBottom: "0.4rem", fontFamily: "var(--font-display)" }}>{item.name}</h3>
+                        <p style={{ fontSize: "0.9rem", color: "var(--stone-600)", lineHeight: 1.65, margin: 0 }}>
+                          {item.summary}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectUrgentCase(item)}
+                        className="btn btn-primary btn-sm"
+                        style={{ width: "100%", justifyContent: "center", borderRadius: "var(--radius-sm)" }}
+                      >
+                        Allocate ₹{item.suggestedAmount.toLocaleString("en-IN")} to {item.purpose}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import PublicShell from "@/components/layout/PublicShell";
 import PWARegister from "@/components/shared/PWARegister";
+import VercelInsights from "@/components/shared/VercelInsights";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 
 const fraunces = Fraunces({
@@ -115,6 +116,7 @@ export default function RootLayout({
         <ThemeProvider>
           <PublicShell>{children}</PublicShell>
           <PWARegister />
+          <VercelInsights />
         </ThemeProvider>
       </body>
     </html>

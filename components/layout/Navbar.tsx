@@ -36,6 +36,10 @@ export default function Navbar() {
   const mobileLinks = [
     ...DESKTOP_NAV,
     ...NAV_LINKS,
+    { label: "Gallery", href: "/gallery" },
+    { label: "ABC & ARV Drives", href: "/drives" },
+    { label: "Rescue Heatmap", href: "/rescue/map" },
+    { label: "Verify 80G Receipt", href: "/verify-receipt" },
     ...FOOTER_QUICK_LINKS,
   ].filter((item, idx, arr) => arr.findIndex((x) => x.href === item.href) === idx);
 

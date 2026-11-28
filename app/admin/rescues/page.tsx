@@ -167,6 +167,18 @@ export default async function AdminRescuesPage({
                       <div style={{ fontWeight: 600 }}>Notes:</div>
                       <div>
                         <div style={{ color: "var(--stone-600)" }}>{cleanDesc || rescue.description || "N/A"}</div>
+                        {rescue.latitude != null && rescue.longitude != null && (
+                          <div style={{ marginTop: "6px" }}>
+                            <a
+                              href={`https://www.google.com/maps?q=${rescue.latitude},${rescue.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: "0.8rem", color: "var(--green-700)", fontWeight: 700, textDecoration: "none" }}
+                            >
+                              📍 Open Exact Incident Pin ({rescue.latitude.toFixed(4)}, {rescue.longitude.toFixed(4)}) ↗
+                            </a>
+                          </div>
+                        )}
                         {photoUrl && (
                           <div style={{ marginTop: "8px" }}>
                             <a href={photoUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block" }}>
@@ -186,6 +198,14 @@ export default async function AdminRescuesPage({
                                 }}
                               />
                             </a>
+                          </div>
+                        )}
+                        {rescue.audioUrl && (
+                          <div style={{ marginTop: "8px" }}>
+                            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--stone-600)", marginBottom: "4px" }}>
+                              Private Witness Voice Note:
+                            </div>
+                            <audio controls src={rescue.audioUrl} style={{ width: "100%", maxWidth: 320, height: 36 }} />
                           </div>
                         )}
                       </div>

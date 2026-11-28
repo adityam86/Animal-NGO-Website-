@@ -48,6 +48,24 @@ export const rescueCreateSchema = z.object({
       z.undefined(),
     ])
     .optional(),
+  audioUrl: z
+    .union([
+      z
+        .string()
+        .trim()
+        .refine(
+          (u) =>
+            u === "" ||
+            /^\/api\/admin\/rescues\/photo\/[a-zA-Z0-9_-]+\.(webm|ogg|mp3|m4a|mp4|wav)$/i.test(u) ||
+            /^data:audio\/(webm|ogg|mpeg|mp3|mp4|wav);base64,/i.test(u),
+          "Audio URL must point to a secure rescue voice upload"
+        ),
+      z.null(),
+      z.undefined(),
+    ])
+    .optional(),
+  latitude: z.coerce.number().finite().min(-90).max(90).nullable().optional(),
+  longitude: z.coerce.number().finite().min(-180).max(180).nullable().optional(),
 });
 
 export const adoptionCreateSchema = z.object({
@@ -88,6 +106,7 @@ export const donationCreateSchema = z.object({
     .transform((v) => (v ? sanitizePlainText(v, 10).toUpperCase() : ""))
     .refine((v) => v === "" || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v), "Invalid PAN format")
     .optional(),
+  fundraiserId: z.union([z.string().trim().min(2).max(60), z.literal(""), z.null(), z.undefined()]).optional(),
 });
 
 export const sponsorshipCreateSchema = z.object({
@@ -131,6 +150,7 @@ export const contactCreateSchema = z.object({
 
 export const chatMessageSchema = z.object({
   message: z.string().transform((v) => sanitizePlainText(v, 1000)).optional(),
+  language: z.enum(["en", "bn", "hi"]).default("en"),
   history: z
     .array(
       z.object({
@@ -173,4 +193,51 @@ export const animalFormSchema = z.object({
   shelter: trimmedString(2, 120),
   shelterLocationId: z.string().trim().nullable().optional(),
   story: trimmedString(10, 4000),
+});
+
+export const medicalFundraiserSchema = z.object({
+  title: trimmedString(4, 140),
+  animalName: trimmedString(2, 80),
+  species: trimmedString(2, 40),
+  summary: trimmedString(10, 1500),
+  purpose: trimmedString(2, 80).default("Medical Treatment"),
+  goalInr: z.coerce.number().finite().min(500).max(5_000_000),
+  image: z
+    .string()
+    .trim()
+    .refine((u) => isSafeImageUrl(u), "Image URL must be a valid local or uploaded photo"),
+  animalId: z.union([z.string().trim().min(1).max(60), z.literal(""), z.null(), z.undefined()]).optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const communityDriveSchema = z.object({
+  title: trimmedString(4, 140),
+  driveType: z.enum(["Anti-Rabies Vaccination", "ABC Sterilization", "Feeding Camp", "Awareness"]),
+  areaWard: trimmedString(2, 140),
+  date: z.string().trim().min(4, "Valid date is required").max(40),
+  timeSlot: trimmedString(3, 60),
+  coordinator: trimmedString(2, 100),
+  status: z.enum(["Scheduled", "Ongoing", "Completed", "Cancelled"]).default("Scheduled"),
+  notes: optionalTrimmedString(1000),
+});
+
+export const driveRequestSchema = z.object({
+  coordinatorName: trimmedString(2, 100),
+  phone: phoneSchema,
+  email: emailSchema,
+  wardOrLocality: trimmedString(3, 140),
+  driveType: z.enum(["ABC Sterilization", "Anti-Rabies Camp", "Deworming & Checkup"]),
+  estimatedAnimals: z.coerce.number().int().min(1).max(500).nullable().optional(),
+  notes: optionalTrimmedString(1000),
+});
+
+export const galleryPhotoSchema = z.object({
+  title: trimmedString(2, 120),
+  category: z.enum(["Rescue", "Gaushala", "Shelter", "Community Drive", "Medical Care", "Adoption"]),
+  caption: optionalTrimmedString(500),
+  capturedDate: optionalTrimmedString(40),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine((u) => isSafeImageUrl(u), "Photo URL must be a valid local or uploaded image"),
 });

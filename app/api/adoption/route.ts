@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
+import { sendSubmissionAlertEmail } from "@/lib/email";
 import { adoptionCreateSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,19 @@ export async function POST(request: Request) {
         createdAt: true,
       },
     });
+
+    void sendSubmissionAlertEmail({
+      category: "Adoption Application",
+      subjectLine: `Applicant ${data.applicantName}${data.animalId ? ` (Animal ${data.animalId})` : ""}`,
+      senderName: data.applicantName,
+      senderEmail: data.email,
+      summaryLines: [
+        `Application ID: ${application.id}`,
+        `Phone: ${data.phone}`,
+        `Home Type: ${data.homeType}`,
+        `Address: ${data.address}`,
+      ],
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, application }, { status: 201 });
   } catch (error) {

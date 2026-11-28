@@ -197,6 +197,13 @@ export default async function AdminAnimalsPage({
                     <td style={{ padding: "0.9rem 1rem", textAlign: "right" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
                         <Link
+                          href={`/admin/animals/${animal.id}/tag`}
+                          className="btn btn-outline btn-sm"
+                          style={{ padding: "0.3rem 0.65rem", fontSize: "0.8rem" }}
+                        >
+                          QR Tag
+                        </Link>
+                        <Link
                           href={`/admin/animals/${animal.id}/edit`}
                           className="btn btn-outline btn-sm"
                           style={{ padding: "0.3rem 0.65rem", fontSize: "0.8rem" }}

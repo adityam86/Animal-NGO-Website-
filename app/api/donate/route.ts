@@ -38,6 +38,17 @@ export async function POST(request: Request) {
     const normalizedFreq =
       d.frequency.toLowerCase() === "monthly" ? "Monthly" : "One-time";
 
+    let validFundraiserId: string | null = null;
+    if (d.fundraiserId && typeof prisma.medicalFundraiser?.findUnique === "function") {
+      const fundraiser = await prisma.medicalFundraiser.findUnique({
+        where: { id: d.fundraiserId },
+        select: { id: true, isActive: true },
+      });
+      if (fundraiser?.isActive) {
+        validFundraiserId = fundraiser.id;
+      }
+    }
+
     const newDonation = await prisma.donation.create({
       data: {
         amount: d.amount,
@@ -47,6 +58,7 @@ export async function POST(request: Request) {
         donorPhone: d.phone,
         donorEmail: d.email,
         donorPan: d.pan || null,
+        fundraiserId: validFundraiserId,
         paymentStatus: "Pending",
       },
       select: {
