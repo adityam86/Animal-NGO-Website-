@@ -187,6 +187,7 @@ function buildSystemPrompt(): string {
     `- Members on Call: Rohan Mishra (+91 76026 66102), Sourav (+91 91345 81378)`,
     `- Official Email: ${CONTACT_INFO.email}`,
     `- Statutory Credentials: Reg. ${AYUDAR_LEGAL.regNo}, NITI Aayog ${AYUDAR_LEGAL.nitiAayogId}, CSR-1 ${AYUDAR_LEGAL.csrRegNo}, 80G URN ${AYUDAR_LEGAL.urn80G} (${AYUDAR_LEGAL.urn80GDate})`,
+    `- Official Website: https://www.ayudarindia.com (always cite ayudarindia.com or relative paths like /rescue — never invent any other domain)`,
     `- Website Pages: /rescue (report injured animal with GPS & photo), /rescue/track (track report ID), /animals & /adoption (adoptable residents), /donate (80G Razorpay donations), /sponsor (monthly care), /cow-care (Gaushala), /shelter, /volunteer, /contact, /about.`,
     `Strict Clinical & Honesty Rules:`,
     `1. NEVER invent rescue counts, shelter headcounts, staff doctor names, or unverified statistics.`,
