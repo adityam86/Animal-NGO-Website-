@@ -2,201 +2,194 @@
 
 
 /* ============================================
-   DESIGN TOKENS
-============================================ */
+   DESIGN TOKENS — AYUDAR EDITORIAL PALETTE
+   ============================================ */
 :root {
-  /* Brand Colors — Palette 1: Warm Sanctuary & Earth */
-  --saffron-50:  hsl(38, 100%, 97%);
-  --saffron-100: hsl(36, 100%, 92%);
-  --saffron-200: hsl(32, 95%, 82%);
-  --saffron-300: hsl(30, 92%, 70%);
-  --saffron-400: hsl(28, 92%, 58%);
-  --saffron-500: hsl(24, 90%, 50%);
-  --saffron-600: hsl(20, 85%, 44%);
-  --saffron-700: hsl(18, 80%, 36%);
-  --saffron-800: hsl(16, 75%, 28%);
-  --saffron-900: hsl(14, 70%, 20%);
+  /* Warm Accent Scale (legacy tokens preserved for inner/admin compatibility) */
+  --saffron-50:  #FDF5F2;
+  --saffron-100: #FAE6E0;
+  --saffron-200: #F4C8BC;
+  --saffron-300: #E9A08E;
+  --saffron-400: #E07A5F;
+  --saffron-500: #D96B52;
+  --saffron-600: #BF5740;
+  --saffron-700: #9C4330;
+  --saffron-800: #7A3224;
+  --saffron-900: #592319;
 
-  /* Blueprint Sanctuary & Warm Earth Palette */
-  --forest-deep: #1E3A2F;
-  --sage-tint:   #E6EFE9;
-  --terracotta:  #E07A5F;
-  --terracotta-hover: #C8644B;
-  --crimson:     #D64545;
+  /* Core Editorial Sanctuary Palette */
+  --forest-deep: #152920;
+  --sage-tint:   #E9EFEA;
+  --terracotta:  #D96B52;
+  --terracotta-hover: #BF5740;
+  --coral-muted: #E07A5F;
+  --crimson:     #B83232;
 
-  /* Nature & Gaushala Healing Greens */
-  --green-50:  #E6EFE9;
-  --green-100: #D2E4D9;
-  --green-200: #A6CBB4;
-  --green-300: #77B08D;
-  --green-400: #4A9168;
-  --green-500: #296B47;
-  --green-600: #1E4D38;
-  --green-700: #1E3A2F;
-  --green-800: #152B22;
-  --forest-50:  #E6EFE9;
-  --forest-700: #1E3A2F;
+  /* Sanctuary Forest & Botanical Greens */
+  --green-50:  #EDF3EE;
+  --green-100: #D7E5DA;
+  --green-200: #B0CBB7;
+  --green-300: #80AA8C;
+  --green-400: #4C8461;
+  --green-500: #295F42;
+  --green-600: #1E4833;
+  --green-700: #183627;
+  --green-800: #11261C;
+  --forest-50:  #EDF3EE;
+  --forest-700: #183627;
 
-  /* Warm Linen & Off-White Surfaces */
+  /* Editorial Linen & Paper Surfaces */
   --cream-50:  #FAF7F2;
-  --cream-100: #F3EFE6;
-  --cream-200: #E6DFD2;
-  --cream-300: #D4CBB9;
+  --cream-100: #F2ECE1;
+  --cream-200: #E2DACB;
+  --cream-300: #CEC3AF;
 
-  /* Deep Espresso & Charcoal Contrast */
-  --stone-900: #16241D;
-  --stone-800: #1E3A2F;
-  --stone-700: #2D4439;
-  --stone-600: #4A5D53;
-  --stone-500: #687870;
-  --stone-400: #8D9B93;
+  /* Editorial Ink & Charcoal Neutrals */
+  --stone-900: #121D17;
+  --stone-800: #1A2820;
+  --stone-700: #2C3D34;
+  --stone-600: #495A51;
+  --stone-500: #66756D;
+  --stone-400: #8B9790;
   --stone-300: #C2CBC5;
-  --stone-200: #DDE2DE;
+  --stone-200: #DCE2DD;
   --stone-100: #EFF2EF;
-  --stone-50:  #F7F8F7;
+  --stone-50:  #F7F8F6;
 
-  /* Emergency & Rapid Ambulance */
-  --emergency-500: #D64545;
-  --emergency-600: #BC3434;
-  --emergency-50:  #FDF0F0;
-  --red-100:       #FDECEC;
-  --red-200:       #F9CACA;
-  --red-500:       #D64545;
-  --red-600:       #C43636;
-  --red-700:       #A62828;
-  --blue-500:      hsl(217, 91%, 60%);
-  --blue-100:      hsl(214, 95%, 93%);
+  /* Calm Emergency Dispatch Crimson */
+  --emergency-500: #B83232;
+  --emergency-600: #9E2626;
+  --emergency-50:  #FCF0F0;
+  --red-100:       #FBE6E6;
+  --red-200:       #F4C4C4;
+  --red-500:       #B83232;
+  --red-600:       #9E2626;
+  --red-700:       #841D1D;
+  --blue-500:      hsl(217, 70%, 48%);
+  --blue-100:      hsl(214, 75%, 94%);
 
-  /* Semantic Colors — Deep Forest Primary + Terracotta Warm Action */
-  --color-primary:       #1E3A2F;
-  --color-primary-dark:  #152B22;
-  --color-primary-light: #296B47;
-  --color-accent:        #E07A5F;
-  --color-accent-dark:   #C8644B;
+  /* Semantic Colors */
+  --color-primary:       #183627;
+  --color-primary-dark:  #11261C;
+  --color-primary-light: #295F42;
+  --color-accent:        #D96B52;
+  --color-accent-dark:   #BF5740;
   --color-bg:            #FAF7F2;
   --color-surface:       #FFFFFF;
-  --color-text:          #1E3A2F;
-  --color-text-muted:    #4A5D53;
-  --color-border:        #E6DFD2;
+  --color-text:          #1A2820;
+  --color-text-muted:    #495A51;
+  --color-border:        #E2DACB;
   --navbar-bg:           rgba(250, 247, 242, 0.92);
   --navbar-bg-scrolled:  rgba(250, 247, 242, 0.98);
-  --footer-bg:           #1E3A2F;
+  --footer-bg:           #152920;
   --footer-text:         #FAF7F2;
-  --footer-border-top:   2px solid #E07A5F;
+  --footer-border-top:   2px solid #D96B52;
 
   /* Typography */
   --font-display: var(--font-fraunces), 'Fraunces', Georgia, serif;
   --font-body:    var(--font-inter), 'Inter', system-ui, sans-serif;
 
   /* Spacing */
-  --section-padding: clamp(4rem, 8vw, 7rem);
-  --container-max: 1200px;
-  --container-pad: clamp(1rem, 4vw, 2rem);
+  --section-padding: clamp(4.25rem, 8vw, 7.25rem);
+  --container-max: 1240px;
+  --container-pad: clamp(1.1rem, 4vw, 2.25rem);
 
-  /* Shadows */
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md:  0 4px 12px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.07);
-  --shadow-lg:  0 12px 32px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-xl:  0 24px 48px rgba(0,0,0,0.14), 0 8px 20px rgba(0,0,0,0.1);
+  /* Editorial Shadows */
+  --shadow-sm:  0 1px 2px rgba(18, 29, 23, 0.05);
+  --shadow-md:  0 6px 18px rgba(18, 29, 23, 0.06);
+  --shadow-lg:  0 16px 36px rgba(18, 29, 23, 0.08);
+  --shadow-xl:  0 24px 52px rgba(18, 29, 23, 0.12);
 
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 32px;
-  --radius-2xl: 28px;
+  /* Crisp Architectural Radii (Restrained vs SaaS Bubbles) */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
   --radius-full: 9999px;
 
   /* Transitions */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 400ms;
+  --duration-fast: 160ms;
+  --duration-base: 260ms;
+  --duration-slow: 450ms;
 }
 
 /* ============================================
-   DARK MODE DESIGN TOKENS (Midnight Velvet & Radiant Accents)
-============================================ */
+   DARK MODE DESIGN TOKENS
+   ============================================ */
 html.dark {
   color-scheme: dark;
 
-  /* Surfaces & Backgrounds — Midnight Velvet slate */
-  --color-bg:            #0d1117;
-  --color-surface:       #161b26;
-  --color-surface-hover: #1f2636;
-  --color-border:        #232b3c;
-  --card-bg:             #161b26;
-  --navbar-bg:           rgba(13, 17, 23, 0.85);
-  --navbar-bg-scrolled:  rgba(13, 17, 23, 0.96);
-  --footer-bg:           #07090e;
-  --footer-text:         #f8fafc;
-  --footer-border-top:   2px solid var(--green-500);
+  --color-bg:            #0E1512;
+  --color-surface:       #151F1A;
+  --color-surface-hover: #1C2922;
+  --color-border:        #25342C;
+  --card-bg:             #151F1A;
+  --navbar-bg:           rgba(14, 21, 18, 0.90);
+  --navbar-bg-scrolled:  rgba(14, 21, 18, 0.97);
+  --footer-bg:           #090E0C;
+  --footer-text:         #F4F1EA;
+  --footer-border-top:   2px solid #D96B52;
 
-  /* Typography */
-  --color-text:          #f1f5f9;
-  --color-text-muted:    #94a3b8;
+  --color-text:          #F4F1EA;
+  --color-text-muted:    #9EABA3;
 
-  /* Stone scale in Dark Mode: Crisp headings and high contrast */
-  --stone-900: #f8fafc;
-  --stone-800: #f1f5f9;
-  --stone-700: #cbd5e1;
-  --stone-600: #94a3b8;
-  --stone-500: #64748b;
-  --stone-400: #475569;
-  --stone-300: #334155;
-  --stone-200: #232b3c;
-  --stone-100: #1a202c;
-  --stone-50:  #131722;
+  --stone-900: #F8F6F1;
+  --stone-800: #ECE9E1;
+  --stone-700: #CDD5CF;
+  --stone-600: #9EABA3;
+  --stone-500: #78867E;
+  --stone-400: #55635C;
+  --stone-300: #36453E;
+  --stone-200: #25342C;
+  --stone-100: #1B2721;
+  --stone-50:  #121B17;
 
-  /* Cream scale in Dark Mode: Multi-layer velvet surfaces */
-  --cream-50:  #0d1117;
-  --cream-100: #131722;
-  --cream-200: #1c2230;
-  --cream-300: #263044;
+  --cream-50:  #0E1512;
+  --cream-100: #141E19;
+  --cream-200: #223029;
+  --cream-300: #31433A;
 
-  /* Saffron accents: Luminous, radiant marigold that pops */
-  --saffron-50:  rgba(249, 115, 22, 0.12);
-  --saffron-100: rgba(249, 115, 22, 0.22);
-  --saffron-200: rgba(249, 115, 22, 0.36);
-  --saffron-300: hsl(28, 96%, 66%);
-  --saffron-400: hsl(26, 95%, 58%);
-  --saffron-500: hsl(24, 92%, 52%);
-  --saffron-600: hsl(22, 88%, 54%);
-  --saffron-700: hsl(28, 95%, 68%);
-  --saffron-800: hsl(30, 96%, 76%);
-  --saffron-900: hsl(34, 98%, 84%);
+  --saffron-50:  rgba(224, 122, 95, 0.14);
+  --saffron-100: rgba(224, 122, 95, 0.22);
+  --saffron-200: rgba(224, 122, 95, 0.34);
+  --saffron-300: #EEA490;
+  --saffron-400: #E58C75;
+  --saffron-500: #E07A5F;
+  --saffron-600: #E8947E;
+  --saffron-700: #F2B5A5;
+  --saffron-800: #F7CEC3;
+  --saffron-900: #FBE7E1;
 
-  /* Green healing accents: Crisp emerald */
-  --green-50:  rgba(34, 197, 94, 0.12);
-  --green-100: rgba(34, 197, 94, 0.22);
-  --green-400: hsl(142, 65%, 52%);
-  --green-500: hsl(142, 68%, 42%);
-  --green-600: hsl(142, 70%, 48%);
-  --green-700: hsl(142, 72%, 66%);
-  --green-800: hsl(142, 76%, 76%);
-  --forest-50:  rgba(34, 197, 94, 0.12);
-  --forest-700: hsl(142, 72%, 66%);
+  --green-50:  rgba(76, 132, 97, 0.16);
+  --green-100: rgba(76, 132, 97, 0.26);
+  --green-400: #6FB388;
+  --green-500: #539E70;
+  --green-600: #6FB388;
+  --green-700: #93CBA6;
+  --green-800: #BCE2C8;
+  --forest-50:  rgba(76, 132, 97, 0.16);
+  --forest-700: #93CBA6;
 
-  /* Emergency in Dark Mode */
-  --emergency-500: hsl(0, 85%, 62%);
-  --emergency-50:  rgba(239, 68, 68, 0.16);
-  --red-100:       rgba(239, 68, 68, 0.18);
-  --red-200:       rgba(239, 68, 68, 0.32);
-  --red-500:       hsl(0, 85%, 60%);
-  --red-600:       hsl(0, 85%, 64%);
-  --red-700:       hsl(0, 88%, 72%);
+  --emergency-500: #DC5A5A;
+  --emergency-50:  rgba(220, 90, 90, 0.14);
+  --red-100:       rgba(220, 90, 90, 0.18);
+  --red-200:       rgba(220, 90, 90, 0.32);
+  --red-500:       #E05A5A;
+  --red-600:       #E57373;
+  --red-700:       #F3A3A3;
 
-  /* Shadows in Dark Mode */
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.5);
-  --shadow-md:  0 4px 14px rgba(0,0,0,0.55);
-  --shadow-lg:  0 12px 32px rgba(0,0,0,0.65);
-  --shadow-xl:  0 24px 48px rgba(0,0,0,0.75);
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md:  0 6px 18px rgba(0, 0, 0, 0.50);
+  --shadow-lg:  0 14px 32px rgba(0, 0, 0, 0.60);
+  --shadow-xl:  0 24px 48px rgba(0, 0, 0, 0.72);
 }
 
 /* ============================================
    RESET & BASE
-============================================ */
+   ============================================ */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -207,30 +200,32 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
 }
 
 body {
   font-family: var(--font-body);
   background-color: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.6;
+  line-height: 1.65;
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 /* ============================================
    TYPOGRAPHY
-============================================ */
+   ============================================ */
 h1, h2, h3, h4 {
   font-family: var(--font-display);
-  line-height: 1.15;
+  line-height: 1.14;
   letter-spacing: -0.02em;
   color: var(--stone-800);
 }
 
-h1 { font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 600; }
-h2 { font-size: clamp(1.75rem, 3.5vw, 2.75rem); font-weight: 500; }
-h3 { font-size: clamp(1.3rem, 2.5vw, 1.75rem); font-weight: 500; }
-h4 { font-size: clamp(1.1rem, 1.8vw, 1.25rem); font-weight: 500; }
+h1 { font-size: clamp(2.3rem, 5vw, 3.85rem); font-weight: 500; }
+h2 { font-size: clamp(1.85rem, 3.4vw, 2.75rem); font-weight: 500; }
+h3 { font-size: clamp(1.25rem, 2.2vw, 1.65rem); font-weight: 500; }
+h4 { font-size: clamp(1.05rem, 1.6vw, 1.2rem); font-weight: 600; }
 
 p { color: var(--stone-600); line-height: 1.75; }
 
@@ -238,7 +233,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ============================================
    LAYOUT UTILITIES
-============================================ */
+   ============================================ */
 .container {
   max-width: var(--container-max);
   margin-inline: auto;
@@ -249,68 +244,151 @@ a { color: inherit; text-decoration: none; }
   padding-block: var(--section-padding);
 }
 
-/* ============================================
-   COMPONENT TOKENS (Tailwind v4 theme)
-============================================ */
-@theme inline {
-  --color-saffron-50:  hsl(38, 100%, 97%);
-  --color-saffron-100: hsl(36, 100%, 92%);
-  --color-saffron-200: hsl(32, 95%, 82%);
-  --color-saffron-300: hsl(30, 92%, 70%);
-  --color-saffron-400: hsl(28, 92%, 58%);
-  --color-saffron-500: hsl(24, 90%, 50%);
-  --color-saffron-600: hsl(20, 85%, 44%);
-  --color-saffron-700: hsl(18, 80%, 36%);
-  --color-saffron-800: hsl(16, 75%, 28%);
-  --color-saffron-900: hsl(14, 70%, 20%);
+.section-sm {
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+}
 
-  --color-forest-50:  hsl(140, 60%, 97%);
-  --color-forest-100: hsl(140, 55%, 90%);
-  --color-forest-200: hsl(142, 52%, 76%);
-  --color-forest-300: hsl(142, 52%, 60%);
-  --color-forest-400: hsl(142, 60%, 42%);
-  --color-forest-500: hsl(142, 68%, 30%);
-  --color-forest-600: hsl(142, 72%, 24%);
-  --color-forest-700: hsl(142, 75%, 18%);
+/* Editorial Eyebrow & Hairline Section Rules */
+.editorial-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  margin-bottom: 0.9rem;
+}
 
-  --color-cream-50:  hsl(40, 36%, 98%);
-  --color-cream-100: hsl(38, 28%, 95%);
-  --color-cream-200: hsl(36, 24%, 90%);
-  --color-cream-300: hsl(34, 20%, 82%);
+.editorial-eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  height: 1.5px;
+  background: currentColor;
+  flex-shrink: 0;
+}
 
-  --color-stone-900: hsl(25, 14%, 12%);
-  --color-stone-800: hsl(25, 12%, 18%);
-  --color-stone-700: hsl(25, 9%, 28%);
-  --color-stone-600: hsl(25, 8%, 42%);
-  --color-stone-500: hsl(25, 6%, 56%);
-  --color-stone-400: hsl(25, 6%, 70%);
-  --color-stone-300: hsl(25, 7%, 82%);
-  --color-stone-100: hsl(25, 10%, 94%);
+.editorial-rule {
+  width: 100%;
+  height: 1px;
+  background: var(--cream-200);
+  border: none;
+}
 
-  --color-emergency-500: hsl(0, 72%, 50%);
-  --color-emergency-600: hsl(0, 75%, 42%);
-  --color-emergency-50:  hsl(0, 85%, 97%);
+/* Documentary Image Frame with Subtle Hover Zoom */
+.editorial-photo-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--cream-100);
+}
 
-  --font-display: var(--font-fraunces), 'Fraunces', Georgia, serif;
-  --font-body: var(--font-inter), 'Inter', system-ui, sans-serif;
+.editorial-photo-wrap img {
+  transition: transform 0.7s var(--ease-out);
+}
+
+.editorial-photo-wrap:hover img {
+  transform: scale(1.035);
+}
+
+/* Nav link animated underline */
+.nav-link-editorial {
+  position: relative;
+  display: inline-block;
+  padding-block: 0.35rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.nav-link-editorial::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--terracotta);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.25s var(--ease-out);
+}
+
+.nav-link-editorial:hover::after,
+.nav-link-editorial[aria-current="page"]::after {
+  transform: scaleX(1);
 }
 
 /* ============================================
-   BUTTONS
-============================================ */
+   COMPONENT TOKENS (Tailwind v4 theme)
+   ============================================ */
+@theme inline {
+  --color-saffron-50:  #FDF5F2;
+  --color-saffron-100: #FAE6E0;
+  --color-saffron-200: #F4C8BC;
+  --color-saffron-300: #E9A08E;
+  --color-saffron-400: #E07A5F;
+  --color-saffron-500: #D96B52;
+  --color-saffron-600: #BF5740;
+  --color-saffron-700: #9C4330;
+  --color-saffron-800: #7A3224;
+  --color-saffron-900: #592319;
+
+  --color-forest-50:  #EDF3EE;
+  --color-forest-100: #D7E5DA;
+  --color-forest-200: #B0CBB7;
+  --color-forest-300: #80AA8C;
+  --color-forest-400: #4C8461;
+  --color-forest-500: #295F42;
+  --color-forest-600: #1E4833;
+  --color-forest-700: #183627;
+
+  --color-cream-50:  #FAF7F2;
+  --color-cream-100: #F2ECE1;
+  --color-cream-200: #E2DACB;
+  --color-cream-300: #CEC3AF;
+
+  --color-stone-900: #121D17;
+  --color-stone-800: #1A2820;
+  --color-stone-700: #2C3D34;
+  --color-stone-600: #495A51;
+  --color-stone-500: #66756D;
+  --color-stone-400: #8B9790;
+  --color-stone-300: #C2CBC5;
+  --color-stone-100: #EFF2EF;
+
+  --color-emergency-500: #B83232;
+  --color-emergency-600: #9E2626;
+  --color-emergency-50:  #FCF0F0;
+
+  --font-display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --font-body:    var(--font-inter), 'Inter', system-ui, sans-serif;
+}
+
+/* ============================================
+   BUTTONS — REFINED EDITORIAL GEOMETRY
+   ============================================ */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.75rem;
-  border-radius: var(--radius-full);
+  gap: 0.55rem;
+  padding: 0.78rem 1.55rem;
+  border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   letter-spacing: 0.01em;
-  transition: all var(--duration-base) var(--ease-out);
+  transition: background-color var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out),
+              color var(--duration-base) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-base) var(--ease-out);
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   outline: none;
   position: relative;
   overflow: hidden;
@@ -318,56 +396,55 @@ a { color: inherit; text-decoration: none; }
 }
 
 .btn-primary {
-  background: var(--green-600);
-  color: white;
-  box-shadow: 0 4px 14px rgba(30, 58, 47, 0.28);
+  background: var(--green-700);
+  color: #FAF7F2;
+  box-shadow: 0 2px 8px rgba(24, 54, 39, 0.18);
 }
 
 .btn-primary:hover {
-  background: var(--green-700);
-  box-shadow: 0 6px 20px rgba(30, 58, 47, 0.36);
+  background: var(--green-800);
   transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(24, 54, 39, 0.24);
 }
 
 .btn-terracotta {
-  background: var(--terracotta, #E07A5F);
-  color: white;
-  box-shadow: 0 4px 14px rgba(224, 122, 95, 0.34);
+  background: var(--terracotta);
+  color: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(217, 107, 82, 0.24);
 }
 
 .btn-terracotta:hover {
-  background: var(--terracotta-hover, #C8644B);
-  box-shadow: 0 6px 20px rgba(200, 100, 75, 0.42);
+  background: var(--terracotta-hover);
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(191, 87, 64, 0.3);
 }
 
 .btn-emergency {
-  background: var(--crimson, #D64545);
-  color: white;
-  box-shadow: 0 4px 14px rgba(214, 69, 69, 0.38);
-  animation: pulse-emergency 2s infinite;
+  background: var(--crimson);
+  color: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(184, 50, 50, 0.26);
 }
 
 .btn-emergency:hover {
-  background: #BC3434;
+  background: var(--emergency-600);
   transform: translateY(-1px);
 }
 
 .btn-emergency-outline {
   background: transparent;
-  color: var(--crimson, #D64545);
-  border: 1.5px solid var(--crimson, #D64545);
+  color: var(--crimson);
+  border: 1.5px solid var(--crimson);
 }
 
 .btn-emergency-outline:hover {
-  background: var(--emergency-50, #FDF0F0);
+  background: var(--emergency-50);
   transform: translateY(-1px);
 }
 
 .btn-outline {
   background: transparent;
   color: var(--green-700);
-  border: 2px solid var(--green-600);
+  border: 1.5px solid var(--green-600);
 }
 
 .btn-outline:hover {
@@ -376,66 +453,71 @@ a { color: inherit; text-decoration: none; }
 }
 
 .btn-white {
-  background: white;
+  background: #FAF7F2;
   color: var(--stone-800);
-  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-white:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  background: #FFFFFF;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .btn-green {
-  background: var(--green-500);
-  color: white;
-  box-shadow: 0 4px 14px hsla(142, 55%, 35%, 0.35);
+  background: var(--green-600);
+  color: #FFFFFF;
 }
 
 .btn-green:hover {
-  background: var(--green-600);
+  background: var(--green-700);
   transform: translateY(-1px);
 }
 
 /* Button sizes */
-.btn-sm { padding: 0.5rem 1.25rem; font-size: 0.875rem; }
-.btn-lg { padding: 1rem 2.25rem; font-size: 1.05rem; }
+.btn-sm { padding: 0.52rem 1.1rem; font-size: 0.85rem; }
+.btn-lg { padding: 0.95rem 1.9rem; font-size: 0.98rem; }
 
 /* ============================================
-   CARDS
-============================================ */
+   CARDS — EDITORIAL FRAMING
+   ============================================ */
 .card {
-  background: white;
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--cream-200);
-  transition: all var(--duration-base) var(--ease-out);
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out);
   overflow: hidden;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--cream-300);
+  transform: translateY(-2px);
 }
 
 /* ============================================
    BADGES
-============================================ */
+   ============================================ */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
+  gap: 0.28rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.badge-green  { background: var(--green-50);  color: var(--green-700); }
-.badge-saffron { background: var(--saffron-50); color: var(--saffron-700); }
-.badge-red    { background: hsl(0,80%,96%);    color: hsl(0,70%,40%); }
-.badge-blue   { background: hsl(210,80%,96%);  color: hsl(210,70%,40%); }
+.badge-green  { background: var(--green-50);  color: var(--green-700); border: 1px solid var(--green-100); }
+.badge-saffron { background: var(--saffron-50); color: var(--saffron-700); border: 1px solid var(--saffron-200); }
+.badge-red    { background: var(--emergency-50); color: var(--crimson); border: 1px solid var(--red-200); }
+.badge-blue   { background: hsl(210,70%,96%);  color: hsl(210,65%,36%); }
 
 /* Universal Admin Status Badges */
 .badge-status-emergency {
@@ -495,10 +577,10 @@ a { color: inherit; text-decoration: none; }
 
 /* ============================================
    ADMIN DASHBOARD & COMMAND CENTER TABLES
-============================================ */
+   ============================================ */
 .admin-card {
   background: var(--color-surface);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--cream-200);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
   overflow: hidden;
@@ -534,7 +616,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .admin-table tbody tr:hover {
-  background: rgba(249, 115, 22, 0.03);
+  background: rgba(217, 107, 82, 0.04);
 }
 
 html.dark .admin-table tbody tr:hover {
@@ -543,7 +625,7 @@ html.dark .admin-table tbody tr:hover {
 
 /* ============================================
    FORM ELEMENTS
-============================================ */
+   ============================================ */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -575,8 +657,8 @@ html.dark .admin-table tbody tr:hover {
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-  border-color: var(--saffron-400);
-  box-shadow: 0 0 0 3px hsla(26, 88%, 50%, 0.12);
+  border-color: var(--green-600);
+  box-shadow: 0 0 0 3px rgba(30, 72, 51, 0.12);
 }
 
 .form-input::placeholder,
@@ -587,76 +669,65 @@ html.dark .admin-table tbody tr:hover {
 .form-textarea { resize: vertical; min-height: 120px; }
 
 /* ============================================
-   SECTION HEADERS
-============================================ */
+   SECTION HEADERS (Clean Editorial Eyebrow)
+   ============================================ */
 .section-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 1rem;
-  background: var(--saffron-50);
-  color: var(--saffron-600);
-  border-radius: var(--radius-full);
-  font-size: 0.8rem;
+  gap: 0.65rem;
+  padding: 0;
+  background: transparent;
+  color: var(--terracotta);
+  border-radius: 0;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.section-tag::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 1.5px;
+  background: currentColor;
 }
 
 /* ============================================
    ANIMATIONS
-============================================ */
+   ============================================ */
 @keyframes pulse-emergency {
-  0%, 100% { box-shadow: 0 4px 14px hsla(0, 80%, 52%, 0.4); }
-  50%       { box-shadow: 0 4px 24px hsla(0, 80%, 52%, 0.7); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-8px); }
-}
-
-@keyframes shimmer {
-  from { background-position: -200% center; }
-  to   { background-position:  200% center; }
-}
-
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  0%, 100% { box-shadow: 0 2px 10px rgba(184, 50, 50, 0.3); }
+  50%       { box-shadow: 0 4px 18px rgba(184, 50, 50, 0.45); }
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(30px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-float { animation: float 4s ease-in-out infinite; }
 .animate-fade-in-up { animation: fade-in-up 0.6s var(--ease-out) both; }
 
 /* ============================================
-   SCROLLBAR
-============================================ */
+   SCROLLBAR & SELECTION
+   ============================================ */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: var(--cream-100); }
 ::-webkit-scrollbar-thumb { background: var(--cream-300); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--saffron-300); }
+::-webkit-scrollbar-thumb:hover { background: var(--terracotta); }
 
-/* ============================================
-   SELECTION
-============================================ */
 ::selection {
-  background: hsla(26, 88%, 50%, 0.2);
-  color: var(--stone-800);
+  background: rgba(217, 107, 82, 0.22);
+  color: var(--stone-900);
 }
 
 /* ============================================
    RESPONSIVE UTILITIES
-============================================ */
+   ============================================ */
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
-  .section { padding-block: 3rem; }
+  .section { padding-block: 3.25rem; }
 }
 
 @media (min-width: 769px) {
@@ -674,13 +745,12 @@ html.dark .admin-table tbody tr:hover {
 
 /* ============================================
    DARK MODE COMPONENT & ELEMENT ADAPTERS
-============================================ */
+   ============================================ */
 html.dark body {
   background-color: var(--color-bg);
   color: var(--color-text);
 }
 
-/* Card & Surface Adapters */
 html.dark .card {
   background: var(--color-surface);
   border-color: var(--color-border);
@@ -696,7 +766,6 @@ html.dark [style*="background-color: #ffffff"] {
   border-color: var(--color-border) !important;
 }
 
-/* Form Controls in Dark Mode */
 html.dark .form-input,
 html.dark .form-select,
 html.dark .form-textarea,
@@ -716,7 +785,6 @@ html.dark textarea::placeholder {
   color: var(--stone-500) !important;
 }
 
-/* Admin Dashboard in Dark Mode */
 html.dark .admin-card {
   background: var(--color-surface);
   border-color: var(--color-border);
@@ -737,7 +805,6 @@ html.dark tr {
   border-color: var(--color-border) !important;
 }
 
-/* Buttons in Dark Mode */
 html.dark .btn-white {
   background: var(--color-surface);
   color: var(--color-text);
@@ -745,15 +812,14 @@ html.dark .btn-white {
 }
 
 html.dark .btn-outline {
-  border-color: var(--saffron-400);
-  color: var(--saffron-400);
+  border-color: var(--green-400);
+  color: var(--green-700);
 }
 
 html.dark .btn-outline:hover {
-  background: var(--saffron-50);
+  background: var(--green-50);
 }
 
-/* Smooth Transitions for Theme Switching */
 html,
 body,
 header,
@@ -767,7 +833,7 @@ select {
 
 /* ============================================
    ADMIN PORTAL RESPONSIVE MOBILE STYLES
-============================================ */
+   ============================================ */
 .admin-mobile-backdrop {
   position: fixed;
   inset: 0;
@@ -778,7 +844,6 @@ select {
   transition: opacity 0.25s ease;
 }
 
-/* Responsive Admin Sidebar */
 .admin-sidebar {
   width: 260px;
   background: #0f172a;
@@ -811,7 +876,6 @@ select {
   }
 }
 
-/* Hide on mobile, show on desktop (768px+) */
 @media (max-width: 767px) {
   .admin-desktop-only {
     display: none !important;
@@ -824,7 +888,6 @@ select {
   }
 }
 
-/* Responsive Admin Canvas */
 .admin-scroll-canvas {
   flex: 1;
   overflow-y: auto;
@@ -844,7 +907,6 @@ select {
   }
 }
 
-/* Responsive Stat Grid */
 .admin-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -860,7 +922,6 @@ select {
   }
 }
 
-/* Stat Card Mobile Refinements */
 .admin-stat-card {
   background: var(--color-surface);
   padding: 0.9rem 0.85rem;
@@ -896,7 +957,6 @@ select {
   }
 }
 
-/* Responsive Feeds Grid */
 .admin-feeds-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -910,7 +970,6 @@ select {
   }
 }
 
-/* Responsive Two-Column Card (e.g. Rescues) */
 .admin-two-col-content {
   padding: 1.25rem;
   display: flex;
@@ -929,7 +988,6 @@ select {
     flex-direction: row;
     gap: 2rem;
   }
-  
   .admin-two-col-right {
     flex: 1;
     border-top: none;
@@ -939,14 +997,12 @@ select {
   }
 }
 
-/* Responsive Horizontal Table Scrolling */
 .admin-table-scroll {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Shared Responsive Grids for Forms & Admin Subpages */
 .responsive-grid-2 {
   display: grid;
   grid-template-columns: 1fr;
@@ -992,6 +1048,18 @@ html.dark .sticky-filter-bar {
   border-color: var(--color-border) !important;
 }
 
+/* Keep Leaflet map panes & controls beneath sticky header (z-index 1200) */
+.leaflet-container {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 400 !important;
+}
+
 /* ============================================
    ACCESSIBILITY, FOCUS RINGS & REDUCED MOTION
    ============================================ */
@@ -1017,7 +1085,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid var(--green-600);
+  outline: 2.5px solid var(--terracotta);
   outline-offset: 2px;
 }
 
@@ -1027,6 +1095,9 @@ textarea:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .editorial-photo-wrap:hover img {
+    transform: none !important;
   }
 }
 
@@ -1038,4 +1109,3 @@ textarea:focus-visible {
     padding-top: 0 !important;
   }
 }
-

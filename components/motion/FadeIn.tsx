@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion, useReducedMotion, type HTMLMotionProps } from "framer-motion";
 import type { ReactNode } from "react";
 
 type Direction = "up" | "down" | "left" | "right" | "none";
@@ -18,13 +18,30 @@ export default function FadeIn({
   children,
   direction = "up",
   delay = 0,
-  duration = 0.6,
-  distance = 24,
+  duration = 0.55,
+  distance = 14,
   fullWidth = false,
   className,
   style,
   ...props
 }: FadeInProps) {
+  const prefersReduced = useReducedMotion();
+
+  if (prefersReduced) {
+    return (
+      <motion.div
+        className={className}
+        style={{
+          width: fullWidth ? "100%" : undefined,
+          ...style,
+        }}
+        {...props}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
   const getInitialPosition = () => {
     switch (direction) {
       case "up":
@@ -41,17 +58,15 @@ export default function FadeIn({
     }
   };
 
-  const initialPos = getInitialPosition();
-
   return (
     <motion.div
-      initial={{ opacity: 0, ...initialPos }}
+      initial={{ opacity: 0, ...getInitialPosition() }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
+      viewport={{ once: true, margin: "-36px" }}
       transition={{
         duration,
         delay,
-        ease: [0.21, 0.47, 0.32, 0.98],
+        ease: [0.16, 1, 0.3, 1],
       }}
       className={className}
       style={{

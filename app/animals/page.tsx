@@ -165,7 +165,7 @@ export default function AnimalsPage() {
           ) : (
             <motion.div
               layout
-              style={{ display: "flex", flexWrap: "wrap", gap: "1.5rem", justifyContent: "center" }}
+              style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: "1.75rem" }}
             >
               <AnimatePresence>
                 {filtered.map((animal) => (

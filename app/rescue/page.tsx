@@ -249,7 +249,7 @@ function RescuePageContent() {
                 }}
               >
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF6B6B" }} />
-                Ayuda • 24/7 Emergency Rescue
+                Ayudar • 24/7 Emergency Rescue Dispatch
               </div>
               <h1 style={{ color: "white", fontSize: "clamp(2rem, 4.4vw, 3rem)", lineHeight: 1.12, marginBottom: "0.9rem" }}>
                 Found an injured or distress animal? Report in under 30 seconds.

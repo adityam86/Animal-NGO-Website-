@@ -2,81 +2,137 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Phone, Mail, MapPin, Heart, ShieldCheck, ExternalLink } from "lucide-react";
-import { NAV_LINKS, FOOTER_QUICK_LINKS, CONTACT_INFO, AYUDAR_LEGAL } from "@/lib/data";
+import { Phone, Mail, MapPin, ShieldCheck, ExternalLink } from "lucide-react";
+import { FOOTER_QUICK_LINKS, CONTACT_INFO, AYUDAR_LEGAL } from "@/lib/data";
+
+const FOOTER_LINKS_PRIMARY = [
+  { label: "Home", href: "/" },
+  { label: "Report an Injured Animal", href: "/rescue" },
+  { label: "Track a Rescue Case", href: "/rescue/track" },
+  { label: "Adopt & Foster", href: "/adoption" },
+  { label: "Rescue Stories", href: "/stories" },
+];
+
+const FOOTER_LINKS_PROGRAMS = [
+  { label: "Donate (80G Exempt)", href: "/donate" },
+  { label: "Volunteer", href: "/volunteer" },
+  { label: "Sponsor an Animal", href: "/sponsor" },
+  { label: "Gaushala & Cow Care", href: "/cow-care" },
+  { label: "Our Shelter", href: "/shelter" },
+  { label: "Impact & Transparency", href: "/about" },
+  ...FOOTER_QUICK_LINKS,
+].filter((item, idx, arr) => arr.findIndex((x) => x.href === item.href) === idx);
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="app-footer" style={{ paddingBlock: "4.5rem 2.5rem" }}>
+    <footer className="app-footer" style={{ paddingBlock: "4.5rem 2.25rem" }}>
       <div className="container">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "2.75rem", marginBottom: "2.75rem" }}>
-          {/* Brand & Mission */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gap: "2.75rem",
+            marginBottom: "3rem",
+          }}
+        >
+          {/* Column 1: Editorial Identity & Statutory Trust */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", marginBottom: "1.1rem" }}>
               <Image
                 src="/images/logo.jpg"
-                alt={AYUDAR_LEGAL.name}
-                width={52}
-                height={52}
-                style={{ borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(224, 122, 95, 0.5)" }}
+                alt={`${AYUDAR_LEGAL.name} Logo`}
+                width={48}
+                height={48}
+                style={{
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "1.5px solid rgba(224, 122, 95, 0.55)",
+                }}
               />
               <div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 700, color: "white" }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "1.25rem",
+                    fontWeight: 600,
+                    color: "#FAF7F2",
+                    lineHeight: 1.15,
+                  }}
+                >
                   {AYUDAR_LEGAL.shortName}
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "#E07A5F", fontWeight: 700, letterSpacing: "0.04em" }}>
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "#E07A5F",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                  }}
+                >
                   {AYUDAR_LEGAL.tagline}
                 </div>
               </div>
             </div>
 
-            <p style={{ color: "rgba(250, 247, 242, 0.78)", fontSize: "0.88rem", lineHeight: 1.75, marginBottom: "1.25rem" }}>
-              {AYUDAR_LEGAL.mission} Serving injured street animals, abandoned companions, and sheltered cows across Raniganj, Asansol &amp; Durgapur.
+            <p
+              style={{
+                color: "rgba(250, 247, 242, 0.78)",
+                fontSize: "0.88rem",
+                lineHeight: 1.75,
+                marginBottom: "1.25rem",
+                maxWidth: "34ch",
+              }}
+            >
+              {AYUDAR_LEGAL.mission} Street rescue, veterinary medicine, gaushala sanctuary, and adoption across Raniganj, Asansol &amp; Durgapur.
             </p>
 
-            {/* 80G & Verification Pill */}
             <div
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.45rem",
-                padding: "0.45rem 0.85rem",
-                borderRadius: "var(--radius-full)",
-                background: "rgba(230, 239, 233, 0.12)",
-                border: "1px solid rgba(230, 239, 233, 0.25)",
+                padding: "0.42rem 0.85rem",
+                borderRadius: "var(--radius-sm)",
+                background: "rgba(255, 255, 255, 0.06)",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
                 fontSize: "0.75rem",
-                fontWeight: 700,
-                color: "#bbf7d0",
+                fontWeight: 600,
+                color: "#D7E5DA",
               }}
             >
-              <ShieldCheck size={14} />
-              80G Tax Exempt • URN: {AYUDAR_LEGAL.urn80G}
+              <ShieldCheck size={14} style={{ color: "#E07A5F" }} />
+              <span>80G Exempt · URN {AYUDAR_LEGAL.urn80G}</span>
             </div>
           </div>
 
-          {/* Explore */}
+          {/* Column 2: Rescue & Sanctuary Navigation */}
           <div>
-            <h4 style={{ color: "white", marginBottom: "1.15rem", fontSize: "0.88rem", fontFamily: "var(--font-body)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Explore
+            <h4
+              style={{
+                color: "#FAF7F2",
+                marginBottom: "1.1rem",
+                fontSize: "0.76rem",
+                fontFamily: "var(--font-body)",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              Field &amp; Sanctuary
             </h4>
-            <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {NAV_LINKS.map((link) => (
+            <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.62rem" }}>
+              {FOOTER_LINKS_PRIMARY.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    style={{ color: "rgba(250, 247, 242, 0.72)", fontSize: "0.88rem", textDecoration: "none" }}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-              {FOOTER_QUICK_LINKS.filter((q) => !NAV_LINKS.some((n) => n.href === q.href)).map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    style={{ color: "rgba(250, 247, 242, 0.72)", fontSize: "0.88rem", textDecoration: "none" }}
+                    style={{
+                      color: "rgba(250, 247, 242, 0.78)",
+                      fontSize: "0.88rem",
+                      transition: "color 0.2s",
+                    }}
                   >
                     {link.label}
                   </Link>
@@ -85,62 +141,91 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Fund Allocation & Registrations */}
+          {/* Column 3: Programs & Registrations */}
           <div>
-            <h4 style={{ color: "white", marginBottom: "1.15rem", fontSize: "0.88rem", fontFamily: "var(--font-body)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Donor Transparency
+            <h4
+              style={{
+                color: "#FAF7F2",
+                marginBottom: "1.1rem",
+                fontSize: "0.76rem",
+                fontFamily: "var(--font-body)",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              Ways to Help &amp; Governance
             </h4>
-            <div style={{ marginBottom: "1.15rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "rgba(250,247,242,0.8)", marginBottom: "0.4rem" }}>
-                <span>Medical &amp; Food (75%)</span>
-                <span>Shelter (15%) • Van (10%)</span>
-              </div>
-              <div style={{ display: "flex", height: "8px", borderRadius: "999px", overflow: "hidden", background: "rgba(255,255,255,0.12)" }}>
-                <div style={{ width: "75%", background: "#4ade80" }} />
-                <div style={{ width: "15%", background: "#E07A5F" }} />
-                <div style={{ width: "10%", background: "#fbbf24" }} />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", fontSize: "0.78rem", color: "rgba(250,247,242,0.72)", lineHeight: 1.55 }}>
-              <div><strong style={{ color: "white" }}>Reg. No:</strong> {AYUDAR_LEGAL.regNo}</div>
-              <div><strong style={{ color: "white" }}>NITI Aayog:</strong> {AYUDAR_LEGAL.nitiAayogId}</div>
-              <div><strong style={{ color: "white" }}>CSR Reg. No:</strong> {AYUDAR_LEGAL.csrRegNo}</div>
-              <div><strong style={{ color: "white" }}>80G URN:</strong> {AYUDAR_LEGAL.urn80G} ({AYUDAR_LEGAL.urn80GDate})</div>
+            <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.55rem", marginBottom: "1.25rem" }}>
+              {FOOTER_LINKS_PROGRAMS.filter((l) => !FOOTER_LINKS_PRIMARY.some((p) => p.href === l.href)).map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    style={{
+                      color: "rgba(250, 247, 242, 0.78)",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div style={{ fontSize: "0.75rem", color: "rgba(250, 247, 242, 0.62)", lineHeight: 1.65 }}>
+              <div>Reg: {AYUDAR_LEGAL.regNo}</div>
+              <div>NITI Aayog: {AYUDAR_LEGAL.nitiAayogId}</div>
+              <div>CSR-1: {AYUDAR_LEGAL.csrRegNo}</div>
             </div>
           </div>
 
-          {/* Contact & Location */}
+          {/* Column 4: Direct Contact & Helpline */}
           <div>
-            <h4 style={{ color: "white", marginBottom: "1.15rem", fontSize: "0.88rem", fontFamily: "var(--font-body)", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Sanctuary &amp; Helpline
+            <h4
+              style={{
+                color: "#FAF7F2",
+                marginBottom: "1.1rem",
+                fontSize: "0.76rem",
+                fontFamily: "var(--font-body)",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              Sanctuary &amp; Dispatch
             </h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
               <a
                 href={AYUDAR_LEGAL.mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "flex", gap: "0.65rem", alignItems: "flex-start", color: "rgba(250,247,242,0.78)", fontSize: "0.86rem", textDecoration: "none", lineHeight: 1.55 }}
+                style={{
+                  display: "flex",
+                  gap: "0.65rem",
+                  alignItems: "flex-start",
+                  color: "rgba(250, 247, 242, 0.8)",
+                  fontSize: "0.86rem",
+                  lineHeight: 1.55,
+                }}
               >
                 <MapPin size={15} style={{ color: "#E07A5F", marginTop: "3px", flexShrink: 0 }} />
                 <span>
                   {CONTACT_INFO.address}
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#E07A5F", fontWeight: 600, marginLeft: "0.35rem" }}>
-                    Open in Google Maps <ExternalLink size={12} />
+                    Directions <ExternalLink size={12} />
                   </span>
                 </span>
               </a>
 
               <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
                 <Phone size={15} style={{ color: "#E07A5F", flexShrink: 0 }} />
-                <a href={`tel:${CONTACT_INFO.phone}`} style={{ color: "rgba(250,247,242,0.78)", fontSize: "0.86rem", textDecoration: "none" }}>
+                <a href={`tel:${CONTACT_INFO.phone}`} style={{ color: "rgba(250, 247, 242, 0.8)", fontSize: "0.86rem" }}>
                   {CONTACT_INFO.phone}
                 </a>
               </div>
 
               <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
                 <Mail size={15} style={{ color: "#E07A5F", flexShrink: 0 }} />
-                <a href={`mailto:${CONTACT_INFO.email}`} style={{ color: "rgba(250,247,242,0.78)", fontSize: "0.86rem", textDecoration: "none" }}>
+                <a href={`mailto:${CONTACT_INFO.email}`} style={{ color: "rgba(250, 247, 242, 0.8)", fontSize: "0.86rem" }}>
                   {CONTACT_INFO.email}
                 </a>
               </div>
@@ -149,15 +234,15 @@ export default function Footer() {
                 style={{
                   marginTop: "0.35rem",
                   padding: "0.85rem 1rem",
-                  background: "rgba(214, 69, 69, 0.18)",
+                  background: "rgba(184, 50, 50, 0.2)",
                   borderRadius: "var(--radius-md)",
-                  border: "1px solid rgba(214, 69, 69, 0.42)",
+                  borderLeft: "3px solid #E07A5F",
                 }}
               >
-                <div style={{ color: "#fca5a5", fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.06em", marginBottom: "0.2rem" }}>
-                  🚨 AYUDA 24/7 EMERGENCY
+                <div style={{ color: "#FAD4CD", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.2rem" }}>
+                  24/7 Emergency Helpline
                 </div>
-                <a href={`tel:${CONTACT_INFO.emergencyPhone}`} style={{ color: "white", fontWeight: 700, fontSize: "1rem", textDecoration: "none" }}>
+                <a href={`tel:${CONTACT_INFO.emergencyPhone}`} style={{ color: "#FAF7F2", fontWeight: 600, fontSize: "1rem" }}>
                   {CONTACT_INFO.emergencyPhone}
                 </a>
               </div>
@@ -165,10 +250,10 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom bar */}
+        {/* Bottom Copyright & Official Links Strip */}
         <div
           style={{
-            borderTop: "1px solid rgba(255,255,255,0.12)",
+            borderTop: "1px solid rgba(255, 255, 255, 0.14)",
             paddingTop: "1.5rem",
             display: "flex",
             flexWrap: "wrap",
@@ -177,12 +262,14 @@ export default function Footer() {
             alignItems: "center",
           }}
         >
-          <p style={{ color: "rgba(250,247,242,0.58)", fontSize: "0.8rem", margin: 0 }}>
-            © {currentYear} {AYUDAR_LEGAL.name} • Reg. No: {AYUDAR_LEGAL.regNo} • NITI Aayog: {AYUDAR_LEGAL.nitiAayogId} • CSR: {AYUDAR_LEGAL.csrRegNo}
+          <p style={{ color: "rgba(250, 247, 242, 0.65)", fontSize: "0.8rem", margin: 0 }}>
+            © {currentYear} {AYUDAR_LEGAL.name} · Reg. {AYUDAR_LEGAL.regNo} · 80G URN {AYUDAR_LEGAL.urn80G}
           </p>
-          <p style={{ color: "rgba(250,247,242,0.58)", fontSize: "0.8rem", margin: 0, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-            Made with <Heart size={12} fill="currentColor" style={{ color: "#E07A5F" }} /> for every animal
-          </p>
+          <div style={{ display: "flex", gap: "1.25rem", fontSize: "0.8rem", color: "rgba(250, 247, 242, 0.65)" }}>
+            <Link href="/about" style={{ color: "inherit" }}>Statutory Records</Link>
+            <Link href="/contact" style={{ color: "inherit" }}>Contact &amp; Visits</Link>
+            <Link href="/login" style={{ color: "inherit" }}>Staff Portal</Link>
+          </div>
         </div>
       </div>
     </footer>

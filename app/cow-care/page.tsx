@@ -23,41 +23,41 @@ export default function CowCarePage() {
   return (
     <main style={{ paddingTop: "68px" }}>
       {/* Hero */}
-      <section style={{ position: "relative", minHeight: 480, display: "flex", alignItems: "center" }}>
+      <section style={{ position: "relative", minHeight: 480, display: "flex", alignItems: "center", background: "var(--forest-deep)" }}>
         <div style={{ position: "absolute", inset: 0 }}>
-          <Image src="/images/cow_care_banner.jpg" alt="Ayudar Gaushala" fill style={{ objectFit: "cover", objectPosition: "center 40%" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(10,25,10,0.85) 0%, rgba(10,25,10,0.4) 60%, transparent 100%)" }} />
+          <Image src="/images/cow_lakshmi.jpg" alt="Rescued calf in Ayudar Gaushala sanctuary care" fill style={{ objectFit: "cover", objectPosition: "center 35%" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(13,28,21,0.90) 0%, rgba(13,28,21,0.58) 60%, rgba(13,28,21,0.25) 100%)" }} />
         </div>
         <div className="container" style={{ position: "relative", paddingTop: "2rem" }}>
           <div style={{ maxWidth: 560 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 1rem", background: "hsla(142,55%,35%,0.3)", border: "1px solid hsla(142,55%,35%,0.6)", borderRadius: "var(--radius-full)", color: "var(--green-200)", fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1.25rem" }}>
-              🐄 Ayudar Gaushala
-            </div>
-            <h1 style={{ color: "white", marginBottom: "1rem" }}>A Sacred Duty — Every Cow Deserves Care</h1>
-            <p style={{ color: "hsla(0,0%,100%,0.8)", fontSize: "1.05rem", lineHeight: 1.8, marginBottom: "2rem" }}>
-              Our Gaushala provides permanent shelter, daily feeding, veterinary care, and love to rescued cows who have no one else.
+            <span className="editorial-eyebrow" style={{ color: "#E07A5F", marginBottom: "1rem" }}>
+              Ayudar Gaushala Wing
+            </span>
+            <h1 style={{ color: "#FAF7F2", marginBottom: "1rem" }}>Every Abandoned &amp; Injured Cow Deserves Shelter</h1>
+            <p style={{ color: "rgba(250,247,242,0.82)", fontSize: "1.05rem", lineHeight: 1.8, marginBottom: "2rem" }}>
+              Our Gaushala provides protective shelter, nutritious fodder, roadside trauma treatment, and dignified long-term care for rescued cattle.
             </p>
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              <Link href="/sponsor" className="btn btn-green btn-lg">🐄 Sponsor a Cow</Link>
-              <Link href="/rescue" className="btn btn-white btn-lg">Report Injured Cow</Link>
+              <Link href="/sponsor" className="btn btn-terracotta btn-lg" style={{ borderRadius: "var(--radius-sm)" }}>Sponsor a Cow Resident</Link>
+              <Link href="/rescue" className="btn btn-white btn-lg" style={{ borderRadius: "var(--radius-sm)" }}>Report Injured Cattle</Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
-      <section style={{ background: "var(--green-700)", paddingBlock: "2.5rem" }}>
+      {/* Verified Sanctuary Operations Strip */}
+      <section style={{ background: "var(--forest-deep)", borderTop: "1px solid rgba(250,247,242,0.12)", paddingBlock: "2rem" }}>
         <div className="container">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1.5rem", textAlign: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "1.5rem", textAlign: "left" }}>
             {[
-              { n: "68", label: "Cows in Shelter" },
-              { n: "12", label: "Pregnant Rescued" },
-              { n: "340+", label: "Cows Treated" },
-              { n: "24", label: "Active Sponsors" },
+              { title: "24/7 Road Response", note: "Highway & municipal distress calls across Raniganj–Asansol" },
+              { title: "Fodder & Clean Water", note: "Daily green roughage, cattle feed, and sheltered shade" },
+              { title: "Hoof & Wound Care", note: "Targeted veterinary dressing for fracture & accident trauma" },
+              { title: "[Admin Placeholder]", note: "Verified Gaushala headcount & active sponsor register awaiting sync" },
             ].map((s) => (
-              <div key={s.label}>
-                <div style={{ fontSize: "2.25rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "white" }}>{s.n}</div>
-                <div style={{ fontSize: "0.825rem", color: "hsla(0,0%,100%,0.65)", marginTop: "0.2rem" }}>{s.label}</div>
+              <div key={s.title} style={{ borderLeft: "2px solid rgba(224,122,95,0.65)", paddingLeft: "1rem" }}>
+                <div style={{ fontSize: "1.05rem", fontFamily: "var(--font-display)", fontWeight: 600, color: "#FAF7F2" }}>{s.title}</div>
+                <div style={{ fontSize: "0.82rem", color: "rgba(250,247,242,0.72)", marginTop: "0.25rem", lineHeight: 1.5 }}>{s.note}</div>
               </div>
             ))}
           </div>

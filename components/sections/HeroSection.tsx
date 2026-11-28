@@ -2,158 +2,246 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { AlertCircle, ArrowRight, Heart, Phone } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import ParallaxImage from "@/components/motion/ParallaxImage";
 import PulseBeacon from "@/components/motion/PulseBeacon";
-import { AYUDAR_LEGAL } from "@/lib/data";
+import { AYUDAR_LEGAL, CONTACT_INFO } from "@/lib/data";
 
 export default function HeroSection() {
-  return (
-    <section style={{ position: "relative", minHeight: "94vh", display: "flex", alignItems: "center", overflow: "hidden" }}>
-      {/* Background image */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-        <motion.div
-          initial={{ scale: 1.07 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 1.8, ease: "easeOut" }}
-          style={{ width: "100%", height: "100%", position: "relative" }}
-        >
-          <Image
-            src="/images/hero_banner.jpg"
-            alt="A rescued dog being cared for by an Ayudar volunteer"
-            fill
-            priority
-            style={{ objectFit: "cover", objectPosition: "center 30%" }}
-          />
-        </motion.div>
-        {/* Deep Forest & Warm Earth Overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(105deg, rgba(20, 40, 31, 0.92) 0%, rgba(30, 58, 47, 0.72) 52%, rgba(20, 38, 30, 0.28) 100%)",
-          }}
-        />
-      </div>
+  const shouldReduceMotion = useReducedMotion();
 
-      <div className="container" style={{ position: "relative", zIndex: 1, paddingTop: "7.5rem", paddingBottom: "4.5rem" }}>
-        <div style={{ maxWidth: 660 }}>
-          {/* Verification Pill */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+  return (
+    <section
+      aria-labelledby="hero-headline"
+      style={{
+        position: "relative",
+        minHeight: "min(88vh, 780px)",
+        display: "flex",
+        alignItems: "flex-end",
+        background: "#12241B",
+        color: "#FAF7F2",
+        overflow: "hidden",
+      }}
+    >
+      {/* Full-Bleed Authentic Rescue Photograph with Subtle Parallax */}
+      <ParallaxImage
+        offset={22}
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+        }}
+      >
+        <Image
+          src="/images/hero_banner.jpg"
+          alt="Rescued community dog sheltered and cared for outdoors by Ayudar Animal Welfare Foundation"
+          fill
+          priority
+          style={{
+            objectFit: "cover",
+            objectPosition: "62% 32%",
+          }}
+          sizes="100vw"
+        />
+      </ParallaxImage>
+
+      {/* Balanced Dark Forest-Green Scrim Overlay */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          background:
+            "linear-gradient(102deg, rgba(13, 28, 21, 0.92) 0%, rgba(16, 34, 25, 0.78) 44%, rgba(16, 34, 25, 0.36) 100%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          background:
+            "linear-gradient(to top, rgba(12, 24, 18, 0.88) 0%, rgba(12, 24, 18, 0.25) 45%, rgba(12, 24, 18, 0.32) 100%)",
+        }}
+      />
+
+      {/* Foreground Content */}
+      <div
+        className="container"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          paddingTop: "clamp(7rem, 12vw, 9rem)",
+          paddingBottom: "clamp(3.25rem, 6vw, 4.75rem)",
+        }}
+      >
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+          style={{ maxWidth: "680px" }}
+        >
+          {/* Editorial Region & Dispatch Indicator */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.65rem",
+              marginBottom: "1.35rem",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              letterSpacing: "0.11em",
+              textTransform: "uppercase",
+              color: "rgba(250, 247, 242, 0.82)",
+            }}
           >
-            <div
+            <PulseBeacon color="#E07A5F" size={8} />
+            <span>{AYUDAR_LEGAL.name} · Raniganj &amp; Asansol</span>
+          </div>
+
+          {/* Editorial Headline */}
+          <h1
+            id="hero-headline"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(2.5rem, 6vw, 4.35rem)",
+              fontWeight: 600,
+              lineHeight: 1.07,
+              letterSpacing: "-0.025em",
+              color: "#FAF7F2",
+              margin: "0 0 1.4rem",
+            }}
+          >
+            Every street life
+            <br />
+            deserves a{" "}
+            <em
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.6rem",
-                padding: "0.45rem 1.1rem",
-                background: "rgba(230, 239, 233, 0.14)",
-                border: "1px solid rgba(230, 239, 233, 0.35)",
-                borderRadius: "var(--radius-full)",
-                color: "#E6EFE9",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                marginBottom: "1.4rem",
-                backdropFilter: "blur(8px)",
+                fontStyle: "italic",
+                fontWeight: 500,
+                color: "#E07A5F",
               }}
             >
-              <PulseBeacon color="#E07A5F" size={8} pulseScale={2.5} />
-              {AYUDAR_LEGAL.shortName} • {AYUDAR_LEGAL.tagline} • Reg. {AYUDAR_LEGAL.regNo}
-            </div>
-          </motion.div>
+              second chance
+            </em>
+            .
+          </h1>
 
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 25 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          {/* Concise Supporting Description */}
+          <p
             style={{
-              color: "white",
-              fontSize: "clamp(2.45rem, 5.5vw, 4.1rem)",
-              lineHeight: 1.08,
-              marginBottom: "1.25rem",
-              fontWeight: 600,
+              fontSize: "clamp(1rem, 1.35vw, 1.15rem)",
+              lineHeight: 1.72,
+              color: "rgba(250, 247, 242, 0.84)",
+              maxWidth: "52ch",
+              margin: "0 0 2.15rem",
             }}
           >
-            Every street life deserves a{" "}
-            <span style={{ color: "#E07A5F" }}>second chance</span>
-          </motion.h1>
+            24/7 emergency street animal rescue, trauma medicine, protective gaushala shelter,
+            and responsible adoption across Paschim Bardhaman. Registered under Section 80G &amp; NITI Aayog.
+          </p>
 
-          {/* Official Mission + Local Scope */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              color: "rgba(250, 247, 242, 0.88)",
-              fontSize: "clamp(1rem, 2vw, 1.18rem)",
-              lineHeight: 1.75,
-              marginBottom: "2.25rem",
-              maxWidth: 550,
-            }}
-          >
-            {AYUDAR_LEGAL.mission} Rapid 24/7 street rescue, veterinary surgery, gaushala shelter, and vetted adoptions across Raniganj, Asansol &amp; Durgapur.
-          </motion.p>
+          {/* Distinct Primary & Rescue Action CTAs */}
+          <div className="hero-cta-group">
+            <Link
+              href="/donate"
+              className="btn btn-terracotta btn-lg hero-cta-btn"
+              style={{
+                borderRadius: "var(--radius-sm)",
+                gap: "0.6rem",
+              }}
+            >
+              <Heart size={18} aria-hidden="true" />
+              <span>Donate to Save a Life</span>
+              <ArrowRight size={16} aria-hidden="true" />
+            </Link>
 
-          {/* Dual-Intent CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
-            style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}
-          >
-            <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}>
-              <Link href="/donate" className="btn btn-terracotta btn-lg" style={{ boxShadow: "0 10px 26px rgba(224, 122, 95, 0.42)" }}>
-                ❤️ Donate to Save a Life
-              </Link>
-            </motion.div>
+            <Link
+              href="/rescue"
+              className="btn btn-lg hero-cta-btn hero-rescue-btn"
+              style={{
+                borderRadius: "var(--radius-sm)",
+                background: "rgba(17, 38, 28, 0.82)",
+                color: "#FAF7F2",
+                border: "1.5px solid rgba(250, 247, 242, 0.62)",
+                gap: "0.6rem",
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              <AlertCircle size={18} style={{ color: "#E07A5F" }} aria-hidden="true" />
+              <span>Report an Injured Animal</span>
+            </Link>
+          </div>
 
-            <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}>
-              <Link href="/rescue" className="btn btn-emergency btn-lg" style={{ boxShadow: "0 8px 22px rgba(214, 69, 69, 0.42)" }}>
-                🚨 Found an Injured Animal? (Ayuda)
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          {/* Trust & 80G Strip */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
+          {/* Quiet Rescue Helpline & Track Ledger Line */}
+          <div
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: "1.75rem",
-              marginTop: "3rem",
-              paddingTop: "1.75rem",
-              borderTop: "1px solid rgba(255,255,255,0.16)",
+              alignItems: "center",
+              gap: "0.85rem 1.75rem",
+              marginTop: "2rem",
+              paddingTop: "1.25rem",
+              borderTop: "1px solid rgba(250, 247, 242, 0.14)",
+              fontSize: "0.84rem",
+              color: "rgba(250, 247, 242, 0.72)",
             }}
           >
-            {[
-              { n: "1,250+", label: "Animals Rescued" },
-              { n: "420+", label: "Happy Adoptions" },
-              { n: "80G Exempt", label: `URN: ${AYUDAR_LEGAL.urn80G}` },
-              { n: "24/7 Ayuda", label: "Emergency Dispatch" },
-            ].map((stat, idx) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.75 + idx * 0.08 }}
-              >
-                <div style={{ fontSize: "1.35rem", fontWeight: 700, color: "#E07A5F", fontFamily: "var(--font-display)", lineHeight: 1.1 }}>
-                  {stat.n}
-                </div>
-                <div style={{ fontSize: "0.75rem", color: "rgba(250, 247, 242, 0.68)", marginTop: "0.25rem" }}>{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
+            <a
+              href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                color: "#FAF7F2",
+                textDecoration: "none",
+                fontWeight: 500,
+              }}
+            >
+              <Phone size={14} style={{ color: "#E07A5F" }} aria-hidden="true" />
+              <span>Emergency Line: {CONTACT_INFO.emergencyPhone}</span>
+            </a>
+
+            <Link
+              href="/rescue/track"
+              style={{
+                color: "rgba(250, 247, 242, 0.78)",
+                textDecoration: "none",
+                borderBottom: "1px solid rgba(224, 122, 95, 0.5)",
+                paddingBottom: "1px",
+              }}
+            >
+              Track a submitted rescue ID →
+            </Link>
+          </div>
+        </motion.div>
       </div>
+
+      <style jsx>{`
+        .hero-cta-group {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.9rem;
+          align-items: stretch;
+        }
+        :global(.hero-rescue-btn:hover) {
+          background: rgba(184, 50, 50, 0.92) !important;
+          border-color: #E07A5F !important;
+          color: #FFFFFF !important;
+        }
+        @media (max-width: 639px) {
+          .hero-cta-group {
+            flex-direction: column;
+          }
+          :global(.hero-cta-btn) {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
     </section>
   );
 }

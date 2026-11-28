@@ -3,13 +3,15 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { shouldBypassImageOptimization } from "@/lib/image-url";
-import { Sparkles, MoveHorizontal } from "lucide-react";
+import { MoveHorizontal } from "lucide-react";
 
 interface BeforeAfterSliderProps {
   beforeImage: string;
   afterImage: string;
   beforeLabel?: string;
   afterLabel?: string;
+  beforeObjectPosition?: string;
+  afterObjectPosition?: string;
   aspectRatio?: string;
   initialPosition?: number;
   className?: string;
@@ -21,6 +23,8 @@ export default function BeforeAfterSlider({
   afterImage,
   beforeLabel = "Day 1 of Rescue",
   afterLabel = "Recovered & Happy",
+  beforeObjectPosition = "center center",
+  afterObjectPosition = "center center",
   aspectRatio = "16/10",
   initialPosition = 50,
   className,
@@ -78,16 +82,15 @@ export default function BeforeAfterSlider({
   return (
     <div className={className} style={{ width: "100%" }}>
       {title && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-          <Sparkles size={18} style={{ color: "var(--saffron-500)" }} />
-          <h3 style={{ fontSize: "1.1rem", margin: 0, color: "var(--stone-800)" }}>{title}</h3>
+        <div style={{ marginBottom: "0.75rem" }}>
+          <h3 style={{ fontSize: "1.1rem", margin: 0, color: "var(--stone-800)", fontFamily: "var(--font-fraunces), Georgia, serif" }}>{title}</h3>
         </div>
       )}
 
       <div
         ref={containerRef}
         role="slider"
-        aria-valuenow={sliderPosition}
+        aria-valuenow={Math.round(sliderPosition)}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label="Before and after rescue comparison slider"
@@ -106,8 +109,8 @@ export default function BeforeAfterSlider({
           width: "100%",
           aspectRatio,
           overflow: "hidden",
-          borderRadius: "var(--radius-xl)",
-          boxShadow: "0 8px 28px rgba(0,0,0,0.12)",
+          borderRadius: "var(--radius-md)",
+          boxShadow: "0 10px 28px rgba(16, 26, 20, 0.14)",
           cursor: isDragging ? "grabbing" : "ew-resize",
           userSelect: "none",
           touchAction: "none",
@@ -121,7 +124,7 @@ export default function BeforeAfterSlider({
             alt={afterLabel}
             fill
             unoptimized={shouldBypassImageOptimization(afterImage)}
-            style={{ objectFit: "cover" }}
+            style={{ objectFit: "cover", objectPosition: afterObjectPosition }}
             sizes="(max-width: 768px) 100vw, 800px"
           />
         </div>
@@ -139,7 +142,7 @@ export default function BeforeAfterSlider({
             alt={beforeLabel}
             fill
             unoptimized={shouldBypassImageOptimization(beforeImage)}
-            style={{ objectFit: "cover" }}
+            style={{ objectFit: "cover", objectPosition: beforeObjectPosition }}
             sizes="(max-width: 768px) 100vw, 800px"
           />
         </div>
@@ -151,84 +154,84 @@ export default function BeforeAfterSlider({
             top: 0,
             bottom: 0,
             left: `${sliderPosition}%`,
-            width: "3px",
-            backgroundColor: "white",
-            boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+            width: "2px",
+            backgroundColor: "rgba(255, 255, 255, 0.92)",
+            boxShadow: "0 0 10px rgba(0,0,0,0.45)",
             zIndex: 10,
             transform: "translateX(-50%)",
           }}
         >
-          {/* Circular Grab Handle */}
+          {/* Grab Handle */}
           <div
             style={{
               position: "absolute",
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              width: "44px",
-              height: "44px",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
-              backgroundColor: "white",
-              color: "var(--stone-800)",
+              backgroundColor: "#FAF8F5",
+              color: "#1B241E",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.32)",
               border: "2px solid var(--saffron-500)",
               transition: isDragging ? "transform 0.1s" : "transform 0.2s ease",
             }}
           >
-            <MoveHorizontal size={20} style={{ color: "var(--saffron-600)" }} />
+            <MoveHorizontal size={18} style={{ color: "var(--saffron-600)" }} />
           </div>
         </div>
 
-        {/* BEFORE Label Badge (Top/Bottom Left) */}
+        {/* BEFORE Label */}
         <div
           style={{
             position: "absolute",
-            bottom: "1rem",
-            left: "1rem",
-            padding: "0.35rem 0.85rem",
-            background: "rgba(0, 0, 0, 0.72)",
-            color: "white",
-            borderRadius: "var(--radius-full)",
-            fontSize: "0.75rem",
+            bottom: "0.9rem",
+            left: "0.9rem",
+            padding: "0.3rem 0.7rem",
+            background: "rgba(16, 26, 20, 0.84)",
+            color: "#FAF8F5",
+            borderRadius: "3px",
+            fontSize: "0.7rem",
             fontWeight: 700,
-            letterSpacing: "0.04em",
-            backdropFilter: "blur(6px)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
             pointerEvents: "none",
             zIndex: 5,
-            border: "1px solid rgba(255, 255, 255, 0.2)",
+            border: "1px solid rgba(255, 255, 255, 0.16)",
           }}
         >
-          ⚠️ {beforeLabel}
+          {beforeLabel}
         </div>
 
-        {/* AFTER Label Badge (Top/Bottom Right) */}
+        {/* AFTER Label */}
         <div
           style={{
             position: "absolute",
-            bottom: "1rem",
-            right: "1rem",
-            padding: "0.35rem 0.85rem",
-            background: "hsla(142, 60%, 35%, 0.85)",
-            color: "white",
-            borderRadius: "var(--radius-full)",
-            fontSize: "0.75rem",
+            bottom: "0.9rem",
+            right: "0.9rem",
+            padding: "0.3rem 0.7rem",
+            background: "rgba(29, 76, 54, 0.9)",
+            color: "#FAF8F5",
+            borderRadius: "3px",
+            fontSize: "0.7rem",
             fontWeight: 700,
-            letterSpacing: "0.04em",
-            backdropFilter: "blur(6px)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
             pointerEvents: "none",
             zIndex: 5,
-            border: "1px solid rgba(255, 255, 255, 0.2)",
+            border: "1px solid rgba(255, 255, 255, 0.16)",
           }}
         >
-          ✨ {afterLabel}
+          {afterLabel}
         </div>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--stone-400)" }}>
-        Drag or swipe slider horizontally to reveal transformation
+      <div style={{ textAlign: "center", marginTop: "0.6rem", fontSize: "0.76rem", color: "var(--stone-400)" }}>
+        Drag slider or use arrow keys to compare rescue intake and recovery
       </div>
     </div>
   );

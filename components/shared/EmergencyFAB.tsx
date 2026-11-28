@@ -145,21 +145,21 @@ export default function EmergencyFAB() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.78rem 1.15rem",
-                background: "var(--crimson, #D64545)",
+                gap: "0.55rem",
+                padding: "0.78rem 1.2rem",
+                background: "var(--crimson, #B83232)",
                 color: "white",
-                borderRadius: "var(--radius-full)",
-                fontWeight: 700,
-                fontSize: "0.9rem",
-                border: "none",
+                borderRadius: "var(--radius-md)",
+                fontWeight: 600,
+                fontSize: "0.88rem",
+                border: "1px solid rgba(255,255,255,0.22)",
                 cursor: "pointer",
-                boxShadow: "0 8px 24px rgba(214, 69, 69, 0.45)",
+                boxShadow: "0 8px 24px rgba(18, 29, 23, 0.3)",
               }}
-              aria-label="Open Ayuda quick SOS rescue drawer"
+              aria-label="Report an injured animal immediately"
             >
-              <PulseBeacon color="#ffffff" size={8} pulseScale={2.6} />
-              <span>🚨 Ayuda SOS</span>
+              <PulseBeacon color="#ffffff" size={7} pulseScale={2} />
+              <span>Report Injured Animal</span>
             </button>
           </motion.div>
         )}
@@ -177,7 +177,7 @@ export default function EmergencyFAB() {
               inset: 0,
               background: "rgba(15, 31, 22, 0.65)",
               backdropFilter: "blur(4px)",
-              zIndex: 1200,
+              zIndex: 1350,
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "center",

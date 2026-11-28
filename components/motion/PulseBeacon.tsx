@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { CSSProperties } from "react";
 
 interface PulseBeaconProps {
@@ -13,16 +13,19 @@ interface PulseBeaconProps {
 }
 
 export default function PulseBeacon({
-  color = "hsl(0, 80%, 52%)",
-  size = 10,
-  pulseScale = 2.4,
-  duration = 2,
+  color = "hsl(8, 68%, 48%)",
+  size = 9,
+  pulseScale = 2.2,
+  duration = 2.2,
   className,
   style,
 }: PulseBeaconProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <span
       className={className}
+      aria-hidden="true"
       style={{
         position: "relative",
         display: "inline-flex",
@@ -30,28 +33,29 @@ export default function PulseBeacon({
         justifyContent: "center",
         width: size,
         height: size,
+        flexShrink: 0,
         ...style,
       }}
     >
-      {/* Expanding pulse ring */}
-      <motion.span
-        animate={{
-          scale: [1, pulseScale],
-          opacity: [0.75, 0],
-        }}
-        transition={{
-          duration,
-          repeat: Infinity,
-          ease: "easeOut",
-        }}
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: "50%",
-          backgroundColor: color,
-        }}
-      />
-      {/* Solid center dot */}
+      {!shouldReduceMotion && (
+        <motion.span
+          animate={{
+            scale: [1, pulseScale],
+            opacity: [0.65, 0],
+          }}
+          transition={{
+            duration,
+            repeat: Infinity,
+            ease: "easeOut",
+          }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            backgroundColor: color,
+          }}
+        />
+      )}
       <span
         style={{
           position: "relative",

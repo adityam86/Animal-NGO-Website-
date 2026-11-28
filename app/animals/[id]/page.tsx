@@ -5,7 +5,6 @@ import prisma from "@/lib/prisma";
 import { CheckCircle, XCircle, MapPin, Calendar, ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import FadeIn from "@/components/motion/FadeIn";
-import BeforeAfterSlider from "@/components/shared/BeforeAfterSlider";
 
 export const dynamic = "force-dynamic";
 
@@ -181,25 +180,21 @@ export default async function AnimalProfilePage({ params }: { params: Promise<{ 
                   <p style={{ lineHeight: 1.85, color: "var(--stone-600)", fontSize: "0.95rem" }}>{animal.story}</p>
                 </div>
 
-                {/* Before & After Recovery Slider (for animals with documented rescue stages) */}
+                {/* Documentation Note */}
                 {(animal.name === "Bruno" || animal.name === "Lakshmi") && (
-                  <div style={{ marginBottom: "2rem", background: "white", borderRadius: "var(--radius-xl)", padding: "1.25rem", border: "1px solid var(--cream-200)", boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--saffron-700)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>
-                      ✨ Recovery Progress (Rescue Day vs Today)
+                  <div style={{ marginBottom: "1.75rem", background: "var(--cream-50)", borderRadius: "var(--radius-md)", padding: "1.15rem 1.25rem", border: "1px solid var(--cream-200)" }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--stone-600)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.35rem" }}>
+                      Field Intake Archive
                     </div>
-                    <BeforeAfterSlider
-                      beforeImage={animal.name === "Lakshmi" ? "/images/cow_care_banner.jpg" : "/images/rescue_story_banner.jpg"}
-                      afterImage={animal.image}
-                      beforeLabel="Day 1 Rescue"
-                      afterLabel="Healed Today"
-                      aspectRatio="16/9"
-                    />
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--stone-600)", lineHeight: 1.6 }}>
+                      [Admin Placeholder: Upload verified Day-1 field rescue intake photograph for {animal.name} to enable side-by-side recovery comparison.]
+                    </p>
                   </div>
                 )}
 
                 {/* Shelter */}
-                <div style={{ background: "var(--green-50)", borderRadius: "var(--radius-lg)", padding: "1rem 1.25rem", marginBottom: "2rem", display: "flex", alignItems: "center", gap: "0.75rem", border: "1px solid var(--green-100)" }}>
-                  <span style={{ fontSize: "1.5rem" }}>🏠</span>
+                <div style={{ background: "var(--green-50)", borderRadius: "var(--radius-md)", padding: "1rem 1.25rem", marginBottom: "2rem", display: "flex", alignItems: "center", gap: "0.75rem", border: "1px solid var(--green-100)" }}>
+                  <MapPin size={20} style={{ color: "var(--green-600)", flexShrink: 0 }} aria-hidden="true" />
                   <div>
                     <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--green-700)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Current Shelter</div>
                     <div style={{ fontWeight: 600, color: "var(--stone-800)", fontSize: "0.95rem" }}>{animal.shelter}</div>
@@ -212,9 +207,9 @@ export default async function AnimalProfilePage({ params }: { params: Promise<{ 
                     <Link
                       href={`/adoption?animal=${animal.id}`}
                       className="btn btn-primary btn-lg"
-                      style={{ flex: 1, justifyContent: "center", fontSize: "1.05rem", boxShadow: "0 4px 16px rgba(249, 115, 22, 0.2)" }}
+                      style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)" }}
                     >
-                      ❤️ Adopt {animal.name}
+                      Adopt {animal.name}
                     </Link>
                   )}
                   <Link

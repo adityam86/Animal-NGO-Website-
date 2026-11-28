@@ -4,7 +4,6 @@ import Image from "next/image";
 import { ShieldCheck, MapPin, Phone, ExternalLink, Clock } from "lucide-react";
 import FadeIn from "@/components/motion/FadeIn";
 import HoverCard from "@/components/motion/HoverCard";
-import BeforeAfterSlider from "@/components/shared/BeforeAfterSlider";
 import { AYUDAR_LEGAL, CONTACT_INFO, STORIES } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -25,31 +24,18 @@ const FUND_ALLOCATION = [
   { label: "24/7 Rescue Ambulance & Field Transport", pct: 10, color: "#687870" },
 ];
 
-const TEAM = [
-  { name: "Dr. Priya Sharma", role: "Chief Veterinary Officer", since: "2018" },
-  { name: "Arjun Dey", role: "Rescue Operations Head", since: "2019" },
-  { name: "Kavya Nair", role: "Adoption & Volunteer Coordinator", since: "2020" },
-  { name: "Ravi Mukherjee", role: "Gaushala & Shelter Manager", since: "2018" },
+const CARE_UNITS = [
+  { name: "Emergency Triage Unit", role: "24/7 Road Rescue & Stabilization", note: "Field response team" },
+  { name: "Veterinary Wing", role: "Trauma Surgery, Dressing & Vaccination", note: "Supervising veterinarians" },
+  { name: "Gaushala Care Team", role: "Cattle Shelter, Fodder & Hoof Care", note: "Dedicated cow caretakers" },
+  { name: "Adoption & Welfare Desk", role: "Home Checks & Foster Coordination", note: "[Admin Placeholder: Trustee & team names]" },
 ];
 
 const TIMELINE = [
-  { year: "2018", event: "Started in Raniganj with grassroots volunteers answering roadside trauma calls." },
-  { year: "2020", event: "Expanded dedicated Gaushala cow-care wing after rescuing highway trauma cattle." },
-  { year: "2022", event: `Formally registered under ${AYUDAR_LEGAL.regNo} with full adoption and rehabilitation protocols.` },
-  { year: "2023", event: "Launched mobile veterinary dispatch across Asansol, NH-19 highway, and Durgapur." },
-  { year: "2025", event: `Verified under NITI Aayog (${AYUDAR_LEGAL.nitiAayogId}), CSR (${AYUDAR_LEGAL.csrRegNo}) & 80G (${AYUDAR_LEGAL.urn80G}).` },
+  { year: "Est.", event: "[Admin Placeholder: Verified founding year & pre-registration grassroots rescue chronicle awaiting trustee confirmation.]" },
+  { year: "2022", event: `Formally registered under West Bengal Trust Registration No. ${AYUDAR_LEGAL.regNo} with statutory welfare charter.` },
+  { year: "2025", event: `Verified under NITI Aayog NGO Darpan (${AYUDAR_LEGAL.nitiAayogId}), MCA CSR-1 (${AYUDAR_LEGAL.csrRegNo}), and Section 80G (${AYUDAR_LEGAL.urn80G}, Dt. ${AYUDAR_LEGAL.urn80GDate}).` },
 ];
-
-const TRANSFORMATION_IMAGES: Record<string, { before: string; after: string }> = {
-  "bruno-road-to-recovery": {
-    before: "/images/rescue_story_banner.jpg",
-    after: "/images/dog_bruno.jpg",
-  },
-  "lakshmi-the-highway-cow": {
-    before: "/images/cow_care_banner.jpg",
-    after: "/images/cow_lakshmi.jpg",
-  },
-};
 
 export default function AboutPage() {
   return (
@@ -185,45 +171,57 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Before & After Transformation Archive */}
+      {/* Documented Recovery Chronicles */}
       <section className="section">
         <div className="container">
           <FadeIn direction="up" distance={16}>
             <div style={{ textAlign: "center", marginBottom: "2.25rem" }}>
-              <div className="section-tag">Recovery Archive</div>
-              <h2>Before &amp; After Transformations</h2>
+              <span className="editorial-eyebrow" style={{ marginBottom: "0.75rem", justifyContent: "center" }}>
+                Recovery Archive
+              </span>
+              <h2>Documented Sanctuary Recoveries</h2>
               <p style={{ color: "var(--stone-600)", maxWidth: "54ch", marginInline: "auto" }}>
-                Drag the slider on any rescue transformation and open their full medical story.
+                Explore verified rescue journeys and medical stabilization notes from our sanctuary records.
               </p>
             </div>
           </FadeIn>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "1.5rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: "1.5rem" }}>
             {STORIES.slice(0, 3).map((story) => {
-              const pair = TRANSFORMATION_IMAGES[story.slug] || {
-                before: story.coverImage,
-                after: "/images/dog_ruby.jpg",
-              };
               return (
                 <div
                   key={story.slug}
                   style={{
                     background: "var(--color-surface)",
-                    borderRadius: "var(--radius-xl)",
+                    borderRadius: "var(--radius-md)",
                     padding: "1.15rem",
                     border: "1px solid var(--cream-200)",
                     boxShadow: "var(--shadow-sm)",
                   }}
                 >
-                  <BeforeAfterSlider
-                    beforeImage={pair.before}
-                    afterImage={pair.after}
-                    beforeLabel="Day 1 Rescue"
-                    afterLabel="Recovered & Happy"
-                    aspectRatio="16 / 10"
-                    title={story.animal}
-                  />
-                  <h3 style={{ fontSize: "1.15rem", marginTop: "0.95rem", marginBottom: "0.3rem" }}>
+                  <div
+                    className="editorial-photo-wrap"
+                    style={{
+                      position: "relative",
+                      aspectRatio: "16 / 10",
+                      borderRadius: "var(--radius-sm)",
+                      overflow: "hidden",
+                      marginBottom: "0.95rem",
+                      background: "var(--cream-100)",
+                    }}
+                  >
+                    <Image
+                      src={story.coverImage}
+                      alt={`${story.animal}: ${story.title}`}
+                      fill
+                      style={{ objectFit: "cover", objectPosition: "center 35%" }}
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  </div>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--green-600)", marginBottom: "0.3rem" }}>
+                    {story.animal} · {story.outcome}
+                  </div>
+                  <h3 style={{ fontSize: "1.15rem", marginBottom: "0.3rem" }}>
                     {story.title}
                   </h3>
                   <p style={{ fontSize: "0.85rem", color: "var(--stone-600)", marginBottom: "0.8rem" }}>
@@ -268,15 +266,15 @@ export default function AboutPage() {
             </div>
 
             <div>
-              <div className="section-tag">Core Caregivers</div>
-              <h2 style={{ marginBottom: "1.25rem" }}>Meet the Sanctuary Team</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
-                {TEAM.map((m) => (
-                  <HoverCard key={m.name} lift={4}>
-                    <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-lg)", padding: "1.15rem", border: "1px solid var(--cream-200)" }}>
-                      <h4 style={{ fontSize: "1rem", marginBottom: "0.2rem" }}>{m.name}</h4>
-                      <div style={{ fontSize: "0.82rem", color: "var(--terracotta-hover)", fontWeight: 600 }}>{m.role}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--stone-500)", marginTop: "0.25rem" }}>Since {m.since}</div>
+              <span className="editorial-eyebrow" style={{ marginBottom: "0.75rem" }}>Operational Wings</span>
+              <h2 style={{ marginBottom: "1.25rem" }}>Sanctuary Care Structure</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 210px), 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
+                {CARE_UNITS.map((m) => (
+                  <HoverCard key={m.name} lift={3}>
+                    <div style={{ background: "var(--color-surface)", borderRadius: "var(--radius-md)", padding: "1.15rem", border: "1px solid var(--cream-200)", height: "100%" }}>
+                      <h4 style={{ fontSize: "1rem", marginBottom: "0.25rem" }}>{m.name}</h4>
+                      <div style={{ fontSize: "0.84rem", color: "var(--terracotta-hover)", fontWeight: 600 }}>{m.role}</div>
+                      <div style={{ fontSize: "0.76rem", color: "var(--stone-500)", marginTop: "0.35rem" }}>{m.note}</div>
                     </div>
                   </HoverCard>
                 ))}

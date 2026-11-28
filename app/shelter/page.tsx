@@ -20,35 +20,36 @@ export default function ShelterPage() {
   return (
     <main style={{ paddingTop: "68px" }}>
       {/* Hero */}
-      <section style={{ position: "relative", minHeight: 460, display: "flex", alignItems: "center" }}>
+      <section style={{ position: "relative", minHeight: 460, display: "flex", alignItems: "center", background: "var(--forest-deep)" }}>
         <div style={{ position: "absolute", inset: 0 }}>
-          <Image src="/images/shelter_banner.jpg" alt="Ayudar Animal Shelter" fill style={{ objectFit: "cover" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(5,15,5,0.88) 0%, rgba(5,15,5,0.5) 60%, transparent 100%)" }} />
+          <Image src="/images/dog_bruno.jpg" alt="Recovered sanctuary dog resting at Ayudar shelter" fill style={{ objectFit: "cover", objectPosition: "center 35%" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(13,28,21,0.90) 0%, rgba(13,28,21,0.58) 60%, rgba(13,28,21,0.22) 100%)" }} />
         </div>
         <div className="container" style={{ position: "relative" }}>
           <div style={{ maxWidth: 560 }}>
-            <div className="section-tag" style={{ background: "hsla(142,55%,35%,0.25)", color: "var(--green-200)" }}>Our Shelter</div>
-            <h1 style={{ color: "white", marginBottom: "0.75rem" }}>A Safe Place Called Home</h1>
-            <p style={{ color: "hsla(0,0%,100%,0.8)", fontSize: "1.05rem", lineHeight: 1.8 }}>
-              Our shelter is more than a building — it&apos;s the place where animals begin their journey from pain to hope. Every corner is designed for animal wellbeing.
+            <span className="editorial-eyebrow" style={{ color: "#E07A5F", marginBottom: "0.9rem" }}>Our Sanctuary</span>
+            <h1 style={{ color: "#FAF7F2", marginBottom: "0.75rem" }}>A Safe Place to Recover and Heal</h1>
+            <p style={{ color: "rgba(250,247,242,0.82)", fontSize: "1.05rem", lineHeight: 1.8 }}>
+              Our Raniganj sanctuary provides trauma isolation, supervised veterinary wards, and dedicated spaces for recovering dogs, cats, and cows.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Quick stats */}
-      <section style={{ background: "var(--green-600)", paddingBlock: "2.5rem" }}>
+      {/* Shelter Overview Strip */}
+      <section style={{ background: "var(--forest-deep)", borderTop: "1px solid rgba(250,247,242,0.12)", paddingBlock: "2rem" }}>
         <div className="container">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1.5rem", textAlign: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "1.5rem", textAlign: "left" }}>
             {[
-              { n: "186", label: "Currently Sheltered" },
-              { n: "4", label: "Facility Sections" },
-              { n: "24/7", label: "Staff On-Duty" },
-              { n: "3", label: "Vets on Team" },
+              { n: "4 Wings", label: "Dedicated Care Zones", note: "Triage ward, kennel recovery, cattery & gaushala" },
+              { n: "24/7 Dispatch", label: "Emergency Intake", note: "Field stabilization & night-shift observation" },
+              { n: "Supervision", label: "Veterinary Rounds", note: "Daily clinical dressing, vaccination & nutrition" },
+              { n: "[Admin Placeholder]", label: "Live Shelter Occupancy", note: "Connect verified ShelterLocation headcount from database" },
             ].map((s) => (
-              <div key={s.label}>
-                <div style={{ fontSize: "2.25rem", fontFamily: "var(--font-display)", fontWeight: 700, color: "white" }}>{s.n}</div>
-                <div style={{ fontSize: "0.82rem", color: "hsla(0,0%,100%,0.65)", marginTop: "0.2rem" }}>{s.label}</div>
+              <div key={s.label} style={{ borderLeft: "2px solid rgba(224,122,95,0.65)", paddingLeft: "1rem" }}>
+                <div style={{ fontSize: "1.1rem", fontFamily: "var(--font-display)", fontWeight: 600, color: "#FAF7F2" }}>{s.n}</div>
+                <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "rgba(250,247,242,0.88)", marginTop: "0.15rem" }}>{s.label}</div>
+                <div style={{ fontSize: "0.78rem", color: "rgba(250,247,242,0.68)", marginTop: "0.15rem" }}>{s.note}</div>
               </div>
             ))}
           </div>
@@ -112,7 +113,7 @@ export default function ShelterPage() {
       <section style={{ background: "var(--green-50)", paddingBlock: "3rem", textAlign: "center" }}>
         <div className="container" style={{ maxWidth: 520 }}>
           <h2 style={{ marginBottom: "0.75rem" }}>Support Our Shelter</h2>
-          <p style={{ marginBottom: "2rem" }}>Running a shelter for 186 animals takes enormous resources. Your donation keeps our doors open.</p>
+          <p style={{ marginBottom: "2rem" }}>Operating trauma wards, daily feeding rounds, and clean recovery enclosures requires consistent community support.</p>
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/donate?purpose=Shelter" className="btn btn-primary">Donate to Shelter</Link>
             <Link href="/volunteer" className="btn btn-green">Volunteer at Shelter</Link>

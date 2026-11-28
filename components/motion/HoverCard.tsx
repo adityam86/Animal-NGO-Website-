@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion, useReducedMotion, type HTMLMotionProps } from "framer-motion";
 import type { ReactNode } from "react";
 
 interface HoverCardProps extends HTMLMotionProps<"div"> {
@@ -12,12 +12,22 @@ interface HoverCardProps extends HTMLMotionProps<"div"> {
 
 export default function HoverCard({
   children,
-  lift = 6,
-  scale = 1.01,
+  lift = 3,
+  scale = 1,
   className,
   style,
   ...props
 }: HoverCardProps) {
+  const prefersReduced = useReducedMotion();
+
+  if (prefersReduced) {
+    return (
+      <motion.div className={className} style={style} {...props}>
+        {children}
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       whileHover={{
@@ -25,7 +35,6 @@ export default function HoverCard({
         scale,
         transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
       }}
-      whileTap={{ scale: 0.98 }}
       className={className}
       style={{
         transformOrigin: "center center",

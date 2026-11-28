@@ -7,7 +7,6 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import FadeIn from "@/components/motion/FadeIn";
 import HoverCard from "@/components/motion/HoverCard";
-import BeforeAfterSlider from "@/components/shared/BeforeAfterSlider";
 
 export const dynamic = "force-dynamic";
 
@@ -116,24 +115,14 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
               </p>
             </div>
 
-            <BeforeAfterSlider
-              beforeImage={
-                story.slug === "lakshmi-the-highway-cow"
-                  ? "/images/cow_care_banner.jpg"
-                  : "/images/rescue_story_banner.jpg"
-              }
-              afterImage={
-                story.slug === "lakshmi-the-highway-cow"
-                  ? "/images/cow_lakshmi.jpg"
-                  : story.slug === "bruno-road-to-recovery"
-                  ? "/images/dog_bruno.jpg"
-                  : story.coverImage
-              }
-              beforeLabel="Day 1 (Rescue)"
-              afterLabel={`Recovered ${story.animal}`}
-              aspectRatio="16/9"
-              initialPosition={50}
-            />
+            <div style={{ padding: "1.25rem 1.5rem", background: "var(--cream-50)", border: "1px solid var(--cream-200)", borderRadius: "var(--radius-md)" }}>
+              <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--stone-600)", lineHeight: 1.65 }}>
+                Recovery timeline photographs below reflect verified sanctuary care for {story.animal}.{" "}
+                <span style={{ color: "var(--stone-500)" }}>
+                  [Admin Placeholder: Upload verified Day-1 rescue intake image to enable side-by-side comparison.]
+                </span>
+              </p>
+            </div>
           </FadeIn>
         </div>
       </section>

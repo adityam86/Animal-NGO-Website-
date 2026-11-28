@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { Check, MapPin, ArrowRight } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { shouldBypassImageOptimization } from "@/lib/image-url";
 
 interface AnimalCardProps {
   id: string;
@@ -35,136 +36,231 @@ export default function AnimalCard({
 }: AnimalCardProps) {
   const isAvailable = status === "Available for Adoption";
   const [isHovered, setIsHovered] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <motion.div
-      whileHover={{ y: -6 }}
+    <motion.article
+      whileHover={shouldReduceMotion ? undefined : { y: -3 }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className="card"
       style={{
-        maxWidth: 320,
         width: "100%",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        borderRadius: "var(--radius-xl)",
+        borderRadius: "var(--radius-md)",
         boxShadow: isHovered
-          ? "0 14px 30px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04)"
-          : "0 2px 8px rgba(0,0,0,0.04)",
-        transition: "box-shadow 0.25s ease, border-color 0.25s ease",
-        borderColor: isHovered ? "var(--saffron-200)" : "var(--cream-200)",
+          ? "0 14px 30px rgba(24, 34, 24, 0.08)"
+          : "0 1px 4px rgba(24, 34, 24, 0.04)",
+        transition: "box-shadow 0.28s ease, border-color 0.28s ease",
+        borderColor: isHovered ? "var(--cream-300)" : "var(--cream-200)",
       }}
     >
-      {/* Image container */}
-      <div style={{ position: "relative", height: 240, overflow: "hidden" }}>
+      {/* Portrait frame */}
+      <Link
+        href={`/animals/${id}`}
+        style={{
+          position: "relative",
+          aspectRatio: "4 / 3",
+          width: "100%",
+          overflow: "hidden",
+          display: "block",
+          background: "var(--cream-200)",
+        }}
+      >
         <motion.div
-          animate={{ scale: isHovered ? 1.06 : 1 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          animate={{ scale: !shouldReduceMotion && isHovered ? 1.035 : 1 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           style={{ width: "100%", height: "100%", position: "relative" }}
         >
           <Image
             src={image}
-            alt={name}
+            alt={`${name}, ${breed} ${type} at Ayudar sanctuary`}
             fill
-            unoptimized={image.startsWith("data:")}
-            style={{ objectFit: "cover" }}
+            unoptimized={shouldBypassImageOptimization(image)}
+            style={{ objectFit: "cover", objectPosition: "center 30%" }}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         </motion.div>
 
-        {/* Status badge */}
         <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(to top, rgba(16, 26, 20, 0.45) 0%, transparent 45%)",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Editorial status label */}
+        <span
           style={{
             position: "absolute",
             top: "0.75rem",
             left: "0.75rem",
-            padding: "0.25rem 0.75rem",
-            borderRadius: "var(--radius-full)",
-            fontSize: "0.72rem",
+            padding: "0.24rem 0.6rem",
+            borderRadius: "3px",
+            fontSize: "0.68rem",
             fontWeight: 700,
-            background: isAvailable ? "var(--green-500)" : "var(--saffron-500)",
-            color: "white",
-            letterSpacing: "0.04em",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            background: isAvailable ? "hsl(152, 34%, 22%)" : "hsl(12, 62%, 44%)",
+            color: "#FFFFFF",
           }}
         >
-          {isAvailable ? "Available" : status}
-        </div>
+          {isAvailable ? "Ready for Home" : status}
+        </span>
 
-        {/* Type badge */}
-        <div
+        {/* Species label */}
+        <span
           style={{
             position: "absolute",
             top: "0.75rem",
             right: "0.75rem",
-            padding: "0.25rem 0.75rem",
-            borderRadius: "var(--radius-full)",
-            fontSize: "0.72rem",
+            padding: "0.24rem 0.6rem",
+            borderRadius: "3px",
+            fontSize: "0.68rem",
             fontWeight: 600,
-            background: "rgba(255,255,255,0.94)",
-            color: "var(--stone-800)",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            backdropFilter: "blur(6px)",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            background: "rgba(250, 248, 245, 0.94)",
+            color: "#1B241E",
           }}
         >
           {type}
-        </div>
-      </div>
+        </span>
+      </Link>
 
-      {/* Content */}
-      <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
+      {/* Details */}
+      <div
+        style={{
+          padding: "1.25rem 1.35rem 1.35rem",
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          justifyContent: "space-between",
+          gap: "1rem",
+        }}
+      >
         <div>
-          <div style={{ marginBottom: "0.5rem" }}>
-            <h3 style={{ fontSize: "1.25rem", marginBottom: "0.25rem", color: "var(--stone-800)" }}>{name}</h3>
-            <p style={{ fontSize: "0.82rem", color: "var(--stone-500)", margin: 0 }}>
-              {breed} • {gender} • {age}
-            </p>
-            <p style={{ fontSize: "0.78rem", color: "var(--stone-400)", margin: "0.25rem 0 0" }}>
-              📍 {location}
-            </p>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem" }}>
+            <h3
+              style={{
+                fontSize: "1.3rem",
+                marginBottom: "0.25rem",
+                color: "var(--stone-800)",
+                fontFamily: "var(--font-fraunces), Georgia, serif",
+              }}
+            >
+              <Link href={`/animals/${id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                {name}
+              </Link>
+            </h3>
+            <span style={{ fontSize: "0.76rem", color: "var(--stone-400)", fontWeight: 500 }}>
+              {age}
+            </span>
           </div>
 
-          {/* Health badges */}
-          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-            {vaccinated && (
-              <span className="badge badge-green" style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem" }}>
-                <CheckCircle size={11} /> Vaccinated
-              </span>
-            )}
-            {sterilized && (
-              <span className="badge badge-green" style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem" }}>
-                <CheckCircle size={11} /> Sterilized
-              </span>
-            )}
-          </div>
+          <p style={{ fontSize: "0.84rem", color: "var(--stone-500)", margin: "0 0 0.45rem" }}>
+            {breed} · {gender}
+          </p>
+
+          <p
+            style={{
+              fontSize: "0.78rem",
+              color: "var(--stone-400)",
+              margin: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.3rem",
+            }}
+          >
+            <MapPin size={12} aria-hidden="true" />
+            <span>{location}</span>
+          </p>
+
+          {(vaccinated || sterilized) && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.65rem",
+                flexWrap: "wrap",
+                marginTop: "0.85rem",
+                paddingTop: "0.75rem",
+                borderTop: "1px solid var(--cream-200)",
+              }}
+            >
+              {vaccinated && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    fontSize: "0.74rem",
+                    fontWeight: 600,
+                    color: "var(--green-600)",
+                  }}
+                >
+                  <Check size={12} aria-hidden="true" /> Vaccinated
+                </span>
+              )}
+              {sterilized && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    fontSize: "0.74rem",
+                    fontWeight: 600,
+                    color: "var(--green-600)",
+                  }}
+                >
+                  <Check size={12} aria-hidden="true" /> Sterilized
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Actions with tactile motion */}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ flex: 1 }}>
-            <Link
-              href={`/animals/${id}`}
-              className="btn btn-outline btn-sm"
-              style={{ width: "100%", justifyContent: "center" }}
-            >
-              View Profile
-            </Link>
-          </motion.div>
+        {/* Actions */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.75rem",
+            paddingTop: "0.25rem",
+          }}
+        >
+          <Link
+            href={`/animals/${id}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              fontSize: "0.84rem",
+              fontWeight: 600,
+              color: "var(--stone-700)",
+              textDecoration: "none",
+              padding: "0.45rem 0",
+            }}
+          >
+            View Dossier <ArrowRight size={14} aria-hidden="true" />
+          </Link>
 
           {isAvailable && (
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ flex: 1 }}>
-              <Link
-                href={`/adoption?animal=${id}`}
-                className="btn btn-primary btn-sm"
-                style={{ width: "100%", justifyContent: "center" }}
-              >
-                Adopt Me
-              </Link>
-            </motion.div>
+            <Link
+              href={`/adoption?animal=${id}`}
+              className="btn btn-primary btn-sm"
+              style={{ borderRadius: "var(--radius-sm)" }}
+            >
+              Apply to Adopt
+            </Link>
           )}
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
