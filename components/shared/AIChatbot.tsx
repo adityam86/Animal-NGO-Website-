@@ -76,10 +76,10 @@ export default function AIChatbot() {
         ...prev,
         {
           sender: "bot",
-          text: "⚠️ Connection interrupted. For immediate life-threatening emergencies, please call our 24/7 hotline at +91 98000 00000 or click Report an Animal.",
+          text: "⚠️ Connection interrupted. For immediate life-threatening emergencies, please call our 24/7 hotline at +91 73840 20901 or click Report an Animal.",
           isEmergency: true,
           dispatchUrl: "/rescue",
-          hotline: "+91 98000 00000"
+          hotline: "+91 73840 20901"
         }
       ]);
     } finally {

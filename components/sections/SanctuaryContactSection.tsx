@@ -153,18 +153,57 @@ export default function SanctuaryContactSection() {
               <span>Emergency &amp; Communication</span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", fontSize: "0.9rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", fontSize: "0.88rem" }}>
               <div>
-                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)" }}>24/7 Rescue Desk</div>
-                <a
-                  href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`}
-                  style={{ fontWeight: 600, color: "var(--stone-800)", textDecoration: "none" }}
-                >
-                  {CONTACT_INFO.emergencyPhone}
-                </a>
+                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)" }}>
+                  Main Helpline &amp; WhatsApp ({CONTACT_INFO.primaryContact.name})
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.65rem", marginTop: "0.15rem" }}>
+                  <a
+                    href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`}
+                    style={{ fontWeight: 700, color: "var(--stone-900)", textDecoration: "none" }}
+                  >
+                    {CONTACT_INFO.emergencyPhone}
+                  </a>
+                  <a
+                    href={CONTACT_INFO.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: "0.76rem",
+                      fontWeight: 600,
+                      color: "var(--green-600)",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    WhatsApp Desk →
+                  </a>
+                </div>
               </div>
+
               <div>
-                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)" }}>General &amp; Adoptions</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)", marginBottom: "0.15rem" }}>
+                  Members on Call
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", fontSize: "0.84rem", color: "var(--stone-700)" }}>
+                  {CONTACT_INFO.teamContacts
+                    .filter((m) => m.name !== CONTACT_INFO.primaryContact.name)
+                    .map((member) => (
+                      <div key={member.name}>
+                        <span style={{ fontWeight: 600 }}>{member.name}</span> ({member.role}):{" "}
+                        <a
+                          href={`tel:${member.phone.replace(/\s+/g, "")}`}
+                          style={{ color: "var(--stone-800)", fontWeight: 500 }}
+                        >
+                          {member.phone}
+                        </a>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: "0.75rem", color: "var(--stone-400)" }}>General &amp; Adoptions Email</div>
                 <a
                   href={`mailto:${CONTACT_INFO.email}`}
                   style={{
@@ -180,8 +219,8 @@ export default function SanctuaryContactSection() {
                   <span>{CONTACT_INFO.email}</span>
                 </a>
               </div>
-              <div style={{ fontSize: "0.76rem", color: "var(--stone-500)", marginTop: "0.25rem" }}>
-                [Admin Placeholder: Confirm active field phone numbers &amp; @ayudarindia.com mail forward]
+              <div style={{ fontSize: "0.74rem", color: "var(--stone-500)", marginTop: "0.1rem" }}>
+                [Admin Placeholder: Confirm @ayudarindia.com mail forward]
               </div>
             </div>
           </div>

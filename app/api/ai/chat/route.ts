@@ -136,7 +136,7 @@ const GENERAL_KNOWLEDGE = [
   },
   {
     keywords: ["location", "address", "asansol", "kumarpur", "tilabad", "raniganj", "contact", "timing", "shelter"],
-    response: "📍 AYUDAR SHELTER (ANIMAL HOSPITAL):\n\nAddress: PW3Q+5F, Tilabad, Kumarpur, Asansol, West Bengal 713304.\nAmbulance: 24/7 Emergency Response across Asansol, Raniganj & Durgapur.\nVisiting Hours: Mon–Sat 9 AM – 7 PM (Emergency 24/7).\nEmergency Hotline: +91 98000 00000"
+    response: "📍 AYUDAR SHELTER (ANIMAL HOSPITAL):\n\nAddress: PW3Q+5F, Tilabad, Kumarpur, Asansol, West Bengal 713304.\nAmbulance: 24/7 Emergency Response across Asansol, Raniganj & Durgapur.\nVisiting Hours: Mon–Sat 9 AM – 7 PM (Emergency 24/7).\nMain Helpline & WhatsApp (Tarasankar Nag): +91 73840 20901\nMembers: Rohan Mishra (+91 76026 66102), Sourav (+91 91345 81378)"
   }
 ];
 
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
     if (!rate.allowed) {
       return NextResponse.json(
         {
-          reply: "Please slow down slightly — for immediate animal emergencies call +91 98000 00000.",
+          reply: "Please slow down slightly — for immediate animal emergencies call +91 73840 20901.",
           isEmergency: false,
         },
         { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
@@ -190,7 +190,7 @@ export async function POST(request: Request) {
           warnings: triage.safetyWarnings,
           disclaimer: FIRST_AID_DISCLAIMER,
           dispatchUrl: "/rescue",
-          hotline: "+91 98000 00000",
+          hotline: "+91 73840 20901",
         });
       }
     }
@@ -219,10 +219,10 @@ export async function POST(request: Request) {
     console.error("AI Chat error:", error);
     return NextResponse.json(
       {
-        reply: "Sorry, I'm having trouble connecting to my knowledge base right now. If this is an emergency, call our 24/7 hotline at +91 98000 00000 or click '🚨 Report an Animal'!",
+        reply: "Sorry, I'm having trouble connecting to my knowledge base right now. If this is an emergency, call our 24/7 hotline at +91 73840 20901 or click '🚨 Report an Animal'!",
         isEmergency: true,
         dispatchUrl: "/rescue",
-        hotline: "+91 98000 00000"
+        hotline: "+91 73840 20901"
       },
       { status: 500 }
     );

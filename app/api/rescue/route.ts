@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     const rate = await checkDistributedRateLimit(`rescue-create:${ip}`, 8, 15 * 60_000);
     if (!rate.allowed) {
       return NextResponse.json(
-        { error: "Too many rescue reports submitted. For emergencies, call +91 98000 00000." },
+        { error: "Too many rescue reports submitted. For emergencies, call +91 73840 20901." },
         { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } }
       );
     }

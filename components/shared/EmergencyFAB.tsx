@@ -227,7 +227,7 @@ export default function EmergencyFAB() {
                   </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                     <a
-                      href={`https://wa.me/?text=${whatsappSummary}`}
+                      href={`https://wa.me/917384020901?text=${whatsappSummary}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-green"

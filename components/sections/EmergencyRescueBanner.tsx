@@ -54,7 +54,7 @@ export default function EmergencyRescueBanner() {
 
               <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} style={{ width: "100%" }}>
                 <a
-                  href="tel:+919800000000"
+                  href="tel:+917384020901"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -71,7 +71,7 @@ export default function EmergencyRescueBanner() {
                     backdropFilter: "blur(8px)",
                   }}
                 >
-                  <Phone size={18} /> +91 98000 00000
+                  <Phone size={18} /> +91 73840 20901
                 </a>
               </motion.div>
             </div>

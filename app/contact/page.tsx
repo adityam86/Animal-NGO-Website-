@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin, Clock, CheckCircle, Send, ExternalLink, ShieldCheck } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, CheckCircle, Send, ExternalLink, ShieldCheck, MessageCircle } from "lucide-react";
 import FadeIn from "@/components/motion/FadeIn";
 import { CONTACT_INFO, AYUDAR_LEGAL } from "@/lib/data";
 
@@ -114,9 +114,23 @@ function ContactPageContent() {
                   <div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
                     <Phone size={18} style={{ color: "var(--crimson)", flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <strong>Helpline &amp; Office</strong>
-                      <div>Emergency: {CONTACT_INFO.emergencyPhone}</div>
-                      <div>General: {CONTACT_INFO.phone}</div>
+                      <strong>Helpline, WhatsApp &amp; Team Contacts</strong>
+                      <div>
+                        Main &amp; WhatsApp ({CONTACT_INFO.primaryContact.name}):{" "}
+                        <a href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`} style={{ color: "var(--stone-900)", fontWeight: 600 }}>
+                          {CONTACT_INFO.emergencyPhone}
+                        </a>
+                      </div>
+                      {CONTACT_INFO.teamContacts
+                        .filter((m) => m.name !== CONTACT_INFO.primaryContact.name)
+                        .map((member) => (
+                          <div key={member.name}>
+                            {member.name} ({member.role}):{" "}
+                            <a href={`tel:${member.phone.replace(/\s+/g, "")}`} style={{ color: "var(--stone-800)", fontWeight: 500 }}>
+                              {member.phone}
+                            </a>
+                          </div>
+                        ))}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
@@ -144,6 +158,15 @@ function ContactPageContent() {
                     style={{ gap: "0.35rem" }}
                   >
                     Open Google Maps Location <ExternalLink size={13} />
+                  </a>
+                  <a
+                    href={CONTACT_INFO.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-green btn-sm"
+                    style={{ gap: "0.35rem" }}
+                  >
+                    <MessageCircle size={14} /> WhatsApp ({CONTACT_INFO.primaryContact.name})
                   </a>
                 </div>
 

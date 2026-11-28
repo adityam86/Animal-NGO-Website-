@@ -101,7 +101,7 @@ export default function RootLayout({
                 postalCode: "713304",
                 addressCountry: "IN",
               },
-              telephone: "+91-98000-00000",
+              telephone: "+91-73840-20901",
               sameAs: ["https://maps.app.goo.gl/Aug8yQi2FmTVeegx7"],
             }),
           }}

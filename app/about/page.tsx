@@ -25,10 +25,10 @@ const FUND_ALLOCATION = [
 ];
 
 const CARE_UNITS = [
-  { name: "Emergency Triage Unit", role: "24/7 Road Rescue & Stabilization", note: "Field response team" },
-  { name: "Veterinary Wing", role: "Trauma Surgery, Dressing & Vaccination", note: "Supervising veterinarians" },
-  { name: "Gaushala Care Team", role: "Cattle Shelter, Fodder & Hoof Care", note: "Dedicated cow caretakers" },
-  { name: "Adoption & Welfare Desk", role: "Home Checks & Foster Coordination", note: "[Admin Placeholder: Trustee & team names]" },
+  { name: "Tarasankar Nag", role: "Main Helpline & WhatsApp Desk", note: "+91 73840 20901" },
+  { name: "Rohan Mishra", role: "Sanctuary Team Member", note: "+91 76026 66102" },
+  { name: "Sourav", role: "Sanctuary Team Member", note: "+91 91345 81378" },
+  { name: "Veterinary & Gaushala Wing", role: "Trauma Care & Cattle Shelter", note: "[Admin Placeholder: Veterinary doctor roster]" },
 ];
 
 const TIMELINE = [
@@ -286,7 +286,7 @@ export default function AboutPage() {
                 <div style={{ fontSize: "0.86rem", color: "rgba(250,247,242,0.86)", display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "1.1rem" }}>
                   <div><MapPin size={14} style={{ display: "inline", marginRight: 6 }} />{CONTACT_INFO.address}</div>
                   <div><Clock size={14} style={{ display: "inline", marginRight: 6 }} />{CONTACT_INFO.hours}</div>
-                  <div><Phone size={14} style={{ display: "inline", marginRight: 6 }} />Emergency Helpline: {CONTACT_INFO.emergencyPhone}</div>
+                  <div><Phone size={14} style={{ display: "inline", marginRight: 6 }} />Helpline &amp; WhatsApp ({CONTACT_INFO.primaryContact.name}): {CONTACT_INFO.emergencyPhone}</div>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
                   <a

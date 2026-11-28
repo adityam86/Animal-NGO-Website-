@@ -1,4 +1,4 @@
-const CACHE_NAME = "ayudar-pwa-v3";
+const CACHE_NAME = "ayudar-pwa-v4";
 const STATIC_ASSETS = [
   "/images/logo.jpg",
   "/images/hero_banner.jpg",
@@ -50,9 +50,9 @@ function buildOfflineHotlineResponse() {
       <div class="card">
         <h2>You are currently offline</h2>
         <p style="color: #495A51; line-height: 1.6;">Internet connection is unavailable, but our emergency rescue hotline can still be dialed directly.</p>
-        <div class="phone">+91 98000 00000</div>
+        <div class="phone">+91 73840 20901</div>
         <p style="font-size: 0.85rem; color: #66756D;">Ayudar Shelter (Animal Hospital) · Tilabad, Kumarpur, Asansol 713304</p>
-        <a href="tel:+919800000000" class="btn">Call Emergency Dispatch Now</a>
+        <a href="tel:+917384020901" class="btn">Call Emergency Dispatch Now</a>
       </div>
     </body>
     </html>`,

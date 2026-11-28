@@ -96,7 +96,7 @@ const SERVICE_ZONES = [
 ];
 
 function buildWhatsAppHref(text: string) {
-  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/917384020901?text=${encodeURIComponent(text)}`;
 }
 
 function RescuePageContent() {

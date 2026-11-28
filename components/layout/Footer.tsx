@@ -216,11 +216,21 @@ export default function Footer() {
                 </span>
               </a>
 
-              <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
-                <Phone size={15} style={{ color: "#E07A5F", flexShrink: 0 }} />
-                <a href={`tel:${CONTACT_INFO.phone}`} style={{ color: "rgba(250, 247, 242, 0.8)", fontSize: "0.86rem" }}>
-                  {CONTACT_INFO.phone}
-                </a>
+              <div style={{ display: "flex", gap: "0.65rem", alignItems: "flex-start" }}>
+                <Phone size={15} style={{ color: "#E07A5F", flexShrink: 0, marginTop: "3px" }} />
+                <div style={{ fontSize: "0.84rem", color: "rgba(250, 247, 242, 0.8)", lineHeight: 1.55 }}>
+                  <div>
+                    <a href={`tel:${CONTACT_INFO.phone.replace(/\s+/g, "")}`} style={{ color: "#FAF7F2", fontWeight: 600 }}>
+                      {CONTACT_INFO.phone}
+                    </a>{" "}
+                    <span style={{ color: "rgba(250, 247, 242, 0.65)" }}>({CONTACT_INFO.primaryContact.name})</span>
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(250, 247, 242, 0.68)", marginTop: "0.25rem" }}>
+                    Rohan Mishra: <a href="tel:+917602666102" style={{ color: "rgba(250, 247, 242, 0.82)" }}>+91 76026 66102</a>
+                    {" · "}
+                    Sourav: <a href="tel:+919134581378" style={{ color: "rgba(250, 247, 242, 0.82)" }}>+91 91345 81378</a>
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
@@ -240,11 +250,21 @@ export default function Footer() {
                 }}
               >
                 <div style={{ color: "#FAD4CD", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.2rem" }}>
-                  24/7 Emergency Helpline
+                  24/7 Helpline &amp; WhatsApp
                 </div>
-                <a href={`tel:${CONTACT_INFO.emergencyPhone}`} style={{ color: "#FAF7F2", fontWeight: 600, fontSize: "1rem" }}>
-                  {CONTACT_INFO.emergencyPhone}
-                </a>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <a href={`tel:${CONTACT_INFO.emergencyPhone.replace(/\s+/g, "")}`} style={{ color: "#FAF7F2", fontWeight: 600, fontSize: "1rem" }}>
+                    {CONTACT_INFO.emergencyPhone}
+                  </a>
+                  <a
+                    href={CONTACT_INFO.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#E07A5F", fontSize: "0.78rem", fontWeight: 600 }}
+                  >
+                    WhatsApp →
+                  </a>
+                </div>
               </div>
             </div>
           </div>

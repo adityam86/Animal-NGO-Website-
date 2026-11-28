@@ -32,7 +32,7 @@ export const DEFAULT_FACILITIES: Facility[] = [
     address: "PW3Q+5F, Tilabad, Kumarpur, Asansol, West Bengal 713304",
     lat: AYUDAR_SHELTER_COORDS.lat,
     lng: AYUDAR_SHELTER_COORDS.lng,
-    phone: "+91 98000 00000",
+    phone: "+91 73840 20901",
     icon: "🏥",
   },
 ];
