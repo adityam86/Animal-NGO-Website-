@@ -1,4 +1,11 @@
+import dns from "node:dns";
 import { NextResponse } from "next/server";
+
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // Ignore in restricted runtimes without dns configuration support
+}
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { getClientIp, isSameOriginRequest, readBoundedJson } from "@/lib/security";
 import { chatMessageSchema } from "@/lib/validation";
@@ -283,7 +290,16 @@ async function queryGemini(
   const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
   if (!apiKey) return null;
 
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const configured = process.env.GEMINI_MODEL?.trim();
+  const candidates = Array.from(
+    new Set([
+      configured || "gemini-flash-lite-latest",
+      "gemini-flash-lite-latest",
+      "gemini-3.8-flash",
+      "gemini-flash-latest",
+    ])
+  );
+
   const contents = [
     ...history.slice(-6).map((h) => ({
       role: h.sender === "user" ? "user" : "model",
@@ -292,37 +308,56 @@ async function queryGemini(
     { role: "user", parts: [{ text: message }] },
   ];
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 600,
-          responseMimeType: "application/json",
-        },
-      }),
-      signal: AbortSignal.timeout(10_000),
-    }
-  );
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    throw new Error(`Gemini API HTTP ${res.status}`);
+  for (const model of candidates) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+            contents,
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 600,
+              responseMimeType: "application/json",
+            },
+          }),
+          signal: AbortSignal.timeout(7_500),
+        }
+      );
+
+      if (!res.ok) {
+        if (res.status === 404 || res.status === 429 || res.status === 503) {
+          lastError = new Error(`Gemini API HTTP ${res.status} (${model})`);
+          continue;
+        }
+        throw new Error(`Gemini API HTTP ${res.status}`);
+      }
+
+      const data = (await res.json()) as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return null;
+      return normalizeLlmJson(text, "gemini");
+    } catch (err) {
+      if (err instanceof Error && err.name === "TimeoutError") {
+        lastError = err;
+        continue;
+      }
+      throw err;
+    }
   }
 
-  const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return null;
-  return normalizeLlmJson(text, "gemini");
+  if (lastError) throw lastError;
+  return null;
 }
 
 function getRuleBasedResponse(message: string): StructuredChatPayload {
