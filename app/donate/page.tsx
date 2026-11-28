@@ -717,7 +717,7 @@ function DonatePageContent() {
                 <div className="section-tag">In-Kind Support</div>
                 <h2 style={{ marginBottom: "0.35rem" }}>Shelter Needs Wishlist</h2>
                 <p style={{ color: "var(--stone-600)", margin: 0 }}>
-                  Prefer sending supplies instead of cash? Order essentials online or drop them directly at our Raniganj sanctuary.
+                  Prefer sending supplies instead of cash? Order essentials online or drop them directly at Ayudar Shelter in Tilabad, Kumarpur, Asansol.
                 </p>
               </div>
               <a

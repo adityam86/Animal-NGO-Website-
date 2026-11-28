@@ -135,8 +135,8 @@ const GENERAL_KNOWLEDGE = [
     response: "🐄 AYUDAR GAUSHALA:\n\nOur sanctuary provides lifetime care, nutritious green fodder, and medical treatments for over 45 rescued cows, calves, and retired working cattle. Learn more at `/cow-care`!"
   },
   {
-    keywords: ["location", "address", "raniganj", "contact", "timing", "shelter"],
-    response: "📍 AYUDAR ANIMAL SANCTUARY:\n\nLocation: Raniganj - Asansol Belt, West Bengal.\nAmbulance: 24/7 Emergency Response.\nVisiting Hours: 10:00 AM – 5:00 PM (Daily).\nEmergency Hotline: +91 98000 00000"
+    keywords: ["location", "address", "asansol", "kumarpur", "tilabad", "raniganj", "contact", "timing", "shelter"],
+    response: "📍 AYUDAR SHELTER (ANIMAL HOSPITAL):\n\nAddress: PW3Q+5F, Tilabad, Kumarpur, Asansol, West Bengal 713304.\nAmbulance: 24/7 Emergency Response across Asansol, Raniganj & Durgapur.\nVisiting Hours: Mon–Sat 9 AM – 7 PM (Emergency 24/7).\nEmergency Hotline: +91 98000 00000"
   }
 ];
 

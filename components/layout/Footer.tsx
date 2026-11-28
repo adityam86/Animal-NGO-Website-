@@ -86,7 +86,7 @@ export default function Footer() {
                 maxWidth: "34ch",
               }}
             >
-              {AYUDAR_LEGAL.mission} Street rescue, veterinary medicine, gaushala sanctuary, and adoption across Raniganj, Asansol &amp; Durgapur.
+              {AYUDAR_LEGAL.mission} Street rescue, veterinary medicine, gaushala sanctuary, and adoption across Asansol, Raniganj &amp; Durgapur.
             </p>
 
             <div

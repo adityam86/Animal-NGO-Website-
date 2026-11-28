@@ -1,17 +1,13 @@
-const CACHE_NAME = "ayudar-pwa-v2";
+const CACHE_NAME = "ayudar-pwa-v3";
 const STATIC_ASSETS = [
-  "/",
-  "/rescue",
-  "/animals",
-  "/stories",
-  "/donate",
   "/images/logo.jpg",
   "/images/hero_banner.jpg",
-  "/images/rescue_story_banner.jpg",
-  "/manifest.json"
+  "/images/cow_lakshmi.jpg",
+  "/images/dog_bruno.jpg",
+  "/manifest.json",
 ];
 
-// 1. Install event: Cache critical shell assets
+// 1. Install event: Pre-cache static image & manifest assets only
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -23,7 +19,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// 2. Activate event: Clean up legacy caches
+// 2. Activate event: Purge stale caches immediately (e.g., ayudar-pwa-v2)
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -35,14 +31,43 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// 3. Fetch event: Stale-While-Revalidate with Offline Hotline Fallback
+function buildOfflineHotlineResponse() {
+  return new Response(
+    `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Ayudar — Offline Emergency Support</title>
+      <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #FAF7F2; color: #1A2820; padding: 2rem 1.5rem; text-align: center; }
+        .card { max-width: 440px; margin: 2rem auto; background: white; border-radius: 8px; padding: 2.25rem 1.5rem; border: 1px solid #E2DACB; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+        .btn { display: inline-block; background: #B83232; color: white; padding: 0.9rem 1.6rem; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 1rem; margin-top: 1.25rem; }
+        .phone { font-size: 1.5rem; font-weight: 800; color: #B83232; margin: 1rem 0; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>You are currently offline</h2>
+        <p style="color: #495A51; line-height: 1.6;">Internet connection is unavailable, but our emergency rescue hotline can still be dialed directly.</p>
+        <div class="phone">+91 98000 00000</div>
+        <p style="font-size: 0.85rem; color: #66756D;">Ayudar Shelter (Animal Hospital) · Tilabad, Kumarpur, Asansol 713304</p>
+        <a href="tel:+919800000000" class="btn">Call Emergency Dispatch Now</a>
+      </div>
+    </body>
+    </html>`,
+    { headers: { "Content-Type": "text/html; charset=utf-8" } }
+  );
+}
+
+// 3. Fetch event: Network-First for pages & Next.js assets; Cache-First only for /images/
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-
-  // Never intercept or cache API, admin, or authentication routes
   const url = new URL(request.url);
+
   if (
     request.method !== "GET" ||
+    url.origin !== self.location.origin ||
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/admin") ||
     url.pathname === "/login"
@@ -50,57 +75,37 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request)
+  // Static sanctuary photos can use cache-then-network cleanly
+  if (url.pathname.startsWith("/images/")) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((res) => {
+          if (res && res.status === 200 && res.type === "basic") {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return res;
+        });
+      })
+    );
+    return;
+  }
+
+  // HTML navigations & JS/CSS bundles MUST ALWAYS prefer fresh network builds
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
-            });
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
           return networkResponse;
         })
         .catch(() => {
-          // If network failed and we have no cached page:
-          if (request.mode === "navigate") {
-            return caches.match("/").then((root) => {
-              if (root) return root;
-              // Emergency fallback offline HTML with Hotline
-              return new Response(
-                `<!DOCTYPE html>
-                <html lang="en">
-                <head>
-                  <meta charset="utf-8" />
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                  <title>Ayudar - Offline Emergency Support</title>
-                  <style>
-                    body { font-family: system-ui, -apple-system, sans-serif; background: #fffbf5; color: #1c1917; padding: 2rem 1.5rem; text-align: center; }
-                    .card { max-width: 440px; margin: 2rem auto; background: white; border-radius: 1.5rem; padding: 2.5rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-                    .btn { display: inline-block; background: #dc2626; color: white; padding: 0.9rem 1.8rem; border-radius: 9999px; text-decoration: none; font-weight: 700; font-size: 1.1rem; margin-top: 1.5rem; }
-                    .phone { font-size: 1.6rem; font-weight: 800; color: #dc2626; margin: 1rem 0; }
-                  </style>
-                </head>
-                <body>
-                  <div class="card">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">🐾</div>
-                    <h2>You are currently offline</h2>
-                    <p style="color: #78716c; line-height: 1.6;">You don't have active internet connection, but our emergency rescue hotline is always available.</p>
-                    <div class="phone">📞 +91 98000 00000</div>
-                    <p style="font-size: 0.85rem; color: #a8a29e;">Raniganj • Asansol • Durgapur Animal Rescue</p>
-                    <a href="tel:+919800000000" class="btn">Call Emergency Dispatch Now</a>
-                  </div>
-                </body>
-                </html>`,
-                { headers: { "Content-Type": "text/html; charset=utf-8" } }
-              );
-            });
-          }
-          return cachedResponse;
-        });
-
-      return cachedResponse || fetchPromise;
-    })
-  );
+          return caches.match(request).then((cachedPage) => cachedPage || buildOfflineHotlineResponse());
+        })
+    );
+  }
 });

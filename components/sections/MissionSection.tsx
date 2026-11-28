@@ -69,7 +69,7 @@ export default function MissionSection() {
                   marginBottom: "1.25rem",
                 }}
               >
-                Operating across Raniganj, Asansol, and Durgapur in West Bengal,{" "}
+                Operating from Tilabad, Kumarpur (Asansol) and serving Raniganj and Durgapur across West Bengal,{" "}
                 <strong style={{ color: "var(--stone-800)", fontWeight: 600 }}>
                   {AYUDAR_LEGAL.name}
                 </strong>{" "}
@@ -172,7 +172,7 @@ export default function MissionSection() {
                   color: "var(--stone-500)",
                 }}
               >
-                <span>Sanctuary Gaushala &amp; Rehabilitation Wing, Raniganj</span>
+                <span>Sanctuary Gaushala &amp; Rehabilitation Wing, Asansol</span>
                 <span style={{ color: "var(--stone-400)", fontVariantNumeric: "tabular-nums" }}>
                   Archive Photograph
                 </span>

@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Our Shelter",
-  description: "Learn about Ayudar Animal Shelter — facilities, capacity, and how we care for rescued animals in Raniganj.",
+  description: "Learn about Ayudar Shelter (Animal Hospital) in Tilabad, Kumarpur, Asansol — facilities, veterinary wards, and sanctuary care.",
 };
 
 const facilities = [
@@ -30,7 +30,7 @@ export default function ShelterPage() {
             <span className="editorial-eyebrow" style={{ color: "#E07A5F", marginBottom: "0.9rem" }}>Our Sanctuary</span>
             <h1 style={{ color: "#FAF7F2", marginBottom: "0.75rem" }}>A Safe Place to Recover and Heal</h1>
             <p style={{ color: "rgba(250,247,242,0.82)", fontSize: "1.05rem", lineHeight: 1.8 }}>
-              Our Raniganj sanctuary provides trauma isolation, supervised veterinary wards, and dedicated spaces for recovering dogs, cats, and cows.
+              Our shelter in Tilabad, Kumarpur, Asansol provides trauma isolation, supervised veterinary wards, and dedicated spaces for recovering dogs, cats, and cows.
             </p>
           </div>
         </div>

@@ -279,7 +279,7 @@ export default function RescueInActionSection({
                 }}
               >
                 <span>
-                  Sanctuary intake, stabilization &amp; supervised recovery — Raniganj field records
+                  Sanctuary intake, stabilization &amp; supervised recovery — Asansol &amp; Raniganj field records
                 </span>
                 <Link
                   href="/stories"

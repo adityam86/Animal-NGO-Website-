@@ -39,7 +39,7 @@ export default function SanctuaryContactSection() {
                   margin: 0,
                 }}
               >
-                Reach our team in Raniganj &amp; Asansol.
+                Reach Ayudar Shelter in Kumarpur, Asansol.
               </h2>
             </div>
 

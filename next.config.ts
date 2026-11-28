@@ -6,7 +6,7 @@ const cspDirectives = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.public.blob.vercel-storage.com https://*.aws.neon.tech",
+  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com https://*.arcgisonline.com https://*.public.blob.vercel-storage.com https://*.aws.neon.tech",
   "font-src 'self' https://fonts.gstatic.com data:",
   "connect-src 'self' https://nominatim.openstreetmap.org https://api.razorpay.com https://lumberjack.razorpay.com https://blob.vercel-storage.com",
   "frame-src https://api.razorpay.com https://checkout.razorpay.com",

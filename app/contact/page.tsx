@@ -153,7 +153,7 @@ function ContactPageContent() {
                 </div>
               </div>
 
-              <InteractiveMap mode="facilities" height={280} />
+              <InteractiveMap mode="facilities" height={320} />
             </div>
 
             {/* Right Message Form */}

@@ -99,7 +99,7 @@ export default function HeroSection() {
             }}
           >
             <PulseBeacon color="#E07A5F" size={8} />
-            <span>{AYUDAR_LEGAL.name} · Raniganj &amp; Asansol</span>
+            <span>{AYUDAR_LEGAL.name} · Asansol &amp; Raniganj</span>
           </div>
 
           {/* Editorial Headline */}

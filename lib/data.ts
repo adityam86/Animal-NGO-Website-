@@ -355,7 +355,9 @@ export const FOOTER_QUICK_LINKS = [
 ];
 
 export const CONTACT_INFO = {
-  address: "Raniganj — Asansol Animal Care Sanctuary, West Bengal — 713347",
+  address: "Ayudar Shelter (Animal Hospital), PW3Q+5F, Tilabad, Kumarpur, Asansol, West Bengal 713304",
+  coordinates: { lat: 23.703819, lng: 86.938713 },
+  plusCode: "PW3Q+5F, Tilabad, Kumarpur, Asansol",
   phone: "+91 98765 43210",
   emergencyPhone: "+91 98000 00000",
   email: "help@jeevseva.org",

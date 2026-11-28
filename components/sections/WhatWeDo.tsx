@@ -9,7 +9,7 @@ const PROGRAMS = [
     number: "01",
     title: "Street Animal Rescue",
     summary:
-      "Emergency response for road accidents, open wounds, distemper symptoms, and distressed street animals across Raniganj and neighbouring towns.",
+      "Emergency response for road accidents, open wounds, distemper symptoms, and distressed street animals across Asansol, Raniganj, and neighbouring towns.",
     cta: "Report an Emergency",
     href: "/rescue",
   },

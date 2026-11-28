@@ -89,10 +89,10 @@ const FIRST_AID_GUIDES = [
 ];
 
 const SERVICE_ZONES = [
-  { zone: "Raniganj & NH-19 Corridor", eta: "15–30 min emergency target" },
-  { zone: "Asansol Municipal Belt", eta: "25–45 min dispatch window" },
-  { zone: "Durgapur & Industrial Sectors", eta: "35–60 min medical van" },
-  { zone: "Jamuria / Andal / Searsole", eta: "25–50 min rescue outreach" },
+  { zone: "Tilabad, Kumarpur & Asansol", eta: "15–30 min immediate shelter dispatch" },
+  { zone: "Raniganj & NH-19 Corridor", eta: "20–40 min rapid response" },
+  { zone: "Kulti / Barakar / Jamuria", eta: "25–50 min rescue outreach" },
+  { zone: "Andal & Durgapur Belt", eta: "35–60 min medical van" },
 ];
 
 function buildWhatsAppHref(text: string) {
@@ -104,6 +104,8 @@ function RescuePageContent() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsStatus, setGpsStatus] = useState("");
   const [location, setLocation] = useState("");
+  const [selectedLat, setSelectedLat] = useState<number | null>(null);
+  const [selectedLng, setSelectedLng] = useState<number | null>(null);
   const [animalType, setAnimalType] = useState("Dog");
   const [condition, setCondition] = useState("Road Accident");
   const [urgency, setUrgency] = useState<"Critical" | "High" | "Normal">("Critical");
@@ -127,8 +129,12 @@ function RescuePageContent() {
     setGpsStatus("Acquiring GPS coordinates...");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const lat = pos.coords.latitude.toFixed(5);
-        const lng = pos.coords.longitude.toFixed(5);
+        const rawLat = pos.coords.latitude;
+        const rawLng = pos.coords.longitude;
+        const lat = rawLat.toFixed(5);
+        const lng = rawLng.toFixed(5);
+        setSelectedLat(rawLat);
+        setSelectedLng(rawLng);
         setLocation((prev) =>
           prev.trim()
             ? `${prev.trim()} (GPS: ${lat}, ${lng})`
@@ -474,8 +480,12 @@ function RescuePageContent() {
 
                           <InteractiveMap
                             mode="picker"
-                            height={250}
+                            height={320}
+                            selectedLat={selectedLat}
+                            selectedLng={selectedLng}
                             onLocationSelect={(lat, lng, addr) => {
+                              setSelectedLat(lat);
+                              setSelectedLng(lng);
                               setLocation(addr ? `${addr} (${lat.toFixed(4)}, ${lng.toFixed(4)})` : `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
                             }}
                           />
@@ -486,7 +496,7 @@ function RescuePageContent() {
                               id="rescue-location"
                               type="text"
                               className="form-input"
-                              placeholder="e.g., Opposite Raniganj Petrol Pump, NH-19"
+                              placeholder="e.g., Near Tilabad, Kumarpur, Asansol / GT Road"
                               value={location}
                               onChange={(e) => setLocation(e.target.value)}
                               required
